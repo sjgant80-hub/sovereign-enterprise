@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The AI-Native Office</title>
+<meta name="description" content="White paper: how AI runs 90% of an office's work on machines the company owns, with five AI-native people overseeing it — the roles, the hardware at every step, how it all hooks together, and the five-year cost, every figure computed live from sourced UK data." />
+<style>
+:root{--bg:#0b0e13;--panel:#121821;--panel2:#0e141b;--ink:#e8eef4;--dim:#93a6b8;--faint:#5c6e80;--line:#1f2b38;
+  --accent:#45d0a8;--accent2:#6ab0ff;--gold:#ffcf5c;--bad:#ff6b6b;--warn:#ffa94d;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f6f8fa;--panel:#ffffff;--panel2:#f0f3f6;--ink:#0f1720;--dim:#4d5b69;--faint:#8a97a4;--line:#dde3ea;--accent:#0e9f77;--accent2:#1f6fd1;--gold:#9a6f00;--bad:#d23b3b;--warn:#c56a12}}
+:root[data-theme="light"]{--bg:#f6f8fa;--panel:#ffffff;--panel2:#f0f3f6;--ink:#0f1720;--dim:#4d5b69;--faint:#8a97a4;--line:#dde3ea;--accent:#0e9f77;--accent2:#1f6fd1;--gold:#9a6f00;--bad:#d23b3b;--warn:#c56a12}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px 56px}
+a{color:var(--accent2)}
+header{padding:28px 0 6px}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(28px,6.5vw,48px);line-height:1.1;margin:8px 0 10px;font-weight:800}
+h2{font-size:clamp(20px,4.4vw,26px);margin:42px 0 10px;font-weight:800}
+h3{font-size:16px;margin:22px 0 6px}
+.lede{font-size:clamp(16px,3.6vw,19px);color:var(--dim);max-width:70ch}
+.hero{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin:22px 0 6px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat .n{font-size:clamp(24px,6vw,32px);font-weight:800;font-family:var(--mono);color:var(--accent)}
+.stat .n.gold{color:var(--gold)}.stat .l{color:var(--dim);font-size:13px}
+.vs{display:grid;gap:12px;grid-template-columns:1fr;margin:14px 0}
+@media(min-width:760px){.vs{grid-template-columns:repeat(3,1fr)}}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.col.win{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.col h4{margin:0 0 4px;font-size:14px}.col .big{font-family:var(--mono);font-size:26px;font-weight:800}
+.col .sub{color:var(--dim);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--dim);font-weight:600;font-size:13px}
+td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+.scroll{overflow-x:auto}
+.tier{display:grid;gap:12px;grid-template-columns:1fr;margin:10px 0}
+@media(min-width:760px){.tier{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card .what{font-family:var(--mono);font-size:12px;color:var(--gold)}
+.card p{margin:6px 0 0;font-size:14px;color:var(--dim)}
+.flow{list-style:none;padding:0;margin:8px 0;counter-reset:s}
+.flow li{position:relative;padding:8px 0 8px 40px;border-bottom:1px dashed var(--line);font-size:14px}
+.flow li:before{counter-increment:s;content:counter(s);position:absolute;left:0;top:8px;width:26px;height:26px;border-radius:50%;
+  background:var(--panel2);border:1px solid var(--line);font-family:var(--mono);font-size:12px;display:flex;align-items:center;justify-content:center}
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:12px;padding:1px 8px;margin:0 4px 0 0;color:var(--dim)}
+.tag.box{color:var(--accent)}.tag.hub{color:var(--accent2)}.tag.lap{color:var(--gold)}.tag.limb{color:var(--warn)}.tag.human{color:var(--ink);border-color:var(--ink)}
+.callout{background:var(--panel2);border-left:3px solid var(--accent);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:15px}
+.src{font-size:12.5px;color:var(--dim)}.src li{margin:4px 0;overflow-wrap:anywhere}
+.foot{color:var(--faint);font-size:12.5px;margin-top:34px;line-height:1.7}
+.mono{font-family:var(--mono)}
+.ok{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">White paper · Sovereign Enterprise</div>
+  <h1>The AI-native office</h1>
+  <p class="lede">Five people and the machines they own run what fifty people run today. The AI does the work; AI-native leads
+    oversee it; nothing the company knows leaves the building. Here is the whole set-up — the roles, the hardware at every step, how it
+    hooks together, and what it costs — with every figure computed live from sourced UK data.</p>
+  <div class="hero" id="hero"></div>
+  <p class="src">A modelled 50-person UK office. Figures are computed on this page by the same kernel the test suite proves
+    (<span class="mono">src/office.mjs</span>) from <span class="mono">data/basis.json</span> (every external figure, sourced) and
+    <span class="mono">data/office.json</span> (the design). <a href="index.html">See the company running →</a></p>
+</header>
+
+<h2>1 · The shift: from software that helps to AI that does the work</h2>
+<p>Office software rents a company its own logic, data and screens, one seat at a time, forever. The first wave of AI added another
+  seat on top: an assistant on every desk. The people still do the work, so the bill only grows.</p>
+<div class="vs" id="vs"></div>
+<p>The AI-native office takes the other road. The work itself — answering the customer, qualifying the lead, matching the invoice,
+  booking the van, onboarding the starter — is done by AI agents running on machines the company owns. A small number of AI-native
+  people direct those agents, check what matters, and handle the judgement, the relationships and the exceptions.</p>
+
+<h2>2 · Who does what: 90% of the work runs on AI</h2>
+<p>Each department's work is mapped to the agents that do it and the AI-native lead who oversees it.</p>
+<div class="scroll"><table id="depts"></table></div>
+<h3>The five people who remain</h3>
+<div class="tier" id="roles"></div>
+
+<h2>3 · The hardware at every step</h2>
+<p>Three kinds of machine, each doing what it is built for, plus specialist services called per use. The AI boxes are sized from
+  measured throughput, with a spare for resilience.</p>
+<div class="tier" id="hw"></div>
+<div class="callout" id="cap"></div>
+
+<h2>4 · How it hooks together</h2>
+<p>Every machine runs the same signed, gated company spine. The company is a pure function of the signed writes a machine holds — so
+  every device, every agent and every person sees the same company, whether the network is up, down or split.</p>
+<div class="tier">
+  <div class="card"><b>Signed by the device that made it</b><p>Every write — a task, a message, a deal, a ledger entry — carries the
+    Ed25519 signature of the person's or agent's own device. Nothing anonymous enters the company.</p></div>
+  <div class="card"><b>Checked before it is read</b><p>Every incoming write passes the gate on its raw bytes: size, encoding, exact
+    grammar, canonical form, replay, signature. Forged, altered, replayed or malformed writes never reach the company.</p></div>
+  <div class="card"><b>One company on every device</b><p>Concurrent edits merge the same way everywhere; a device that was offline
+    catches up when it reconnects. Partitions, delays and duplicates cannot make two devices disagree.</p></div>
+  <div class="card"><b>Authority is a tree</b><p>The owner's key makes leads; leads grant each person and agent exactly the parts of the
+    company they work in. An agent cannot touch the books unless it was granted the books.</p></div>
+  <div class="card"><b>The books prove themselves</b><p>Every posted entry is sequenced into an append-only transparency log. Anyone —
+    an auditor, a bank — can verify an entry is in the books and that nothing was ever rewritten.</p></div>
+  <div class="card"><b>Personal data, sealed per person</b><p>Personal details are stored only under a key for that person. Erasing a
+    person destroys the key: every copy goes dark at once, and the history still verifies.</p></div>
+  <div class="card"><b>A leaver's device locks itself</b><p>Each device's local data is held on a lease it renews while its grant is
+    live. Revoke the grant and the lease runs out; the cache on that device seals itself.</p></div>
+  <div class="card"><b>Nothing leaves the building</b><p>The company's data lives on its own devices and its own AI boxes. Specialist
+    services receive only what a single call needs — the voice of one call, the text of one hard question.</p></div>
+</div>
+
+<h2>5 · A day in the AI-native office</h2>
+<p>Six real workflows, step by step: which machine does each step, and where a person signs off.
+  <span class="tag lap">laptop</span><span class="tag hub">hub</span><span class="tag box">AI box</span><span class="tag limb">per-use limb</span><span class="tag human">person</span></p>
+<div class="tier">
+  <div class="card"><b>A customer complaint, by email</b><ol class="flow">
+    <li><span class="tag hub">hub</span>The mail bridge turns the email into a signed message in the service queue.</li>
+    <li><span class="tag box">AI box</span>The service agent reads the customer's history in the CRM and the order in the books.</li>
+    <li><span class="tag box">AI box</span>It drafts the reply and the remedy, then audits its own draft against the facts before it proposes it.</li>
+    <li><span class="tag human">person</span>Refunds over the threshold or angry customers go to the revenue lead: one click to approve or edit.</li>
+    <li><span class="tag box">AI box</span>The reply goes out; the refund posts to the books and is sequenced into the vault.</li></ol></div>
+  <div class="card"><b>A new lead to a signed deal</b><ol class="flow">
+    <li><span class="tag box">AI box</span>The sales agent qualifies the inbound lead and researches the company.</li>
+    <li><span class="tag box">AI box</span>It runs the follow-up sequence and books the call into the lead's diary.</li>
+    <li><span class="tag human">person</span>The revenue lead takes the call — the relationship is human.</li>
+    <li><span class="tag box">AI box</span>The agent drafts the proposal from the call notes and the price book.</li>
+    <li><span class="tag limb">limb</span>For a complex tender, one frontier call checks the reasoning; nothing else leaves.</li>
+    <li><span class="tag human">person</span>The lead sends it; the deal moves to won in the CRM on every device.</li></ol></div>
+  <div class="card"><b>A supplier invoice to paid</b><ol class="flow">
+    <li><span class="tag hub">hub</span>The invoice arrives and is filed as a signed record.</li>
+    <li><span class="tag box">AI box</span>The finance agent matches it to the order and the delivery note, codes it, and drafts the journal.</li>
+    <li><span class="tag box">AI box</span>The books refuse anything that does not balance; the entry is sequenced into the vault.</li>
+    <li><span class="tag human">person</span>The finance and people lead approves the payment run and witnesses the vault's tree head.</li></ol></div>
+  <div class="card"><b>A phone call</b><ol class="flow">
+    <li><span class="tag limb">limb</span>The voice service carries the caller's speech; the agent's thinking runs on the company's own AI box.</li>
+    <li><span class="tag box">AI box</span>It answers from the CRM and the order history, takes the action, and logs the call.</li>
+    <li><span class="tag human">person</span>Anything it should not decide is handed to the revenue lead mid-call, with the summary on screen.</li></ol></div>
+  <div class="card"><b>A new starter</b><ol class="flow">
+    <li><span class="tag human">person</span>The finance and people lead grants the starter's device its role and scope.</li>
+    <li><span class="tag box">AI box</span>The people agent prepares the contract, the checklist and the induction plan.</li>
+    <li><span class="tag lap">laptop</span>The starter opens the company on their own device; it syncs only what their role needs.</li></ol></div>
+  <div class="card"><b>Month-end</b><ol class="flow">
+    <li><span class="tag box">AI box</span>The finance agent reconciles the bank, accrues, and drafts the VAT figures.</li>
+    <li><span class="tag box">AI box</span>Trial balance, P&amp;L and balance sheet are produced; the balance sheet must balance or it stops.</li>
+    <li><span class="tag human">person</span>The lead reviews the variances the agent flags and signs the period closed.</li></ol></div>
+</div>
+
+<h2>6 · What it costs: five years, three ways</h2>
+<div class="scroll"><table id="cost"></table></div>
+<div class="callout" id="notcounted"></div>
+
+<h2>7 · The AI-native employee</h2>
+<p>The five people who remain are not doing the old jobs faster. They direct a workforce of agents, and they are the company's
+  verifiers. Two rules make that work:</p>
+<div class="tier">
+  <div class="card"><b>The agent checks itself first</b><p>Every agent drafts, audits its own draft against what it can verify, and only
+    then proposes. In our own blind test on held-out tasks, that self-audit step raised calibration — saying what it does not know —
+    and refused the claims it could not support.</p></div>
+  <div class="card"><b>A capable verifier signs what matters</b><p>Anything that leaves the building or touches the books is signed off
+    by a lead or checked by a frontier model called for that one decision. A weak checker misses exactly the claims that matter, so the
+    verifier is always a strong one.</p></div>
+</div>
+
+<h2>8 · The roll-out: twelve weeks</h2>
+<div class="scroll"><table>
+  <tr><th>Weeks</th><th>What goes live</th><th>What it replaces</th></tr>
+  <tr><td>1–2</td><td>The hub and the AI boxes; every device on the company spine; owner, leads and roles</td><td>—</td></tr>
+  <tr><td>3–4</td><td>Chat, tasks and documents on every device</td><td>Team chat, task tracker, shared docs</td></tr>
+  <tr><td>5–6</td><td>CRM plus the service and sales agents</td><td>The per-seat CRM</td></tr>
+  <tr><td>7–8</td><td>The books, the vault and the finance agent</td><td>The per-seat finance system</td></tr>
+  <tr><td>9–10</td><td>People records, leases and the people agent</td><td>The per-seat HR system</td></tr>
+  <tr><td>11–12</td><td>Voice on the phone line; cut-over; the old seats end</td><td>Front-line phone cover</td></tr>
+</table></div>
+
+<h2>9 · Proof</h2>
+<p>The company spine is open and re-runnable. It runs live on the <a href="index.html">company page</a>: five devices, partitions,
+  attacks, the books and the vault. Its kernels are proven by a unit and hostile-input test suite and a mutation witness. A
+  deterministic simulator puts a fleet of devices through partitions, dropped and duplicated messages and a live attacker, and every
+  run converges to the same company, byte for byte, with a receipt anyone can reproduce.</p>
+<h3>Sources</h3>
+<ol class="src" id="sources"></ol>
+
+<p class="foot">The design lens — entropy-guided regulation (GEP), weighted pruning (WIPER), behavioural signatures (BES) and dual-map
+  checking — is the work of Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Services, LLC). Konomi — Thomas Frumkin.
+  Source: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a>.</p>
+</div>
+
+<script type="module">
+import { plan, gbp0, gbpM } from './src/office.mjs';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pct = (x) => Math.round(x * 100) + '%';
+const fx1 = (x) => (Math.round(x * 10) / 10).toLocaleString('en-GB');
+
+const [basis, office] = await Promise.all([fetch('data/basis.json').then((r) => r.json()), fetch('data/office.json').then((r) => r.json())]);
+const p = plan(office, basis);
+
+$('hero').innerHTML = [
+  [gbpM(p.today.total) + ' → ' + gbpM(p.sovereign.total), 'five-year cost: today → AI-native', 'gold'],
+  [gbpM(p.saving), 'saved over five years (' + pct(p.savingPct) + ')', ''],
+  [pct(office.aiShare), 'of the operational work done by AI', ''],
+  [p.today.headcount + ' → ' + p.sovereign.headcount, 'people running the office', ''],
+].map(([n, l, c]) => `<div class="stat"><div class="n ${c}">${esc(n)}</div><div class="l">${esc(l)}</div></div>`).join('');
+
+$('vs').innerHTML = [
+  ['Today', p.today, 'people + rented per-seat software', ''],
+  ['An AI seat on every desk', p.assisted, 'the same people, plus an assistant each — the people still do the work', ''],
+  ['AI-native, owned', p.sovereign, 'AI does the work on owned machines; AI-native leads oversee', 'win'],
+].map(([t, x, s, c]) => `<div class="col ${c}"><h4>${esc(t)}</h4><div class="big">${gbpM(x.total)}</div><div class="sub">${x.headcount} people · ${esc(s)}</div></div>`).join('');
+
+$('depts').innerHTML = `<tr><th>Department</th><th>The work</th><th class="n">People today</th><th class="n">Done by AI</th><th class="n">Human remainder</th><th>Overseen by</th></tr>` +
+  office.departments.map((d) => { const k = p.departments.find((x) => x.id === d.id); return `<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.work)}</td><td class="n">${d.today}</td><td class="n">${fx1(k.aiFte)} FTE</td><td class="n">${fx1(k.humanFte)} FTE</td><td>${esc(k.overseenBy || '')}</td></tr>`; }).join('') +
+  `<tr><td><b>Leadership</b></td><td>Direction, decisions, relationships</td><td class="n">${office.leadership.today}</td><td class="n">—</td><td class="n">—</td><td>The five below</td></tr>` +
+  `<tr><th>Total</th><th></th><th class="n">${p.today.headcount}</th><th class="n">${fx1(p.capacity.aiHours / office.hoursPerFte)} FTE</th><th class="n">${fx1(p.human.remainderFte)} FTE</th><th>${p.sovereign.headcount} people · ${fx1(p.human.capacityFte)} FTE of oversight</th></tr>`;
+
+$('roles').innerHTML = office.retained.map((r) => `<div class="card"><b>${esc(r.role)}</b><p>${esc(r.focus)}</p></div>`).join('');
+
+const box = basis.aiBox, hub = basis.hub;
+$('hw').innerHTML = [
+  ['The laptop each lead already has', '£0 new · +' + basis.laptopExtraWatts.value + ' W while its small model runs', 'Runs the company on the person\'s own device — every app, their replica, their key — and a small in-browser model for instant drafting and triage. The same machine they have today.'],
+  ['The hub · ' + hub.product, gbp0(p.hardware.hubCost) + ' ex VAT · ' + hub.watts + ' W max', 'Always on. The office relay (discovery and the offline queue), the vault\'s sequencer and witness, encrypted nightly backups, the mail and phone bridges, and the fast small models that route and classify.'],
+  ['The AI box × ' + p.capacity.boxes + ' · ' + box.product, gbp0(p.hardware.boxCost) + ' ex VAT each · ' + box.watts + ' W peak', 'The office\'s AI workforce: the service, sales, finance, people and operations agents, on open models of the gpt-oss class. Measured at ' + box.decodeTokPerSec + ' tokens/s aggregate decode per box; two boxes, one of them spare.'],
+  ['Per-use limbs', 'frontier ' + '$' + basis.frontier.inPerM + '/$' + basis.frontier.outPerM + ' per M tokens · voice $' + basis.voicePerMinute.value + '/min', 'A frontier model for the hardest ' + pct(office.frontierShare) + ' of the thinking, and a voice service to carry phone calls. Called per use; each call carries only what that one call needs.'],
+].map(([t, w, d]) => `<div class="card"><b>${esc(t)}</b><div class="what">${esc(w)}</div><p>${esc(d)}</p></div>`).join('');
+
+$('cap').innerHTML = `<b>Sized from the work.</b> ${fx1(p.capacity.aiHours)} hours of office work a year done by AI at ${Number(office.tokensPerHumanHour).toLocaleString('en-GB')} tokens an hour is
+  ${(p.capacity.tokens / 1e9).toFixed(2)} billion tokens a year: ${fx1(p.capacity.outPerSec)} tokens/s of writing across the working day. One AI box covers it
+  (${p.capacity.boxesNeeded} needed); ${p.capacity.boxes} are installed, running at ${pct(p.capacity.decodeUtilisation)} of their combined capacity. At two and a half times
+  the token demand, the same two boxes still carry it.`;
+
+const yrs = p.years;
+const rows = [
+  ['People', p.today.payYear1 * p.cpiFactor, p.assisted.payYear1 * p.cpiFactor, p.sovereign.payYear1 * p.cpiFactor, `${p.today.headcount} → ${p.sovereign.headcount} · rising with CPI`],
+  ['Per-seat software', p.today.seatsYear1 * p.cpiFactor, p.assisted.seatsYear1 * p.cpiFactor, 0, 'CRM, finance and HR seats (+ an AI seat each in the middle column)'],
+  ['AI boxes + hub (bought once)', 0, 0, p.sovereign.hardware, p.capacity.boxes + ' × AI box + 1 hub, ex VAT'],
+  ['Electricity', 0, 0, p.sovereign.powerYear1 * p.cpiFactor, Math.round(p.sovereign.kwh).toLocaleString('en-GB') + ' kWh a year at peak draw, around the clock'],
+  ['Frontier model (per use)', 0, 0, p.sovereign.frontierYear * yrs, pct(office.frontierShare) + ' of the AI\'s tokens'],
+  ['Voice on the phones (per use)', 0, 0, p.sovereign.voiceYear * yrs, Math.round(p.sovereign.phoneMinutes).toLocaleString('en-GB') + ' minutes a year'],
+  ['Set-up and migration', 0, 0, p.sovereign.setup, office.setupDays + ' days'],
+];
+$('cost').innerHTML = `<tr><th>Five years</th><th class="n">Today</th><th class="n">AI seat on every desk</th><th class="n">AI-native, owned</th><th>Basis</th></tr>` +
+  rows.map(([t, a, b, c, n]) => `<tr><td>${esc(t)}</td><td class="n">${a ? gbp0(a) : '—'}</td><td class="n">${b ? gbp0(b) : '—'}</td><td class="n">${c ? gbp0(c) : '—'}</td><td>${esc(n)}</td></tr>`).join('') +
+  `<tr><th>Total</th><th class="n">${gbp0(p.today.total)}</th><th class="n">${gbp0(p.assisted.total)}</th><th class="n ok">${gbp0(p.sovereign.total)}</th><th class="ok">${gbp0(p.saving)} saved · ${pct(p.savingPct)}</th></tr>`;
+
+$('notcounted').innerHTML = `<b>Counted at the floor.</b> Pay is the ONS median for operational roles and the ONS IT-manager median for leads; the AI-native leads are
+  paid ${pct(office.aiNativePremium)} more than today's. Their pay, seats and power rise with CPI (${(basis.cpi.value * 100).toFixed(1)}%); token and voice prices are held flat.
+  <b>Not counted, and all on the AI-native side:</b> office space for 45 fewer desks, 45 laptops never refreshed, recruitment, sickness and holiday cover.
+  Email and telephone lines are kept on both sides and left out of both totals.`;
+
+$('sources').innerHTML = Object.entries(basis).filter(([k, x]) => x && typeof x === 'object' && (x.source || x.priceSource))
+  .map(([k, x]) => `<li><b>${esc(x.product || x.what || k)}</b>${x.value !== undefined ? ' — ' + esc(x.value) + (x.unit ? ' ' + esc(x.unit) : '') : ''}${x.priceIncVat ? ' — £' + esc(x.priceIncVat) + ' inc VAT' : ''}${x.decodeTokPerSec ? ' — ' + esc(x.throughputNote) : ''}. <a href="${esc(x.source || x.priceSource)}" rel="noopener">${esc((x.source || x.priceSource).replace(/^https?:\/\//, '').slice(0, 70))}</a>${x.wattsSource ? ' · power: <a href="' + esc(x.wattsSource) + '" rel="noopener">spec</a>' : ''}${x.throughputSource ? ' · throughput: <a href="' + esc(x.throughputSource) + '" rel="noopener">LMSYS</a>' : ''}</li>`).join('');
+</script>
+</body>
+</html>

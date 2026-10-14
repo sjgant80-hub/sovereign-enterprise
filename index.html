@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sovereign Enterprise</title>
+<meta name="description" content="A company's whole operational layer — tasks, chat, CRM, documents, books, the one-true-record and the people — running on the employees' own devices, peer to peer, every write signed and gated, no per-seat software, nothing leaving the building. The page runs the exact kernel its tests and mutation witness prove." />
+<style>
+:root{--bg:#0b0e13;--panel:#121821;--panel2:#0e141b;--ink:#e8eef4;--dim:#93a6b8;--faint:#5c6e80;--line:#1f2b38;
+  --accent:#45d0a8;--accent2:#6ab0ff;--gold:#ffcf5c;--bad:#ff6b6b;--warn:#ffa94d;--violet:#b58cff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f6f8fa;--panel:#ffffff;--panel2:#f0f3f6;--ink:#0f1720;--dim:#4d5b69;--faint:#8a97a4;--line:#dde3ea;--accent:#0e9f77;--accent2:#1f6fd1;--gold:#b7860b;--bad:#d23b3b;--warn:#c56a12;--violet:#7a4fd0}}
+:root[data-theme="light"]{--bg:#f6f8fa;--panel:#ffffff;--panel2:#f0f3f6;--ink:#0f1720;--dim:#4d5b69;--faint:#8a97a4;--line:#dde3ea;--accent:#0e9f77;--accent2:#1f6fd1;--gold:#b7860b;--bad:#d23b3b;--warn:#c56a12;--violet:#7a4fd0}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 40px}
+a{color:var(--accent2)}
+header{padding:22px 0 8px}
+h1{font-size:clamp(24px,5.5vw,40px);margin:0;font-weight:800;letter-spacing:.03em}h1 .x{color:var(--accent)}
+.tag{color:var(--dim);max-width:76ch;margin:6px 0 0;font-size:15px}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin-left:6px;vertical-align:middle}
+.pill.ok{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.pill.bad{color:var(--bad)}
+.modes{display:flex;gap:8px;margin:16px 0 10px;flex-wrap:wrap}
+button{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:#04241b;font-weight:700}
+button.on{border-color:var(--accent);color:var(--accent)}
+button.danger:hover{border-color:var(--bad);color:var(--bad)}
+input,select,textarea{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+textarea{width:100%;resize:vertical}
+.bar{display:flex;gap:10px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:thin}
+.dev{flex:0 0 auto;min-width:168px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;position:relative}
+.dev.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.dev .nm{font-weight:700;font-size:14px}.dev .tt{color:var(--dim);font-size:12px}
+.dev .dg{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:4px}
+.dev .net{position:absolute;top:8px;right:8px;font-size:11px;border-radius:12px;padding:1px 8px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+.dev .net.up{color:var(--accent)}.dev .net.down{color:var(--bad)}
+.dev .lk{font-size:11px;color:var(--warn)}
+.status{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:2px 0 12px;font-size:13px;color:var(--dim)}
+.badge{font-family:var(--mono);font-weight:700;font-size:12px;border-radius:6px;padding:3px 9px;border:1px solid var(--line)}
+.badge.ok{color:var(--accent);border-color:var(--accent)}.badge.warn{color:var(--warn);border-color:var(--warn)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:9px 12px;color:var(--dim)}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:900px){.grid.two{grid-template-columns:3fr 2fr}.grid.cols{grid-template-columns:repeat(5,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.panel h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.row>input[type=text],.row>input:not([type]){flex:1 1 160px}
+.item{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.item:last-child{border-bottom:none}.item .grow{flex:1;min-width:0;overflow-wrap:anywhere}
+.chip{font-size:11px;border:1px solid var(--line);border-radius:12px;padding:1px 8px;color:var(--dim);white-space:nowrap}
+.chip.todo{color:var(--warn)}.chip.doing{color:var(--accent2)}.chip.done{color:var(--accent)}
+.msgs{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.msg{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:14px;overflow-wrap:anywhere}
+.msg .who{font-size:12px;font-weight:700;color:var(--accent2)}
+.stage{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:90px}
+.stage h4{margin:0 0 6px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 8px;margin-bottom:6px;font-size:13px}
+.card .v{font-family:var(--mono);color:var(--gold);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line)}th{color:var(--dim);font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+.ok{color:var(--accent)}.bad{color:var(--bad)}.warn{color:var(--warn)}.dim{color:var(--dim)}
+.lock{border:1px dashed var(--warn);color:var(--warn);border-radius:10px;padding:14px;text-align:center}
+.log{max-height:260px;overflow:auto;font-family:var(--mono);font-size:12px}
+.log div{padding:3px 0;border-bottom:1px solid var(--line)}
+.foot{color:var(--faint);font-size:12.5px;margin-top:26px;line-height:1.7}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>SOVEREIGN<span class="x"> ENTERPRISE</span></h1>
+  <p class="tag">A company's whole operational layer — tasks, chat, CRM, documents, the books, the one-true-record and the people —
+    running on the employees' own devices, peer to peer. Every write is signed by the device that made it and checked before it is
+    read. No per-seat software. Nothing leaves the building. <span id="kstat" class="pill">booting the kernel…</span></p>
+</header>
+
+<div class="modes">
+  <button id="m-demo" class="on">Demo office · 5 devices</button>
+  <button id="m-real">Run your own company</button>
+  <a class="pill" href="whitepaper.html" style="text-decoration:none">The white paper →</a>
+</div>
+
+<section id="demo">
+  <div class="bar" id="devices"></div>
+  <div class="status">
+    <span id="conv" class="badge">…</span>
+    <span id="netinfo"></span>
+    <button id="attack" class="danger">Attack this device</button>
+    <button id="splitnet">Split the office network</button>
+    <button id="healnet">Heal the network</button>
+  </div>
+</section>
+
+<section id="real" class="hide">
+  <div class="panel" id="realbox"></div>
+  <div class="status"><span id="rconv" class="badge">…</span><span id="rinfo"></span></div>
+</section>
+
+<nav class="tabs" id="tabs"></nav>
+<main id="app"></main>
+
+<p class="foot">
+  Kernel-backed: this page imports <span class="mono">src/crdt · gate · canon · keys · node · vault · books · lease · sim</span> — the
+  same modules the test suite and the mutation witness prove in CI. Each device holds its own Ed25519 key and its own replica; the
+  company is a pure function of the set of signed writes a device holds, so devices that have seen the same writes hold the same
+  company, byte for byte, whatever order the network delivered them in.<br>
+  Source, receipts and the full design: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a>.
+  The entropy-guided design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd, Lumiea Systems Research Division
+  (ThunderStruck Services, LLC). Konomi — Thomas Frumkin.
+</p>
+</div>
+
+<script type="module">
+import { createNode, pull } from './src/node.mjs';
+import { fromSeed, generate, exportPriv, importPriv, sign } from './src/keys.mjs';
+import { sha256Bytes } from './src/sha256.mjs';
+import { canonical, utf8, toHex, fromHex } from './src/canon.mjs';
+import { sequence } from './src/crdt.mjs';
+import { leafHash, root, inclusionProof, verifyInclusion, consistencyProof, verifyConsistency, audit } from './src/vault.mjs';
+import { CHART, encodeLines, parseLines, validEntry, trialBalance, profitAndLoss, balanceSheet, gbp } from './src/books.mjs';
+import { decideLease, renew, seal, open, keyRing } from './src/lease.mjs';
+import { simulate } from './src/sim.mjs';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const short = (h) => (h ? h.slice(0, 8) : '—');
+const pad = (n, w = 6) => String(n).padStart(w, '0');
+// a new record id unique to this device: its next clock tick + its key prefix — two devices can never mint the same id
+const uid = (node, p) => p + pad(node.clock() + 1, 8) + '-' + node.pub.slice(0, 6);
+const TABS = ['Tasks', 'Chat', 'CRM', 'Docs', 'Books', 'Vault', 'People', 'Proof'];
+const SENSITIVE = new Set(['CRM', 'Books', 'People']);
+const LEASE_TTL = 60000, LEASE_WIN = 20000;
+
+// ── state ─────────────────────────────────────────────────────────────────────────────────────────
+let mode = 'demo';
+let tab = 'Tasks';
+const demo = { devices: [], sel: 0, online: [], leases: [], people: [], ring: keyRing(), gateLog: [] };
+const real = { node: null, me: null, chan: null, peers: new Set(), gateLog: [] };
+
+// ── the demo office ───────────────────────────────────────────────────────────────────────────────
+const STAFF = [
+  { name: 'Ava Okafor', title: 'Owner', role: 'owner' },
+  { name: 'Ben Hale', title: 'Finance lead', role: 'admin' },
+  { name: 'Cara Singh', title: 'Sales', role: 'staff', cols: ['crm', 'msg', 'tasks', 'docs'] },
+  { name: 'Dev Patel', title: 'Operations', role: 'staff', cols: ['tasks', 'msg', 'docs'] },
+  { name: 'Eli Moreau', title: 'Customer service', role: 'staff', cols: ['msg', 'tasks', 'crm'] },
+];
+
+async function syncAll(devs, online) {
+  let moved = 0;
+  for (let i = 0; i < devs.length; i++) for (let j = 0; j < devs.length; j++) {
+    if (i !== j && online[i] && online[j]) moved += await pull(devs[i], devs[j]);
+  }
+  return moved;
+}
+
+async function bootDemo() {
+  const keys = [];
+  for (let i = 0; i < STAFF.length; i++) keys.push(await fromSeed(sha256Bytes('sovereign-enterprise/demo-office/' + i)));
+  const G = keys[0].pub;
+  demo.devices = STAFF.map((p, i) => createNode({ keys: keys[i], genesis: G, name: p.name }));
+  demo.online = STAFF.map(() => true);
+  demo.people = STAFF.map((p, i) => ({ ...p, pub: keys[i].pub, keys: keys[i] }));
+  const [ava, ben, cara, dev, eli] = demo.devices;
+  await ava.grant('admin-ben', keys[1].pub, 'admin', ['*']);
+  await pull(ben, ava);
+  for (let i = 2; i < STAFF.length; i++) await ben.grant('staff-' + i, keys[i].pub, 'staff', STAFF[i].cols);
+  await syncAll(demo.devices, demo.online);
+
+  // the people directory — personal details sealed under per-person keys held by the owner (crypto-shreddable)
+  const priv = ['Flat 2, 14 Mill Lane, Leeds', '9 Rowan Close, York', '31 Station Rd, Hull', '5 Weir View, Ilkley', '77 Kirkgate, Otley'];
+  for (let i = 0; i < STAFF.length; i++) {
+    const k = await demo.ring.keyFor('p' + i);
+    await ava.put('people', 'p' + i, { name: STAFF[i].name, title: STAFF[i].title, device: keys[i].pub.slice(0, 16), privateSealed: await seal(k, priv[i], 'people/p' + i) });
+  }
+  await cara.put('tasks', 't1', { title: 'Send the Northwind proposal', owner: 'Cara', status: 'doing' });
+  await dev.put('tasks', 't2', { title: 'Book the van service', owner: 'Dev', status: 'todo' });
+  await eli.put('tasks', 't3', { title: 'Reply to the Harper complaint', owner: 'Eli', status: 'done' });
+  await ben.put('tasks', 't4', { title: 'File the VAT return', owner: 'Ben', status: 'todo' });
+  await postMsg(ava, 'Morning all — Northwind call at 11.');
+  await postMsg(cara, 'Proposal draft is in Docs, numbers from Ben please.');
+  await postMsg(eli, 'Harper sorted, refund approved.');
+  await cara.put('crm', 'c1', { name: 'Northwind Foods', contact: 'J. Ward', stage: 'proposal', value: 1840000, owner: 'Cara' });
+  await cara.put('crm', 'c2', { name: 'Harper & Co', contact: 'L. Harper', stage: 'won', value: 420000, owner: 'Cara' });
+  await eli.put('crm', 'c3', { name: 'Bright Dental', contact: 'Dr Okoye', stage: 'lead', value: 960000, owner: 'Eli' });
+  await cara.put('crm', 'c4', { name: 'Fenwick Joinery', contact: 'S. Fenwick', stage: 'qualified', value: 275000, owner: 'Cara' });
+  await syncAll(demo.devices, demo.online);
+  await cara.typeAt('docs', 'q4-plan', 0, 'Q4 plan: close Northwind, launch the service desk, hire nobody.');
+  await syncAll(demo.devices, demo.online);
+  await postEntry(ben, { date: '2026-10-01', memo: 'Opening capital', lines: [['1200', 2500000, 0], ['3000', 0, 2500000]] });
+  await postEntry(ben, { date: '2026-10-06', memo: 'Invoice Harper & Co', lines: [['1100', 504000, 0], ['4000', 0, 420000], ['2200', 0, 84000]] });
+  await postEntry(ben, { date: '2026-10-09', memo: 'Harper pays', lines: [['1200', 504000, 0], ['1100', 0, 504000]] });
+  await postEntry(ben, { date: '2026-10-15', memo: 'Office rent', lines: [['7100', 120000, 0], ['1200', 0, 120000]] });
+  await postEntry(ben, { date: '2026-10-20', memo: 'Frontier + voice limbs (per use)', lines: [['7510', 3800, 0], ['1200', 0, 3800]] });
+  await syncAll(demo.devices, demo.online);
+  await witnessHead(ava);
+  await syncAll(demo.devices, demo.online);
+  const now = Date.now();
+  demo.leases = STAFF.map(() => ({ issuedAt: now, ttl: LEASE_TTL }));
+}
+
+async function postMsg(node, body) {
+  return node.put('msg', 'm' + pad(node.clock() + 1, 10) + '-' + node.pub.slice(0, 6), { ch: 'general', body: String(body).slice(0, 1500), by: node.name });
+}
+
+// ── the books + the vault (finance sequences, the owner witnesses) ─────────────────────────────────
+function vaultState(node) {
+  const recs = node.list('vault').map((r) => ({ index: r.index, leaf: r.leaf, entry: r.entry }));
+  const heads = node.list('vault_head').map((h) => ({ size: h.size, root: h.root }));
+  const cos = node.list('vault_cosig').map((h) => ({ size: h.size, root: h.root, by: h.by }));
+  return { recs, heads, cos, a: audit(recs, heads) };
+}
+async function postEntry(node, entry) {
+  const v = validEntry(entry);
+  if (!v.ok) return v;
+  const id = uid(node, 'j');
+  const body = { date: entry.date, memo: String(entry.memo).slice(0, 200), lines: encodeLines(v.lines) };
+  let r = await node.put('journal', id, body);
+  if (!r.ok) return r;
+  const { a } = vaultState(node);
+  const leaf = leafHash(canonical({ id, ...body }));
+  const leaves = [...a.leaves, leaf];
+  await node.put('vault', 'v' + pad(a.size), { index: a.size, leaf, entry: id });
+  await node.put('vault_head', 'h' + pad(leaves.length), { size: leaves.length, root: root(leaves) });
+  return { ok: true };
+}
+async function witnessHead(node) {
+  const { a, heads } = vaultState(node);
+  const top = heads.sort((x, y) => y.size - x.size)[0];
+  if (!top || !a.ok) return { ok: false, reason: 'log does not audit' };
+  return node.put('vault_cosig', 'c' + pad(top.size) + '-' + node.pub.slice(0, 6), { size: top.size, root: top.root, by: node.name });
+}
+
+// ── rendering ─────────────────────────────────────────────────────────────────────────────────────
+function current() { return mode === 'demo' ? demo.devices[demo.sel] : real.node; }
+function leaseOf(i) { return mode === 'demo' ? decideLease(demo.leases[i], Date.now(), grantLive(demo.devices[i])) : { action: 'keep' }; }
+function grantLive(node) {
+  const v = node.view();
+  if (node.pub === node.genesis) return true;
+  const mine = v.roster.filter((r) => r.to === node.pub);
+  return mine.length > 0 && mine.some((r) => !r.revoked);
+}
+function nameOf(pub) {
+  const p = demo.people.find((x) => x.pub === pub);
+  if (p) return p.name;
+  return pub === (real.node && real.node.pub) ? 'you' : short(pub);
+}
+
+function renderDevices() {
+  const digests = demo.devices.map((d) => d.digest());
+  $('devices').innerHTML = demo.devices.map((d, i) => {
+    const L = leaseOf(i);
+    const locked = L.action === 'lock';
+    return `<div class="dev ${i === demo.sel ? 'sel' : ''}" data-i="${i}">
+      <span class="net ${demo.online[i] ? 'up' : 'down'}" data-net="${i}">${demo.online[i] ? 'online' : 'offline'}</span>
+      <div class="nm">${esc(STAFF[i].name)}</div><div class="tt">${esc(STAFF[i].title)}</div>
+      <div class="dg">replica ${short(digests[i])} · ${d.size()} writes</div>
+      ${locked ? '<div class="lk">lease expired — locked</div>' : grantLive(d) ? '' : '<div class="lk">grant revoked — lease running down</div>'}
+    </div>`;
+  }).join('');
+  const on = digests.filter((_, i) => demo.online[i]);
+  const conv = on.every((d) => d === on[0]);
+  const all = digests.every((d) => d === digests[0]);
+  $('conv').className = 'badge ' + (all ? 'ok' : 'warn');
+  $('conv').textContent = all ? 'ALL 5 DEVICES CONVERGED · ' + short(digests[0]) : conv ? `${on.length} online converged · ${digests.length - on.length} offline diverged` : 'syncing…';
+  $('netinfo').textContent = `${demo.online.filter(Boolean).length}/5 online · peer-to-peer anti-entropy every 0.7s`;
+}
+
+function renderTabs() {
+  $('tabs').innerHTML = TABS.map((t) => `<button class="${t === tab ? 'on' : ''}" data-tab="${t}">${t}</button>`).join('');
+}
+
+function render() {
+  if (mode === 'demo') renderDevices(); else renderReal();
+  renderTabs();
+  const node = current();
+  if (!node) { $('app').innerHTML = ''; return; }
+  const idx = mode === 'demo' ? demo.sel : 0;
+  if (SENSITIVE.has(tab) && leaseOf(idx).action === 'lock') {
+    $('app').innerHTML = `<div class="lock"><b>This device's data lease has expired.</b><br>Its grant was revoked, so it could not renew; the
+      ${esc(tab)} data cached here is sealed under a key it can no longer refresh. The company carries on everywhere else.</div>`;
+    return;
+  }
+  const focus = document.activeElement && document.activeElement.id;
+  const keep = focus === 'doc' ? { s: document.activeElement.selectionStart, e: document.activeElement.selectionEnd } : null;
+  $('app').innerHTML = VIEWS[tab](node);
+  if (keep && $('doc')) { $('doc').focus(); $('doc').setSelectionRange(keep.s, keep.e); }
+}
+
+const can = (node, c) => node.canWrite(c);
+const VIEWS = {
+  Tasks(node) {
+    const items = node.list('tasks');
+    const w = can(node, 'tasks');
+    return `<div class="panel"><h3>Tasks — ${items.length}</h3>
+      ${w ? `<div class="row"><input id="tt" placeholder="New task" maxlength="200"><button class="primary" data-act="task-add">Add</button></div>` : '<p class="dim">This device has no write scope on tasks.</p>'}
+      ${items.map((t) => `<div class="item"><span class="chip ${esc(t.status)}">${esc(t.status || 'todo')}</span>
+        <span class="grow">${esc(t.title)} <span class="dim">· ${esc(t.owner || '')}</span></span>
+        ${w ? `<button data-act="task-cycle" data-id="${esc(t.id)}">Next</button><button class="danger" data-act="task-del" data-id="${esc(t.id)}">Delete</button>` : ''}</div>`).join('') || '<p class="dim">No tasks.</p>'}
+    </div>`;
+  },
+  Chat(node) {
+    const msgs = node.list('msg');
+    const w = can(node, 'msg');
+    return `<div class="panel"><h3>#general — ${msgs.length} messages</h3>
+      <div class="msgs" id="msgs">${msgs.map((m) => `<div class="msg"><div class="who">${esc(m.by || '')}</div>${esc(m.body)}</div>`).join('')}</div>
+      ${w ? `<div class="row"><input id="mt" placeholder="Message the team" maxlength="1500"><button class="primary" data-act="msg-send">Send</button></div>` : '<p class="dim">No write scope on chat.</p>'}
+    </div>`;
+  },
+  CRM(node) {
+    const deals = node.list('crm');
+    const w = can(node, 'crm');
+    const stages = ['lead', 'qualified', 'proposal', 'won', 'lost'];
+    const pipe = deals.filter((d) => d.stage !== 'lost' && d.stage !== 'won').reduce((s, d) => s + (d.value || 0), 0);
+    return `<div class="panel"><h3>Pipeline — ${gbp(pipe)} open · ${gbp(deals.filter((d) => d.stage === 'won').reduce((s, d) => s + (d.value || 0), 0))} won</h3>
+      ${w ? `<div class="row"><input id="cn" placeholder="Company" maxlength="120"><input id="cc" placeholder="Contact" maxlength="120"><input id="cv" placeholder="Value £" inputmode="numeric" style="max-width:120px"><button class="primary" data-act="crm-add">Add lead</button></div>` : '<p class="dim">No write scope on the CRM.</p>'}
+      <div class="grid cols">${stages.map((s) => `<div class="stage"><h4>${s}</h4>${deals.filter((d) => d.stage === s).map((d) => `
+        <div class="card"><b>${esc(d.name)}</b><br><span class="dim">${esc(d.contact || '')}</span><br><span class="v">${gbp(d.value || 0)}</span>
+        ${w && s !== 'won' && s !== 'lost' ? `<div class="row" style="margin:6px 0 0"><button data-act="crm-next" data-id="${esc(d.id)}">Advance</button><button class="danger" data-act="crm-lose" data-id="${esc(d.id)}">Lost</button></div>` : ''}</div>`).join('')}</div>`).join('')}</div>
+    </div>`;
+  },
+  Docs(node) {
+    const w = can(node, 'docs');
+    return `<div class="panel"><h3>Q4 plan — live co-edit (RGA text, no server)</h3>
+      <textarea id="doc" rows="9" ${w ? '' : 'readonly'}>${esc(node.text('docs', 'q4-plan'))}</textarea>
+      <p class="dim" style="font-size:12px;margin:8px 0 0">${w ? 'Type here, take this device offline, type on another, reconnect — both edits survive, in one order, on every device.' : 'This device has read access only.'}</p>
+    </div>`;
+  },
+  Books(node) {
+    const entries = node.list('journal').map((j) => ({ id: j.id, date: j.date, memo: j.memo, lines: j.lines }));
+    const tb = trialBalance(entries);
+    const pl = profitAndLoss(entries);
+    const bs = balanceSheet(entries);
+    const w = can(node, 'journal') && can(node, 'vault');
+    return `<div class="grid two"><div class="panel"><h3>Journal — ${entries.length} entries</h3>
+      ${w ? `<div class="row"><select id="jt"><option value="sale">Invoice a sale (+20% VAT)</option><option value="paid">Customer pays an invoice</option><option value="rent">Pay rent</option><option value="limb">Per-use AI limb</option></select>
+        <input id="ja" placeholder="Net £" inputmode="numeric" style="max-width:120px"><button class="primary" data-act="post">Post + sequence</button></div>` : '<p class="dim">Only finance posts to the books on this device.</p>'}
+      <table><tr><th>Date</th><th>Memo</th><th class="n">Amount</th></tr>${entries.map((e) => { const v = validEntry(e); return `<tr><td>${esc(e.date)}</td><td>${esc(e.memo)}</td><td class="n">${v.ok ? gbp(v.total) : '<span class="bad">invalid</span>'}</td></tr>`; }).join('')}</table>
+    </div><div class="panel"><h3>Trial balance</h3>
+      <table><tr><th>Account</th><th class="n">Balance</th></tr>${tb.rows.map((r) => `<tr><td>${esc(r.code)} ${esc(r.name)}</td><td class="n">${gbp(r.balance)}</td></tr>`).join('')}
+      <tr><th>Debits = credits</th><th class="n ${tb.balanced ? 'ok' : 'bad'}">${gbp(tb.dr)} ${tb.balanced ? '✓' : '✗'}</th></tr></table>
+      <p style="margin:12px 0 4px"><b>P&amp;L</b> income ${gbp(pl.income)} · costs ${gbp(pl.expense)} · <b class="${pl.profit >= 0 ? 'ok' : 'warn'}">${gbp(pl.profit)}</b></p>
+      <p style="margin:0"><b>Balance sheet</b> assets ${gbp(bs.assets)} = liabilities ${gbp(bs.liabilities)} + equity ${gbp(bs.equity)} + profit ${gbp(bs.profit)} <b class="${bs.balanced ? 'ok' : 'bad'}">${bs.balanced ? '✓ balances' : '✗'}</b></p>
+    </div></div>`;
+  },
+  Vault(node) {
+    const { recs, heads, cos, a } = vaultState(node);
+    const top = heads.slice().sort((x, y) => y.size - x.size)[0];
+    const first = heads.slice().sort((x, y) => x.size - y.size)[0];
+    let inc = null, con = null;
+    if (top && a.leaves.length) {
+      const m = a.leaves.length - 1;
+      inc = verifyInclusion(a.leaves[m], m, top.size, inclusionProof(m, a.leaves.slice(0, top.size)), top.root);
+      if (first && first.size < top.size) con = verifyConsistency(first.size, top.size, first.root, top.root, consistencyProof(first.size, a.leaves.slice(0, top.size)));
+    }
+    return `<div class="grid two"><div class="panel"><h3>The one-true-record — a transparency log, not a blockchain</h3>
+      <p>Finance sequences each posted entry into an append-only Merkle log (RFC 9162, the Certificate Transparency design). Any device,
+      or anyone outside the company, can check an entry is in the books and that the books only ever grew.</p>
+      <table><tr><td>Entries in the log</td><td class="n">${a.size}</td></tr>
+      <tr><td>Rebuilt here, every tree head matches</td><td class="n ${a.ok ? 'ok' : 'bad'}">${a.ok ? '✓' : '✗ ' + a.bad.length + ' bad'}</td></tr>
+      <tr><td>Latest root</td><td class="n mono">${short(a.root)}…</td></tr>
+      <tr><td>Inclusion proof (latest entry, hashes only)</td><td class="n ${inc ? 'ok' : 'warn'}">${inc === null ? '—' : inc ? '✓ verified' : '✗'}</td></tr>
+      <tr><td>Consistency proof (first head → latest)</td><td class="n ${con === false ? 'bad' : 'ok'}">${con === null ? '—' : con ? '✓ only appended' : '✗ rewritten'}</td></tr>
+      <tr><td>Witness co-signatures</td><td class="n">${cos.length}</td></tr></table>
+      ${can(node, 'vault_cosig') ? '<div class="row" style="margin-top:10px"><button data-act="witness">Witness the latest head</button></div>' : ''}
+    </div><div class="panel"><h3>Leaves</h3><div class="log">${recs.sort((x, y) => x.index - y.index).map((r) => `<div>#${r.index} ${esc(r.entry)} · ${short(r.leaf)}</div>`).join('')}</div></div></div>`;
+  },
+  People(node) {
+    const v = node.view();
+    const ppl = node.list('people');
+    const admin = can(node, null);
+    const isOwner = node.pub === node.genesis;
+    return `<div class="grid two"><div class="panel"><h3>The role tree — owner → admins → staff</h3>
+      <table><tr><th>Who</th><th>Role</th><th>Scope</th><th></th></tr>
+      <tr><td>${esc(nameOf(node.genesis))}</td><td>owner</td><td>everything</td><td></td></tr>
+      ${v.roster.map((r) => `<tr><td>${esc(nameOf(r.to))}</td><td>${esc(r.role)}</td><td class="mono">${esc(r.cols.join(', '))}</td>
+        <td>${r.revoked ? '<span class="warn">revoked</span>' : admin && r.role !== 'admin' ? `<button class="danger" data-act="revoke" data-g="${esc(r.grant)}" data-to="${esc(r.to)}">Revoke</button>` : ''}</td></tr>`).join('')}</table>
+      ${mode === 'real' && admin ? `<div class="row" style="margin-top:10px"><input id="gk" placeholder="Teammate's device key (64 hex)" maxlength="64"><select id="gr"><option value="staff">staff</option>${isOwner ? '<option value="admin">admin</option>' : ''}</select><button class="primary" data-act="grant">Grant</button></div>` : ''}
+    </div><div class="panel"><h3>Directory — personal details sealed per person</h3>
+      ${ppl.map((p) => `<div class="item"><span class="grow"><b>${esc(p.name)}</b> <span class="dim">${esc(p.title)}</span><br>
+        <span class="mono dim" data-sealed="${esc(p.id)}">${p.privateSealed ? 'sealed · ' + short(p.privateSealed) + '…' : '—'}</span></span>
+        ${mode === 'demo' && isOwner ? `<button data-act="reveal" data-id="${esc(p.id)}">Reveal</button><button class="danger" data-act="erase" data-id="${esc(p.id)}">Erase</button>` : ''}</div>`).join('') || '<p class="dim">No directory entries.</p>'}
+      <p class="dim" style="font-size:12px">Erase destroys the person's key: every copy of their sealed details, on every device, goes dark at once —
+      while the record, the history and the vault all still verify.</p></div></div>`;
+  },
+  Proof(node) {
+    const v = node.view();
+    const devs = mode === 'demo' ? demo.devices : [real.node];
+    const log = mode === 'demo' ? demo.gateLog : real.gateLog;
+    return `<div class="grid two"><div class="panel"><h3>This device's replica</h3>
+      <table><tr><td>Signed writes held</td><td class="n">${node.size()}</td></tr>
+      <tr><td>Applied to the company</td><td class="n">${v.report.applied}</td></tr>
+      <tr><td>Refused as unauthorised (signed, but no grant)</td><td class="n">${v.report.unauthorized}</td></tr>
+      <tr><td>Equivocating writers flagged</td><td class="n ${v.report.equivocators.length ? 'warn' : ''}">${v.report.equivocators.length}</td></tr>
+      <tr><td>Lamport clock</td><td class="n">${node.clock()}</td></tr>
+      <tr><td>Company digest (SHA-256 of the canonical state)</td><td class="n mono">${short(node.digest())}…</td></tr></table>
+      <h3 style="margin-top:14px">Every device</h3><table>${devs.map((d) => `<tr><td>${esc(d.name || 'this device')}</td><td class="n mono">${short(d.digest())}</td></tr>`).join('')}</table>
+      <div class="row" style="margin-top:12px"><button class="primary" data-act="sim">Run the hostile-network simulation</button></div>
+      <pre class="mono" id="simout" style="white-space:pre-wrap;margin:0"></pre>
+    </div><div class="panel"><h3>The gate — refused at the door</h3>
+      <div class="log">${log.slice(-60).reverse().map((x) => `<div>${esc(x)}</div>`).join('') || '<span class="dim">Nothing refused yet — press "Attack this device".</span>'}</div></div></div>`;
+  },
+};
+
+// ── actions ───────────────────────────────────────────────────────────────────────────────────────
+async function act(a, el) {
+  const node = current();
+  if (!node) return;
+  const val = (id) => ($(id) ? $(id).value.trim() : '');
+  if (a === 'task-add' && val('tt')) await node.put('tasks', uid(node, 't'), { title: val('tt').slice(0, 200), owner: node.name.split(' ')[0] || 'me', status: 'todo' });
+  else if (a === 'task-cycle') { const t = node.list('tasks').find((x) => x.id === el.dataset.id); const n = { todo: 'doing', doing: 'done', done: 'todo' }[t && t.status] || 'doing'; await node.put('tasks', el.dataset.id, { status: n }); }
+  else if (a === 'task-del') await node.del('tasks', el.dataset.id);
+  else if (a === 'msg-send' && val('mt')) await postMsg(node, val('mt'));
+  else if (a === 'crm-add' && val('cn')) await node.put('crm', uid(node, 'c'), { name: val('cn').slice(0, 120), contact: val('cc').slice(0, 120), stage: 'lead', value: Math.max(0, Math.round((parseFloat(val('cv')) || 0) * 100)), owner: node.name.split(' ')[0] || 'me' });
+  else if (a === 'crm-next') { const d = node.list('crm').find((x) => x.id === el.dataset.id); const n = { lead: 'qualified', qualified: 'proposal', proposal: 'won' }[d && d.stage]; if (n) await node.put('crm', el.dataset.id, { stage: n }); }
+  else if (a === 'crm-lose') await node.put('crm', el.dataset.id, { stage: 'lost' });
+  else if (a === 'post') {
+    const net = Math.round((parseFloat(val('ja')) || 0) * 100);
+    if (net > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      const T = {
+        sale: { memo: 'Invoice', lines: [['1100', net + Math.round(net * 0.2), 0], ['4000', 0, net], ['2200', 0, Math.round(net * 0.2)]] },
+        paid: { memo: 'Customer payment', lines: [['1200', net, 0], ['1100', 0, net]] },
+        rent: { memo: 'Rent', lines: [['7100', net, 0], ['1200', 0, net]] },
+        limb: { memo: 'Per-use AI limb', lines: [['7510', net, 0], ['1200', 0, net]] },
+      }[val('jt')];
+      await postEntry(node, { date: today, ...T });
+    }
+  }
+  else if (a === 'witness') await witnessHead(node);
+  else if (a === 'revoke') {
+    const max = Math.max(0, ...node.hashes().map((h) => { try { const e = JSON.parse(new TextDecoder().decode(node.bytes(h))); return e.from === el.dataset.to ? e.seq : 0; } catch { return 0; } }));
+    await node.revoke(el.dataset.g, max);
+  }
+  else if (a === 'grant') { const k = val('gk').toLowerCase(); if (/^[0-9a-f]{64}$/.test(k)) await node.grant(uid(node, 'g'), k, val('gr') || 'staff', val('gr') === 'admin' ? ['*'] : ['tasks', 'msg', 'docs', 'crm']); }
+  else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await demo.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = t === null ? 'erased — key destroyed, unreadable on every device' : t; return; }
+  else if (a === 'erase') { demo.ring.shred(el.dataset.id); const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = 'erased — key destroyed, unreadable on every device'; return; }
+  else if (a === 'sim') { $('simout').textContent = 'running 8 devices through partitions, drops, duplicates and attacks…'; const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); $('simout').textContent = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); return; }
+  render();
+}
+
+async function attack(node) {
+  const log = mode === 'demo' ? demo.gateLog : real.gateLog;
+  const own = node.hashes();
+  const someone = mode === 'demo' ? demo.people[3].keys : null;
+  const stranger = await generate();
+  const shots = [];
+  const body = { from: node.genesis, op: { k: 'put', c: 'crm', id: 'forged', f: { name: 'pwned' }, l: 3 }, seq: 999999, v: 1 };
+  shots.push(['forged signature', utf8(canonical({ ...body, sig: 'ab'.repeat(64) }))]);
+  if (own.length) { const b = node.bytes(own[own.length - 1]).slice(); b[Math.floor(b.length / 2)] ^= 4; shots.push(['bit-flipped write', b]); }
+  if (own.length) shots.push(['replayed write', node.bytes(own[0])]);
+  if (own.length) shots.push(['re-wrapped (non-canonical)', utf8('{ ' + new TextDecoder().decode(node.bytes(own[0])).slice(1))]);
+  shots.push(['oversize', utf8('{' + 'x'.repeat(5000))]);
+  shots.push(['junk bytes', globalThis.crypto.getRandomValues(new Uint8Array(40))]);
+  const sb = { from: stranger.pub, op: { k: 'put', c: 'tasks', id: 'intruder', f: { title: 'free money' }, l: 9 }, seq: 1, v: 1 };
+  shots.push(['stranger, validly signed', utf8(canonical({ ...sb, sig: await sign(stranger, utf8(canonical(sb))) }))]);
+  if (someone) {
+    // a stolen insider key signs TWO different writes for one fresh sequence slot: the company keeps exactly one,
+    // the same one on every device, and flags the writer as an equivocator
+    const slot = 500000 + Math.floor(Math.random() * 400000);
+    for (const fork of ['A', 'B']) {
+      const eb = { from: someone.pub, op: { k: 'put', c: 'tasks', id: 'fork', f: { title: 'fork ' + fork }, l: 2 }, seq: slot, v: 1 };
+      shots.push(['insider equivocation ' + fork, utf8(canonical({ ...eb, sig: await sign(someone, utf8(canonical(eb))) }))]);
+    }
+  }
+  for (const [label, bytes] of shots) {
+    const r = await node.receive(bytes);
+    log.push(`${new Date().toLocaleTimeString()} ${node.name || 'you'} ← ${label}: ${r.ok ? 'admitted to the store — the company refuses to apply it (no grant / equivocation flagged)' : 'REFUSED · ' + r.reason}`);
+  }
+  tab = 'Proof';
+  render();
+}
+
+// Docs: map textarea edits to RGA ops (diff the common prefix/suffix)
+document.addEventListener('input', async (e) => {
+  if (e.target.id !== 'doc') return;
+  const node = current();
+  const before = node.text('docs', 'q4-plan');
+  const after = e.target.value;
+  let p = 0;
+  while (p < before.length && p < after.length && before[p] === after[p]) p++;
+  let s = 0;
+  while (s < before.length - p && s < after.length - p && before[before.length - 1 - s] === after[after.length - 1 - s]) s++;
+  const removed = before.length - p - s;
+  const added = after.slice(p, after.length - s);
+  if (removed > 0) await node.eraseAt('docs', 'q4-plan', p, removed);
+  if (added) await node.typeAt('docs', 'q4-plan', p, added);
+});
+
+document.addEventListener('click', async (e) => {
+  const t = e.target;
+  if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
+  if (t.dataset.net !== undefined) { const i = +t.dataset.net; demo.online[i] = !demo.online[i]; render(); return; }
+  const dev = t.closest('.dev');
+  if (dev && mode === 'demo') { demo.sel = +dev.dataset.i; render(); return; }
+  if (t.dataset.act) { t.disabled = true; try { await act(t.dataset.act, t); } finally { t.disabled = false; } }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const map = { tt: 'task-add', mt: 'msg-send', cn: 'crm-add', ja: 'post' };
+  if (map[e.target.id]) act(map[e.target.id], e.target);
+});
+$('attack').onclick = () => attack(current());
+$('splitnet').onclick = () => { demo.online = demo.online.map((_, i) => i < 2); render(); };
+$('healnet').onclick = () => { demo.online = demo.online.map(() => true); render(); };
+$('m-demo').onclick = () => { mode = 'demo'; $('m-demo').classList.add('on'); $('m-real').classList.remove('on'); $('demo').classList.remove('hide'); $('real').classList.add('hide'); render(); };
+$('m-real').onclick = async () => { mode = 'real'; $('m-real').classList.add('on'); $('m-demo').classList.remove('on'); $('demo').classList.add('hide'); $('real').classList.remove('hide'); if (!real.node) await bootReal(); render(); };
+if (new URLSearchParams(location.hash.slice(1)).get('join')) setTimeout(() => $('m-real').click(), 0);
+
+// ── run your own company: this tab is your device; other tabs join over BroadcastChannel ───────────
+// A founding tab keeps its identity in localStorage; a tab opened from an invite link keeps its OWN identity in
+// tab-scoped sessionStorage — so a teammate opening the link in another tab is a genuinely separate device.
+const JOIN = new URLSearchParams(location.hash.slice(1)).get('join');
+const STORE = () => { try { return JOIN ? sessionStorage : localStorage; } catch { return null; } };
+const LS = (k, v) => { try { const s = STORE(); if (!s) return null; if (v === undefined) return s.getItem(k); if (v === null) s.removeItem(k); else s.setItem(k, v); } catch { return null; } };
+async function bootReal() {
+  const joinG = JOIN;
+  let priv = LS('se.priv');
+  real.me = priv ? await importPriv(priv) : await generate();
+  if (!priv) LS('se.priv', await exportPriv(real.me));
+  let G = LS('se.genesis');
+  if (joinG && /^[0-9a-f]{64}$/.test(joinG) && joinG !== G) { G = joinG; LS('se.genesis', G); LS('se.env', null); }
+  if (!G) return;
+  startReal(G);
+}
+async function startReal(G) {
+  real.node = createNode({ keys: real.me, genesis: G, name: G === real.me.pub ? 'Owner' : 'Teammate ' + real.me.pub.slice(0, 4) });
+  let saved = [];
+  try { saved = JSON.parse(LS('se.env') || '[]'); } catch { saved = []; }
+  for (const hex of saved) { try { await real.node.receive(fromHex(hex)); } catch { /* the gate already refused it */ } }
+  real.node.onChange((r) => {
+    const b = real.node.bytes(r.hash);
+    try { const s = JSON.parse(LS('se.env') || '[]'); s.push(toHex(b)); LS('se.env', JSON.stringify(s.slice(-20000))); } catch { /* storage full: peers still hold the copy */ }
+    if (real.chan) real.chan.postMessage({ t: 'env', hex: toHex(b) });
+  });
+  if ('BroadcastChannel' in self) {
+    real.chan = new BroadcastChannel('sovereign-enterprise:' + G.slice(0, 24));
+    real.chan.onmessage = async (m) => {
+      const d = m.data || {};
+      if (d.t === 'env' && typeof d.hex === 'string' && d.hex.length <= 8192) { const r = await real.node.receive(fromHex(d.hex)); if (!r.ok && r.reason !== 'replay') real.gateLog.push(`${new Date().toLocaleTimeString()} tab → REFUSED · ${r.reason}`); render(); }
+      else if ((d.t === 'hello' || d.t === 'have') && Array.isArray(d.have)) {
+        // set reconciliation: send every signed write the other tab lacks; answer a hello with our own list
+        if (typeof d.from === 'string') real.peers.add(d.from);
+        const theirs = new Set(d.have);
+        for (const b of real.node.give(real.node.have().filter((h) => !theirs.has(h)))) real.chan.postMessage({ t: 'env', hex: toHex(b) });
+        if (d.t === 'hello') real.chan.postMessage({ t: 'have', from: real.me.pub, have: real.node.have() });
+        render();
+      }
+    };
+    real.chan.postMessage({ t: 'hello', from: real.me.pub, have: real.node.have() });
+  }
+}
+function renderReal() {
+  const box = $('realbox');
+  if (!real.node) {
+    box.innerHTML = `<h3 style="margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)">Run your own company</h3>
+      <p>This browser tab becomes a device in your company. Its Ed25519 key is made here and never leaves it. Found a company and you are the owner;
+      share the invite link and every tab that opens it (same machine, today — WebRTC between machines is the next layer) joins and syncs peer to peer.</p>
+      <div class="row"><button class="primary" id="found">Found a company on this device</button></div>`;
+    $('found').onclick = async () => { LS('se.genesis', real.me.pub); LS('se.env', null); await startReal(real.me.pub); render(); };
+    $('rconv').textContent = 'no company yet';
+    return;
+  }
+  const n = real.node;
+  const owner = n.pub === n.genesis;
+  const link = location.origin + location.pathname + '#join=' + n.genesis;
+  box.innerHTML = `<div class="row"><b>${owner ? 'You own this company.' : 'You have joined a company.'}</b>
+    <span class="dim">Your device key:</span><span class="mono">${esc(n.pub)}</span></div>
+    <div class="row"><span class="dim">Invite link:</span><input value="${esc(link)}" readonly style="flex:1 1 300px"><button id="copy">Copy</button>
+    <button class="danger" id="leave">Leave / reset this device</button></div>
+    ${!owner && !n.canWrite('tasks') ? '<p class="warn" style="margin:4px 0 0">Waiting for a grant — send your device key above to the owner or an admin; they grant you in People.</p>' : ''}`;
+  $('copy').onclick = () => navigator.clipboard && navigator.clipboard.writeText(link);
+  $('leave').onclick = () => { LS('se.genesis', null); LS('se.env', null); LS('se.priv', null); location.href = location.pathname; };
+  $('rconv').className = 'badge ok';
+  $('rconv').textContent = `replica ${short(n.digest())} · ${n.size()} signed writes`;
+  $('rinfo').textContent = `${real.peers.size} other tab${real.peers.size === 1 ? '' : 's'} connected · stored on this device only`;
+}
+
+// ── the heartbeat: anti-entropy between online devices + data leases ──────────────────────────────
+let busy = false;
+setInterval(async () => {
+  if (busy || mode !== 'demo' || !demo.devices.length) return;
+  busy = true;
+  try {
+    const moved = await syncAll(demo.devices, demo.online);
+    const now = Date.now();
+    let leaseChange = false;
+    demo.devices.forEach((d, i) => {
+      const L = decideLease(demo.leases[i], now, grantLive(d), LEASE_WIN);
+      if (L.action === 'renew') { const r = renew(demo.leases[i], now, grantLive(d)); if (r) demo.leases[i] = r; }
+      if (L.action === 'lock') leaseChange = true;
+    });
+    const typing = document.activeElement && document.activeElement.tagName === 'INPUT';
+    if ((moved || leaseChange) && !typing) render(); else if (moved) renderDevices();
+  } finally { busy = false; }
+}, 700);
+
+(async () => {
+  try {
+    await bootDemo();
+    $('kstat').textContent = 'kernel live';
+    $('kstat').className = 'pill ok';
+    render();
+  } catch (e) {
+    $('kstat').textContent = 'kernel error: ' + e.message;
+    $('kstat').className = 'pill bad';
+  }
+})();
+</script>
+</body>
+</html>

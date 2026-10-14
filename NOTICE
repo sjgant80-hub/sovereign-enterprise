@@ -1,0 +1,20 @@
+SOVEREIGN ENTERPRISE — credits and provenance
+
+The spine (canonical envelopes, the verify-before-parse gate, the order-independent materialiser with its role tree,
+RGA text, the transparency-log vault, double-entry books, data leases and crypto-shredding, the node, the
+deterministic simulator, the AI-native office cost kernel), the live company and the white paper are original to
+this build and MIT licensed.
+
+Standards implemented: Ed25519 (RFC 8032) via WebCrypto; SHA-256 (FIPS 180-4); Merkle transparency logs with
+inclusion and consistency proofs (RFC 6962 / RFC 9162); RGA sequence CRDT (Roh et al., 2011); observed-remove sets
+and last-writer-wins registers (Shapiro et al., 2011).
+
+The design lens the estate builds in — entropy-guided regulation (the Guided Entropy Principle), weighted
+information pruning (WIPER), behavioural entropy signatures (BES) and dual-map checking — is the work of
+GARY W. FLOYD, Lumiea Systems Research Division (a subsidiary of ThunderStruck Services, LLC), New Caney, Texas.
+
+The compression and codec lineage the estate builds on — Konomi — is Thomas Frumkin's.
+
+External figures in the white paper are cited in data/basis.json with their sources: ONS, HMRC (gov.uk), The
+Pensions Regulator, DESNZ, ECB, Salesforce, Microsoft, Anthropic, ElevenLabs, NVIDIA, LMSYS, Apple and the UK
+retailers named there. The office in the white paper is modelled, not a client.

@@ -1,0 +1,161 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { validOp, inspect, admit, MAX_BYTES, L_MAX } from '../src/gate.mjs';
+import { canonical, utf8 } from '../src/canon.mjs';
+import { fromSeed, sign } from '../src/keys.mjs';
+import { sha256Bytes, sha256 } from '../src/sha256.mjs';
+
+const H = 'a'.repeat(64);
+const TAG = H + '.1';
+const put = (o = {}) => ({ k: 'put', c: 'tasks', id: 't1', f: { title: 'x' }, l: 1, ...o });
+
+test('put: valid shapes and every boundary', () => {
+  assert.equal(validOp(put()), true);
+  const f32 = {}; for (let i = 0; i < 32; i++) f32['f' + i] = i;
+  assert.equal(validOp(put({ f: f32 })), true);
+  const f33 = { ...f32, g: 1 };
+  assert.equal(validOp(put({ f: f33 })), false);
+  assert.equal(validOp(put({ f: {} })), false);
+  assert.equal(validOp(put({ f: ['x'] })), false);
+  assert.equal(validOp(put({ f: 'x' })), false);
+  assert.equal(validOp(put({ f: null })), false);
+  assert.equal(validOp(put({ f: { t: 'x'.repeat(2000) } })), true);
+  assert.equal(validOp(put({ f: { t: 'x'.repeat(2001) } })), false);
+  assert.equal(validOp(put({ f: { t: null, u: true, v: -5 } })), true);
+  assert.equal(validOp(put({ f: { t: 1.5 } })), false);
+  assert.equal(validOp(put({ f: { t: [1] } })), false);
+  assert.equal(validOp(put({ f: { t: {} } })), false);
+  assert.equal(validOp(put({ f: { id: 'x' } })), false);          // 'id' is reserved
+  assert.equal(validOp(put({ f: { Title: 'x' } })), false);       // fields start lowercase
+  assert.equal(validOp(put({ f: { __proto__x: 1 } })), false);
+  assert.equal(validOp(put({ c: 'Tasks' })), false);
+  assert.equal(validOp(put({ c: '_x' })), false);
+  assert.equal(validOp(put({ c: 'a'.repeat(32) })), true);
+  assert.equal(validOp(put({ c: 'a'.repeat(33) })), false);
+  assert.equal(validOp(put({ id: '__proto__' })), false);
+  assert.equal(validOp(put({ id: 'A'.repeat(64) })), true);
+  assert.equal(validOp(put({ id: 'A'.repeat(65) })), false);
+  assert.equal(validOp(put({ id: 'a b' })), false);
+  assert.equal(validOp(put({ l: 0 })), false);
+  assert.equal(validOp(put({ l: L_MAX })), true);
+  assert.equal(validOp(put({ l: L_MAX + 1 })), false);
+  assert.equal(validOp(put({ l: 1.5 })), false);
+  assert.equal(validOp({ ...put(), extra: 1 }), false);
+  const { f, ...noF } = put();
+  assert.equal(validOp(noF), false);
+});
+
+test('del: tags must be 1..256 well-formed tags', () => {
+  const del = (o = {}) => ({ k: 'del', c: 'tasks', id: 't1', tags: [TAG], l: 2, ...o });
+  assert.equal(validOp(del()), true);
+  assert.equal(validOp(del({ tags: [] })), false);
+  assert.equal(validOp(del({ tags: new Array(256).fill(TAG) })), true);
+  assert.equal(validOp(del({ tags: new Array(257).fill(TAG) })), false);
+  assert.equal(validOp(del({ tags: [H + '.0'] })), false);
+  assert.equal(validOp(del({ tags: ['x.1'] })), false);
+  assert.equal(validOp(del({ tags: TAG })), false);
+  assert.equal(validOp(del({ tags: [5] })), false);
+});
+
+test('grant / revoke', () => {
+  const g = (o = {}) => ({ k: 'grant', id: 'g1', to: H, role: 'staff', cols: ['tasks'], l: 1, ...o });
+  assert.equal(validOp(g()), true);
+  assert.equal(validOp(g({ cols: ['*'] })), true);
+  assert.equal(validOp(g({ cols: [] })), false);
+  assert.equal(validOp(g({ cols: new Array(32).fill('a') })), true);
+  assert.equal(validOp(g({ cols: new Array(33).fill('a') })), false);
+  assert.equal(validOp(g({ cols: ['Bad'] })), false);
+  assert.equal(validOp(g({ cols: 'tasks' })), false);
+  assert.equal(validOp(g({ to: 'A'.repeat(64) })), false);
+  assert.equal(validOp(g({ role: 'Staff' })), false);
+  assert.equal(validOp(g({ role: 'a'.repeat(24) })), true);
+  assert.equal(validOp(g({ role: 'a'.repeat(25) })), false);
+  const r = (o = {}) => ({ k: 'revoke', id: 'g1', cut: 0, l: 3, ...o });
+  assert.equal(validOp(r()), true);
+  assert.equal(validOp(r({ cut: -1 })), false);
+  assert.equal(validOp(r({ cut: 1.2 })), false);
+  assert.equal(validOp(r({ id: '-bad' })), false);
+});
+
+test('ins / rm (RGA)', () => {
+  const ins = (o = {}) => ({ k: 'ins', c: 'docs', id: 'd1', at: '^', ch: 'a', l: 1, ...o });
+  assert.equal(validOp(ins()), true);
+  assert.equal(validOp(ins({ at: TAG })), true);
+  assert.equal(validOp(ins({ at: 'x' })), false);
+  assert.equal(validOp(ins({ at: 5 })), false);
+  assert.equal(validOp(ins({ ch: '' })), false);
+  assert.equal(validOp(ins({ ch: 'x'.repeat(64) })), true);
+  assert.equal(validOp(ins({ ch: 'x'.repeat(65) })), false);
+  assert.equal(validOp(ins({ ch: 7 })), false);
+  const rm = (o = {}) => ({ k: 'rm', c: 'docs', id: 'd1', e: TAG, l: 2, ...o });
+  assert.equal(validOp(rm()), true);
+  assert.equal(validOp(rm({ e: '^' })), false);
+});
+
+test('unknown kinds and non-objects are rejected', () => {
+  for (const x of [null, undefined, 1, 'put', [], { k: 'nope' }, { k: 'put' }]) assert.equal(validOp(x), false);
+});
+
+// ── inspect: the synchronous gate ──
+const env = (o = {}) => ({ from: H, op: put(), seq: 1, sig: 'b'.repeat(128), v: 1, ...o });
+const enc = (o) => utf8(canonical(o));
+
+test('inspect accepts a canonical envelope and returns the signed body', () => {
+  const r = inspect(enc(env()));
+  assert.equal(r.ok, true);
+  assert.equal(r.body, canonical({ from: H, op: put(), seq: 1, v: 1 }));
+  assert.equal(r.env.seq, 1);
+});
+
+test('inspect rejects, each with its reason, in gate order', () => {
+  assert.equal(inspect('x').reason, 'not-bytes');
+  assert.equal(inspect(new Uint8Array(0)).reason, 'size');
+  assert.equal(inspect(new Uint8Array(MAX_BYTES + 1).fill(123)).reason, 'size');
+  assert.equal(inspect(new Uint8Array([0xff])).reason, 'utf8');
+  assert.equal(inspect(utf8('[1]')).reason, 'magic');
+  assert.equal(inspect(utf8('{bad')).reason, 'json');
+  assert.equal(inspect(utf8('{"a":1}')).reason, 'envelope');
+  assert.equal(inspect(enc({ ...env(), x: 1 })).reason, 'envelope');
+  const { v, ...noV } = env();
+  assert.equal(inspect(enc({ ...noV, w: 1 })).reason, 'envelope');   // right count, wrong key name
+  assert.equal(inspect(enc(env({ v: 2 }))).reason, 'version');
+  assert.equal(inspect(enc(env({ from: 'zz' }))).reason, 'from');
+  assert.equal(inspect(enc(env({ seq: 0 }))).reason, 'seq');
+  assert.equal(inspect(enc(env({ sig: 'b'.repeat(127) }))).reason, 'sig-shape');
+  assert.equal(inspect(enc(env({ op: { k: 'nope' } }))).reason, 'schema');
+  assert.equal(inspect(utf8(' ' + canonical(env()))).reason, 'magic');
+  assert.equal(inspect(utf8('{ ' + canonical(env()).slice(1))).reason, 'non-canonical');
+  const swapped = '{"op":' + canonical(put()) + ',"from":"' + H + '","seq":1,"sig":"' + 'b'.repeat(128) + '","v":1}';
+  assert.equal(inspect(utf8(swapped)).reason, 'non-canonical');
+});
+
+test('inspect: seq must be a positive safe integer; a float is non-canonical-or-rejected', () => {
+  assert.equal(inspect(utf8(canonical(env()).replace('"seq":1', '"seq":1.0'))).reason, 'non-canonical');
+  assert.equal(inspect(utf8(canonical(env()).replace('"seq":1', '"seq":-1'))).reason, 'seq');
+  assert.equal(inspect(utf8(canonical(env()).replace('"seq":1', '"seq":"1"'))).reason, 'seq');
+});
+
+test('inspect: exactly MAX_BYTES is allowed through the size check', () => {
+  const r = inspect(new Uint8Array(MAX_BYTES).fill(123));
+  assert.notEqual(r.reason, 'size');
+});
+
+// ── admit: replay + signature ──
+test('admit: valid signature in, replay out, forged out', async () => {
+  const k = await fromSeed(sha256Bytes('gate-test'));
+  const body = { from: k.pub, op: put(), seq: 1, v: 1 };
+  const sig = await sign(k, utf8(canonical(body)));
+  const bytes = utf8(canonical({ ...body, sig }));
+  const held = new Set();
+  const a = await admit(bytes, held);
+  assert.equal(a.ok, true);
+  assert.equal(a.hash, sha256(bytes));
+  held.add(a.hash);
+  assert.equal((await admit(bytes, held)).reason, 'replay');
+  const forged = utf8(canonical({ ...body, op: put({ f: { title: 'evil' } }), sig }));
+  assert.equal((await admit(forged, held)).reason, 'signature');
+  const wrongKey = utf8(canonical({ ...body, from: 'c'.repeat(64), sig }));
+  assert.equal((await admit(wrongKey, held)).reason, 'signature');
+  assert.equal((await admit(utf8('{x'), held)).reason, 'json');
+  assert.equal((await admit(bytes, null)).ok, true);
+});

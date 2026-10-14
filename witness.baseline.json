@@ -1,0 +1,27 @@
+[
+  {
+    "mutation": "< → <=",
+    "snippet": "if (it.hash < cur.hash) slot.set(key, it);",
+    "reason": "equivalent: this line only runs inside `else if (cur.hash !== it.hash)`, so the two hashes are never equal here and < and <= decide identically."
+  },
+  {
+    "mutation": "&& → ||",
+    "snippet": "const plain = (o) => o !== null && typeof o === 'object' && !Array.isArray(o);",
+    "reason": "equivalent at the verdict: plain() is a pre-filter. Anything it would wrongly admit (null, an array) is independently refused by exactKeys (an array has index keys; the envelope/op key names never match), by FIELD (index keys fail the regex), or by the surrounding try (null.k throws → false). No gate verdict changes."
+  },
+  {
+    "mutation": "&& → ||",
+    "snippet": "const plain = (o) => o !== null && typeof o === 'object' && !Array.isArray(o);",
+    "reason": "equivalent at the verdict: plain() is a pre-filter. Anything it would wrongly admit (null, an array) is independently refused by exactKeys (an array has index keys; the envelope/op key names never match), by FIELD (index keys fail the regex), or by the surrounding try (null.k throws → false). No gate verdict changes."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "for (let i = 0; i < out.length; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);",
+    "reason": "equivalent: the extra iteration writes out[out.length] — an out-of-bounds index on a Uint8Array, which the language ignores (no growth, no throw). The returned bytes are identical."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "const rows = Object.values(acc).sort((x, y) => (x.code < y.code ? -1 : 1)).map((r) => ({ .",
+    "reason": "equivalent: the rows are the values of an object keyed by account code, so no two rows ever share a code; x.code < y.code and x.code <= y.code decide identically for every pair the sort compares."
+  }
+]
