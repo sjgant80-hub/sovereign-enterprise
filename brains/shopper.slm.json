@@ -1,0 +1,123 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "shopper",
+ "title": "Online shoppers",
+ "role": "sales",
+ "real": true,
+ "note": "REAL data — purchase=1. UCI Online Shoppers Purchasing Intention (Sakar & Kastro, 2018, DOI 10.24432/C5F88Q, CC BY 4.0): 12,330 real sessions; held-out = November + December, grown only on Feb–Oct.",
+ "features": [
+  "Administrative",
+  "Administrative_Duration",
+  "Informational",
+  "Informational_Duration",
+  "ProductRelated",
+  "ProductRelated_Duration",
+  "BounceRates",
+  "ExitRates",
+  "PageValues",
+  "SpecialDay"
+ ],
+ "rules": [
+  {
+   "feat": "BounceRates",
+   "op": ">",
+   "v": 0,
+   "w": -0.25
+  },
+  {
+   "feat": "PageValues",
+   "op": ">",
+   "v": 0,
+   "w": 2
+  },
+  {
+   "feat": "ProductRelated_Duration",
+   "op": ">",
+   "v": 984,
+   "w": -0.25
+  }
+ ],
+ "base": 0.122551,
+ "threshold": 1.75,
+ "spread": 2.5,
+ "dist": {
+  "Administrative": {
+   "min": 0,
+   "q1": 0,
+   "med": 1,
+   "q3": 3,
+   "max": 24
+  },
+  "Administrative_Duration": {
+   "min": 0,
+   "q1": 0,
+   "med": 7,
+   "q3": 88,
+   "max": 2720.5
+  },
+  "Informational": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 24
+  },
+  "Informational_Duration": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 2252.033333
+  },
+  "ProductRelated": {
+   "min": 0,
+   "q1": 7,
+   "med": 16,
+   "q3": 33,
+   "max": 705
+  },
+  "ProductRelated_Duration": {
+   "min": 0,
+   "q1": 160.5,
+   "med": 505.55,
+   "q3": 1238.333333,
+   "max": 43171.23338
+  },
+  "BounceRates": {
+   "min": 0,
+   "q1": 0,
+   "med": 0.002899,
+   "q3": 0.019667,
+   "max": 0.2
+  },
+  "ExitRates": {
+   "min": 0,
+   "q1": 0.014267,
+   "med": 0.027273,
+   "q3": 0.052076,
+   "max": 0.2
+  },
+  "PageValues": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 261.491286
+  },
+  "SpecialDay": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 1
+  }
+ },
+ "heldAuc": 0.782578,
+ "heldAcc": 0.822857,
+ "held": 4725,
+ "train": 7605,
+ "patternId": "66c02b584864e265",
+ "seed": "◊ seed.v1 shopper 61106 f:5c7b8fb6c1e17ce98537 38866354799a",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}

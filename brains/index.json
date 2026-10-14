@@ -1,0 +1,66 @@
+{
+ "shopper": {
+  "role": "sales",
+  "title": "Online shoppers",
+  "real": true,
+  "heldAuc": 0.782578,
+  "patternId": "66c02b584864e265",
+  "file": "shopper.slm.json"
+ },
+ "churn": {
+  "role": "service",
+  "title": "Subscription churn",
+  "real": false,
+  "heldAuc": 0.764505,
+  "patternId": "c250ad28fc483fe2",
+  "file": "churn.slm.json"
+ },
+ "fraud": {
+  "role": "finance",
+  "title": "Card fraud",
+  "real": false,
+  "heldAuc": 0.76476,
+  "patternId": "f98d9899aab1ecfb",
+  "file": "fraud.slm.json"
+ },
+ "credit": {
+  "role": "finance",
+  "title": "Loan default",
+  "real": false,
+  "heldAuc": 0.672547,
+  "patternId": "007a6f1b6537c836",
+  "file": "credit.slm.json"
+ },
+ "inventory": {
+  "role": "ops",
+  "title": "Inventory stockout",
+  "real": false,
+  "heldAuc": 0.823875,
+  "patternId": "255a08b47dc039a8",
+  "file": "inventory.slm.json"
+ },
+ "maintenance": {
+  "role": "ops",
+  "title": "Predictive maintenance",
+  "real": false,
+  "heldAuc": 0.833599,
+  "patternId": "d172b1870649e48f",
+  "file": "maintenance.slm.json"
+ },
+ "intrusion": {
+  "role": "systems",
+  "title": "Network intrusion",
+  "real": false,
+  "heldAuc": 0.743162,
+  "patternId": "825b033e2f7afc8c",
+  "file": "intrusion.slm.json"
+ },
+ "energy": {
+  "role": "ops",
+  "title": "Grid overload",
+  "real": false,
+  "heldAuc": 0.778,
+  "patternId": "00d435d0ca3f2b1a",
+  "file": "energy.slm.json"
+ }
+}

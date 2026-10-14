@@ -1,0 +1,109 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "intrusion",
+ "title": "Network intrusion",
+ "role": "systems",
+ "real": false,
+ "note": "Network intrusion — intrusion=1. Ground-truth risk rises with failed logins, many distinct ports touched, lopsided byte ratios, long connections and off-hours activity. Realistic-synthetic.",
+ "features": [
+  "bytesInKB",
+  "bytesOutKB",
+  "connSeconds",
+  "failedLogins",
+  "distinctPorts",
+  "offHours"
+ ],
+ "rules": [
+  {
+   "feat": "failedLogins",
+   "op": "<=",
+   "v": 1,
+   "w": -0.25
+  },
+  {
+   "feat": "distinctPorts",
+   "op": "<=",
+   "v": 7,
+   "w": -0.5
+  },
+  {
+   "feat": "bytesOutKB",
+   "op": ">",
+   "v": 77.12541,
+   "w": 0.25
+  },
+  {
+   "feat": "failedLogins",
+   "op": ">",
+   "v": 2,
+   "w": 0.25
+  },
+  {
+   "feat": "failedLogins",
+   "op": "<=",
+   "v": 3,
+   "w": -2
+  },
+  {
+   "feat": "offHours",
+   "op": ">",
+   "v": 0,
+   "w": 0.5
+  }
+ ],
+ "base": 0.504167,
+ "threshold": -2,
+ "spread": 3.75,
+ "dist": {
+  "bytesInKB": {
+   "min": 0,
+   "q1": 60.953117,
+   "med": 119.761372,
+   "q3": 177.974402,
+   "max": 502.150357
+  },
+  "bytesOutKB": {
+   "min": 0,
+   "q1": 38.908041,
+   "med": 90.892564,
+   "q3": 145.725057,
+   "max": 349.113697
+  },
+  "connSeconds": {
+   "min": 30.021131,
+   "q1": 42.95792,
+   "med": 56.540449,
+   "q3": 75.873501,
+   "max": 149.409325
+  },
+  "failedLogins": {
+   "min": 1,
+   "q1": 1,
+   "med": 2,
+   "q3": 3,
+   "max": 7
+  },
+  "distinctPorts": {
+   "min": 3,
+   "q1": 4,
+   "med": 6,
+   "q3": 8,
+   "max": 19
+  },
+  "offHours": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 1,
+   "max": 1
+  }
+ },
+ "heldAuc": 0.743162,
+ "heldAcc": 0.679167,
+ "held": 720,
+ "train": 1680,
+ "patternId": "825b033e2f7afc8c",
+ "seed": "◊ seed.v1 intrusion 62757 f:ff8c69d259cee534d42d 83a3a3840407",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}

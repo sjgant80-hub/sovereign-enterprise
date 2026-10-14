@@ -4,7 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sovereign Enterprise</title>
-<meta name="description" content="A company's whole operational layer — tasks, chat, CRM, documents, books, the one-true-record and the people — running on the employees' own devices, peer to peer, every write signed and gated, no per-seat software, nothing leaving the building. The page runs the exact kernel its tests and mutation witness prove." />
+<meta name="description" content="A full AI company on its own devices. Six AI agents run sales, service, finance, operations, systems and audit end to end; two humans watch. Every device is a brain: verified Konomi SLM patterns, re-verified on each device's own data, sharing over a signed peer-to-peer spine — the mycelium. High-stakes calls need a second, independent brain. The page runs the exact kernel its tests and mutation witness prove." />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0b0e13" />
 <style>
 :root{--bg:#0b0e13;--panel:#121821;--panel2:#0e141b;--ink:#e8eef4;--dim:#93a6b8;--faint:#5c6e80;--line:#1f2b38;
   --accent:#45d0a8;--accent2:#6ab0ff;--gold:#ffcf5c;--bad:#ff6b6b;--warn:#ffa94d;--violet:#b58cff;
@@ -13,38 +15,49 @@
 :root[data-theme="light"]{--bg:#f6f8fa;--panel:#ffffff;--panel2:#f0f3f6;--ink:#0f1720;--dim:#4d5b69;--faint:#8a97a4;--line:#dde3ea;--accent:#0e9f77;--accent2:#1f6fd1;--gold:#b7860b;--bad:#d23b3b;--warn:#c56a12;--violet:#7a4fd0}
 *{box-sizing:border-box}html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1180px;margin:0 auto;padding:0 16px 40px}
+.wrap{max-width:1220px;margin:0 auto;padding:0 16px 40px}
 a{color:var(--accent2)}
 header{padding:22px 0 8px}
 h1{font-size:clamp(24px,5.5vw,40px);margin:0;font-weight:800;letter-spacing:.03em}h1 .x{color:var(--accent)}
-.tag{color:var(--dim);max-width:76ch;margin:6px 0 0;font-size:15px}
+.tag{color:var(--dim);max-width:84ch;margin:6px 0 0;font-size:15px}
 .pill{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin-left:6px;vertical-align:middle}
 .pill.ok{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
 .pill.bad{color:var(--bad)}
-.modes{display:flex;gap:8px;margin:16px 0 10px;flex-wrap:wrap}
+.modes{display:flex;gap:8px;margin:16px 0 10px;flex-wrap:wrap;align-items:center}
 button{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
 button:hover{border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.dev:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
 button.primary{background:var(--accent);border-color:var(--accent);color:#04241b;font-weight:700}
 button.on{border-color:var(--accent);color:var(--accent)}
 button.danger:hover{border-color:var(--bad);color:var(--bad)}
+button.sm{font-size:12px;padding:4px 9px}
 input,select,textarea{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
 textarea{width:100%;resize:vertical}
 .bar{display:flex;gap:10px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:thin}
-.dev{flex:0 0 auto;min-width:168px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;position:relative}
+.dev{flex:0 0 auto;min-width:158px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;position:relative;text-align:left;color:var(--ink)}
 .dev.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.dev .nm{font-weight:700;font-size:14px}.dev .tt{color:var(--dim);font-size:12px}
+.dev .nm{font-weight:700;font-size:14px;padding-right:58px}.dev .tt{color:var(--dim);font-size:12px}
 .dev .dg{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:4px}
-.dev .net{position:absolute;top:8px;right:8px;font-size:11px;border-radius:12px;padding:1px 8px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+.dev .net{position:absolute;top:8px;right:8px;font-size:11px;border-radius:12px;padding:1px 8px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;color:var(--dim)}
 .dev .net.up{color:var(--accent)}.dev .net.down{color:var(--bad)}
 .dev .lk{font-size:11px;color:var(--warn)}
-.status{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:2px 0 12px;font-size:13px;color:var(--dim)}
+.kind{font-size:10px;font-family:var(--mono);letter-spacing:.08em;border-radius:6px;padding:0 6px;margin-right:4px;border:1px solid var(--line)}
+.kind.ai{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 45%,var(--line))}.kind.hu{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 45%,var(--line))}
+.status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:2px 0 12px;font-size:13px;color:var(--dim)}
 .badge{font-family:var(--mono);font-weight:700;font-size:12px;border-radius:6px;padding:3px 9px;border:1px solid var(--line)}
 .badge.ok{color:var(--accent);border-color:var(--accent)}.badge.warn{color:var(--warn);border-color:var(--warn)}
-.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
-.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:9px 12px;color:var(--dim)}
+.sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:9px 11px;color:var(--dim)}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs .cnt{font-family:var(--mono);font-size:11px;color:var(--warn);margin-left:4px}
 .grid{display:grid;gap:14px;grid-template-columns:1fr}
-@media(min-width:900px){.grid.two{grid-template-columns:3fr 2fr}.grid.cols{grid-template-columns:repeat(5,1fr)}}
+@media(min-width:900px){.grid.two{grid-template-columns:3fr 2fr}.grid.even{grid-template-columns:1fr 1fr}.grid.cols{grid-template-columns:repeat(5,1fr)}}
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);margin-bottom:14px}
+@media(min-width:700px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.kpi .v{font-size:clamp(20px,4vw,28px);font-weight:800;font-family:var(--mono);line-height:1.15}
+.kpi .l{font-size:12px;color:var(--dim)}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
 .panel h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
@@ -52,22 +65,31 @@ textarea{width:100%;resize:vertical}
 .item{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
 .item:last-child{border-bottom:none}.item .grow{flex:1;min-width:0;overflow-wrap:anywhere}
 .chip{font-size:11px;border:1px solid var(--line);border-radius:12px;padding:1px 8px;color:var(--dim);white-space:nowrap}
-.chip.todo{color:var(--warn)}.chip.doing{color:var(--accent2)}.chip.done{color:var(--accent)}
+.chip.todo{color:var(--warn)}.chip.doing{color:var(--accent2)}.chip.done{color:var(--accent)}.chip.watch{color:var(--warn)}.chip.quar{color:var(--bad)}
+.feed{max-height:520px;overflow:auto}
+.ev{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.ev:last-child{border-bottom:none}
+.ev .meta{grid-column:2;font-family:var(--mono);font-size:11px;color:var(--faint);overflow-wrap:anywhere}
 .msgs{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
 .msg{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:14px;overflow-wrap:anywhere}
 .msg .who{font-size:12px;font-weight:700;color:var(--accent2)}
-.stage{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:90px}
+.stage{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:90px;max-height:420px;overflow:auto}
 .stage h4{margin:0 0 6px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 8px;margin-bottom:6px;font-size:13px}
 .card .v{font-family:var(--mono);color:var(--gold);font-size:12px}
+.tablewrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line)}th{color:var(--dim);font-weight:600}
+th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--dim);font-weight:600}
 td.n,th.n{text-align:right;font-family:var(--mono)}
 .mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
-.ok{color:var(--accent)}.bad{color:var(--bad)}.warn{color:var(--warn)}.dim{color:var(--dim)}
+.ok{color:var(--accent)}.bad{color:var(--bad)}.warn{color:var(--warn)}.dim{color:var(--dim)}.vio{color:var(--violet)}
 .lock{border:1px dashed var(--warn);color:var(--warn);border-radius:10px;padding:14px;text-align:center}
-.log{max-height:260px;overflow:auto;font-family:var(--mono);font-size:12px}
+.log{max-height:300px;overflow:auto;font-family:var(--mono);font-size:12px}
 .log div{padding:3px 0;border-bottom:1px solid var(--line)}
+.rules{font-family:var(--mono);font-size:12px;margin:4px 0 0;padding-left:16px;color:var(--dim)}
+.note{font-size:12.5px;color:var(--dim);margin:8px 0 0}
+.myc{width:100%;height:auto;max-height:360px;display:block}
+.myc text{font-family:var(--sans);font-size:12px;fill:var(--ink)}
 .foot{color:var(--faint);font-size:12.5px;margin-top:26px;line-height:1.7}
 .hide{display:none}
 </style>
@@ -76,25 +98,32 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
 <div class="wrap">
 <header>
   <h1>SOVEREIGN<span class="x"> ENTERPRISE</span></h1>
-  <p class="tag">A company's whole operational layer — tasks, chat, CRM, documents, the books, the one-true-record and the people —
-    running on the employees' own devices, peer to peer. Every write is signed by the device that made it and checked before it is
-    read. No per-seat software. Nothing leaves the building. <span id="kstat" class="pill">booting the kernel…</span></p>
+  <p class="tag">A full AI company on its own devices. Six AI agents run sales, service, finance, operations, systems and audit end to end;
+    two humans watch. Every device is a brain — verified pattern libraries, re-checked on that device's own data, sharing what they learn over
+    a signed peer-to-peer spine. Money and security calls need a second, independent brain to agree. Nothing leaves the building.
+    <span id="kstat" class="pill">booting the company…</span></p>
 </header>
 
 <div class="modes">
-  <button id="m-demo" class="on">Demo office · 5 devices</button>
+  <button id="m-demo" class="on">The AI company · live</button>
   <button id="m-real">Run your own company</button>
   <a class="pill" href="whitepaper.html" style="text-decoration:none">The white paper →</a>
 </div>
 
 <section id="demo">
-  <div class="bar" id="devices"></div>
+  <div class="bar" id="devices" role="list" aria-label="Devices in the company"></div>
   <div class="status">
     <span id="conv" class="badge">…</span>
     <span id="netinfo"></span>
-    <button id="attack" class="danger">Attack this device</button>
-    <button id="splitnet">Split the office network</button>
-    <button id="healnet">Heal the network</button>
+    <span class="sep"></span>
+    <button id="run" class="sm">Pause</button>
+    <span id="speeds"></span>
+    <span class="sep"></span>
+    <button id="hostile" class="sm danger">Send a hostile message</button>
+    <button id="poison" class="sm danger">Poison a brain</button>
+    <button id="attack" class="sm danger">Attack this device</button>
+    <button id="splitnet" class="sm">Split the network</button>
+    <button id="healnet" class="sm">Heal</button>
   </div>
 </section>
 
@@ -103,178 +132,115 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
   <div class="status"><span id="rconv" class="badge">…</span><span id="rinfo"></span></div>
 </section>
 
-<nav class="tabs" id="tabs"></nav>
-<main id="app"></main>
+<nav class="tabs" id="tabs" aria-label="Views"></nav>
+<main id="app" aria-live="polite"></main>
 
 <p class="foot">
-  Kernel-backed: this page imports <span class="mono">src/crdt · gate · canon · keys · node · vault · books · lease · sim</span> — the
-  same modules the test suite and the mutation witness prove in CI. Each device holds its own Ed25519 key and its own replica; the
-  company is a pure function of the set of signed writes a device holds, so devices that have seen the same writes hold the same
-  company, byte for byte, whatever order the network delivered them in.<br>
+  Kernel-backed: this page imports <span class="mono">src/company · agent · brain · grow · screen · crdt · gate · canon · keys · node · vault · books · lease · sim</span> — the
+  same modules the test suite and the mutation witness prove in CI. Each device holds its own Ed25519 key and its own replica; the company is a pure
+  function of the set of signed writes a device holds. The brains are the Konomi SLM's verified pattern libraries (Konomi architecture — Thomas Frumkin),
+  grown by the seed-library ribosome (sjgant80-hub, credited in NOTICE). Sales runs on real data — the UCI Online Shoppers dataset (Sakar &amp; Kastro, 2018,
+  CC BY 4.0); the other seven streams are realistic-synthetic, each generated from a stated rule plus seeded noise (shown in Brains).
+  The entropy-guided design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Service, LLC). The independent second brain and the held-for-a-human verdict draw on his &ldquo;From GEP Stabilization to Dual-Map Ethical Reasoning,&rdquo; Derivation v0.2.<br>
   Source, receipts and the full design: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a>.
-  The entropy-guided design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd, Lumiea Systems Research Division
-  (ThunderStruck Services, LLC). Konomi — Thomas Frumkin.
 </p>
 </div>
 
 <script type="module">
-import { createNode, pull } from './src/node.mjs';
-import { fromSeed, generate, exportPriv, importPriv, sign } from './src/keys.mjs';
-import { sha256Bytes } from './src/sha256.mjs';
+import { createNode } from './src/node.mjs';
+import { generate, exportPriv, importPriv, sign } from './src/keys.mjs';
+import { sha256 } from './src/sha256.mjs';
 import { canonical, utf8, toHex, fromHex } from './src/canon.mjs';
-import { sequence } from './src/crdt.mjs';
-import { leafHash, root, inclusionProof, verifyInclusion, consistencyProof, verifyConsistency, audit } from './src/vault.mjs';
-import { CHART, encodeLines, parseLines, validEntry, trialBalance, profitAndLoss, balanceSheet, gbp } from './src/books.mjs';
+import { inclusionProof, verifyInclusion, consistencyProof, verifyConsistency } from './src/vault.mjs';
+import { validEntry, trialBalance, profitAndLoss, balanceSheet, gbp } from './src/books.mjs';
 import { decideLease, renew, seal, open, keyRing } from './src/lease.mjs';
-import { simulate } from './src/sim.mjs';
+import { simulate, prng } from './src/sim.mjs';
+import { verifyReceipt } from './src/brain.mjs';
+import { NOTES } from './src/streams.mjs';
+import { AGENTS, HUMANS, LEARN_AFTER, agentName, boardKpis } from './src/company.mjs';
+import { ACTIONS } from './src/agent.mjs';
+import { createCompany, HUMAN_IDS, AGENT_IDS, displayName, isAgent } from './src/runtime.mjs';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const short = (h) => (h ? h.slice(0, 8) : '—');
+const short = (h) => (h ? String(h).slice(0, 8) : '—');
 const pad = (n, w = 6) => String(n).padStart(w, '0');
-// a new record id unique to this device: its next clock tick + its key prefix — two devices can never mint the same id
+const pct = (x) => (Math.round(x * 1000) / 10).toFixed(1) + '%';
+const auc3 = (x) => (typeof x === 'number' ? x.toFixed(3) : '—');
+// a record id unique to this device: its next clock tick + its key prefix — two devices can never mint the same id
 const uid = (node, p) => p + pad(node.clock() + 1, 8) + '-' + node.pub.slice(0, 6);
-const TABS = ['Tasks', 'Chat', 'CRM', 'Docs', 'Books', 'Vault', 'People', 'Proof'];
+const TABS = ['Board', 'Agents', 'Watch', 'Brains', 'Tasks', 'Chat', 'CRM', 'Docs', 'Books', 'Vault', 'People', 'Proof'];
 const SENSITIVE = new Set(['CRM', 'Books', 'People']);
-const LEASE_TTL = 60000, LEASE_WIN = 20000;
+const LEASE_TTL = 90000, LEASE_WIN = 30000;
+const TICK = 900, SHIFT = 3000, SPEEDS = [1, 3, 8];
 
-// ── state ─────────────────────────────────────────────────────────────────────────────────────────
+// ── state: the company is the runtime kernel; the page holds only what is the page's ────────────────
 let mode = 'demo';
-let tab = 'Tasks';
-const demo = { devices: [], sel: 0, online: [], leases: [], people: [], ring: keyRing(), gateLog: [] };
+let tab = 'Board';
+let co = null;
+const ui = { sel: 'owner', leases: {}, running: true, speed: 1, brainLog: [], gateLog: [], ring: keyRing(), ready: false, proofOut: '' };
 const real = { node: null, me: null, chan: null, peers: new Set(), gateLog: [] };
+const grantLive = (id) => co.grantLive(id);
+const paused = (id) => co.paused(id);
+const policyOf = (node) => co.policyOf(node);
+const vaultState = (node) => co.vaultState(node);
+function brainLog(s) { ui.brainLog.push(`${new Date().toLocaleTimeString()} ${s}`); if (ui.brainLog.length > 400) ui.brainLog.splice(0, 100); }
 
-// ── the demo office ───────────────────────────────────────────────────────────────────────────────
-const STAFF = [
-  { name: 'Ava Okafor', title: 'Owner', role: 'owner' },
-  { name: 'Ben Hale', title: 'Finance lead', role: 'admin' },
-  { name: 'Cara Singh', title: 'Sales', role: 'staff', cols: ['crm', 'msg', 'tasks', 'docs'] },
-  { name: 'Dev Patel', title: 'Operations', role: 'staff', cols: ['tasks', 'msg', 'docs'] },
-  { name: 'Eli Moreau', title: 'Customer service', role: 'staff', cols: ['msg', 'tasks', 'crm'] },
-];
-
-async function syncAll(devs, online) {
-  let moved = 0;
-  for (let i = 0; i < devs.length; i++) for (let j = 0; j < devs.length; j++) {
-    if (i !== j && online[i] && online[j]) moved += await pull(devs[i], devs[j]);
-  }
-  return moved;
-}
-
-async function bootDemo() {
-  const keys = [];
-  for (let i = 0; i < STAFF.length; i++) keys.push(await fromSeed(sha256Bytes('sovereign-enterprise/demo-office/' + i)));
-  const G = keys[0].pub;
-  demo.devices = STAFF.map((p, i) => createNode({ keys: keys[i], genesis: G, name: p.name }));
-  demo.online = STAFF.map(() => true);
-  demo.people = STAFF.map((p, i) => ({ ...p, pub: keys[i].pub, keys: keys[i] }));
-  const [ava, ben, cara, dev, eli] = demo.devices;
-  await ava.grant('admin-ben', keys[1].pub, 'admin', ['*']);
-  await pull(ben, ava);
-  for (let i = 2; i < STAFF.length; i++) await ben.grant('staff-' + i, keys[i].pub, 'staff', STAFF[i].cols);
-  await syncAll(demo.devices, demo.online);
-
-  // the people directory — personal details sealed under per-person keys held by the owner (crypto-shreddable)
-  const priv = ['Flat 2, 14 Mill Lane, Leeds', '9 Rowan Close, York', '31 Station Rd, Hull', '5 Weir View, Ilkley', '77 Kirkgate, Otley'];
-  for (let i = 0; i < STAFF.length; i++) {
-    const k = await demo.ring.keyFor('p' + i);
-    await ava.put('people', 'p' + i, { name: STAFF[i].name, title: STAFF[i].title, device: keys[i].pub.slice(0, 16), privateSealed: await seal(k, priv[i], 'people/p' + i) });
-  }
-  await cara.put('tasks', 't1', { title: 'Send the Northwind proposal', owner: 'Cara', status: 'doing' });
-  await dev.put('tasks', 't2', { title: 'Book the van service', owner: 'Dev', status: 'todo' });
-  await eli.put('tasks', 't3', { title: 'Reply to the Harper complaint', owner: 'Eli', status: 'done' });
-  await ben.put('tasks', 't4', { title: 'File the VAT return', owner: 'Ben', status: 'todo' });
-  await postMsg(ava, 'Morning all — Northwind call at 11.');
-  await postMsg(cara, 'Proposal draft is in Docs, numbers from Ben please.');
-  await postMsg(eli, 'Harper sorted, refund approved.');
-  await cara.put('crm', 'c1', { name: 'Northwind Foods', contact: 'J. Ward', stage: 'proposal', value: 1840000, owner: 'Cara' });
-  await cara.put('crm', 'c2', { name: 'Harper & Co', contact: 'L. Harper', stage: 'won', value: 420000, owner: 'Cara' });
-  await eli.put('crm', 'c3', { name: 'Bright Dental', contact: 'Dr Okoye', stage: 'lead', value: 960000, owner: 'Eli' });
-  await cara.put('crm', 'c4', { name: 'Fenwick Joinery', contact: 'S. Fenwick', stage: 'qualified', value: 275000, owner: 'Cara' });
-  await syncAll(demo.devices, demo.online);
-  await cara.typeAt('docs', 'q4-plan', 0, 'Q4 plan: close Northwind, launch the service desk, hire nobody.');
-  await syncAll(demo.devices, demo.online);
-  await postEntry(ben, { date: '2026-10-01', memo: 'Opening capital', lines: [['1200', 2500000, 0], ['3000', 0, 2500000]] });
-  await postEntry(ben, { date: '2026-10-06', memo: 'Invoice Harper & Co', lines: [['1100', 504000, 0], ['4000', 0, 420000], ['2200', 0, 84000]] });
-  await postEntry(ben, { date: '2026-10-09', memo: 'Harper pays', lines: [['1200', 504000, 0], ['1100', 0, 504000]] });
-  await postEntry(ben, { date: '2026-10-15', memo: 'Office rent', lines: [['7100', 120000, 0], ['1200', 0, 120000]] });
-  await postEntry(ben, { date: '2026-10-20', memo: 'Frontier + voice limbs (per use)', lines: [['7510', 3800, 0], ['1200', 0, 3800]] });
-  await syncAll(demo.devices, demo.online);
-  await witnessHead(ava);
-  await syncAll(demo.devices, demo.online);
+// ── boot: load the dedicated brain files, then the runtime builds the company on eight devices ─────
+async function bootCompany() {
+  const index = await (await fetch('brains/index.json')).json();
+  const patterns = {};
+  for (const d of Object.keys(index)) patterns[d] = await (await fetch('brains/' + index[d].file)).json();
+  const shopper = await (await fetch('brains/shopper.sample.json')).json();
+  co = createCompany({ index, patterns, shopper }, { log: brainLog });
+  const ADDR = { owner: 'Flat 2, 14 Mill Lane, Leeds', overseer: '9 Rowan Close, York' };
+  await co.boot({ people: async (id, human) => (human ? { privateSealed: await seal(await ui.ring.keyFor('p-' + id), ADDR[id] || '', 'people/p-' + id) } : {}) });
   const now = Date.now();
-  demo.leases = STAFF.map(() => ({ issuedAt: now, ttl: LEASE_TTL }));
-}
-
-async function postMsg(node, body) {
-  return node.put('msg', 'm' + pad(node.clock() + 1, 10) + '-' + node.pub.slice(0, 6), { ch: 'general', body: String(body).slice(0, 1500), by: node.name });
-}
-
-// ── the books + the vault (finance sequences, the owner witnesses) ─────────────────────────────────
-function vaultState(node) {
-  const recs = node.list('vault').map((r) => ({ index: r.index, leaf: r.leaf, entry: r.entry }));
-  const heads = node.list('vault_head').map((h) => ({ size: h.size, root: h.root }));
-  const cos = node.list('vault_cosig').map((h) => ({ size: h.size, root: h.root, by: h.by }));
-  return { recs, heads, cos, a: audit(recs, heads) };
-}
-async function postEntry(node, entry) {
-  const v = validEntry(entry);
-  if (!v.ok) return v;
-  const id = uid(node, 'j');
-  const body = { date: entry.date, memo: String(entry.memo).slice(0, 200), lines: encodeLines(v.lines) };
-  let r = await node.put('journal', id, body);
-  if (!r.ok) return r;
-  const { a } = vaultState(node);
-  const leaf = leafHash(canonical({ id, ...body }));
-  const leaves = [...a.leaves, leaf];
-  await node.put('vault', 'v' + pad(a.size), { index: a.size, leaf, entry: id });
-  await node.put('vault_head', 'h' + pad(leaves.length), { size: leaves.length, root: root(leaves) });
-  return { ok: true };
-}
-async function witnessHead(node) {
-  const { a, heads } = vaultState(node);
-  const top = heads.sort((x, y) => y.size - x.size)[0];
-  if (!top || !a.ok) return { ok: false, reason: 'log does not audit' };
-  return node.put('vault_cosig', 'c' + pad(top.size) + '-' + node.pub.slice(0, 6), { size: top.size, root: top.root, by: node.name });
+  for (const id of co.order) ui.leases[id] = { issuedAt: now, ttl: LEASE_TTL };
+  ui.ready = true;
 }
 
 // ── rendering ─────────────────────────────────────────────────────────────────────────────────────
-function current() { return mode === 'demo' ? demo.devices[demo.sel] : real.node; }
-function leaseOf(i) { return mode === 'demo' ? decideLease(demo.leases[i], Date.now(), grantLive(demo.devices[i])) : { action: 'keep' }; }
-function grantLive(node) {
-  const v = node.view();
-  if (node.pub === node.genesis) return true;
-  const mine = v.roster.filter((r) => r.to === node.pub);
-  return mine.length > 0 && mine.some((r) => !r.revoked);
-}
-function nameOf(pub) {
-  const p = demo.people.find((x) => x.pub === pub);
-  if (p) return p.name;
+function current() { return mode === 'demo' ? co.nodes[ui.sel] : real.node; }
+const selIsHuman = () => mode === 'real' || HUMAN_IDS.includes(ui.sel);
+function leaseOf(id) { return mode === 'demo' ? decideLease(ui.leases[id], Date.now(), grantLive(id)) : { action: 'keep' }; }
+function nameOfPub(pub) {
+  const id = co.order.find((x) => co.keys[x] && co.keys[x].pub === pub);
+  if (id) return displayName(id);
   return pub === (real.node && real.node.pub) ? 'you' : short(pub);
 }
 
 function renderDevices() {
-  const digests = demo.devices.map((d) => d.digest());
-  $('devices').innerHTML = demo.devices.map((d, i) => {
-    const L = leaseOf(i);
-    const locked = L.action === 'lock';
-    return `<div class="dev ${i === demo.sel ? 'sel' : ''}" data-i="${i}">
-      <span class="net ${demo.online[i] ? 'up' : 'down'}" data-net="${i}">${demo.online[i] ? 'online' : 'offline'}</span>
-      <div class="nm">${esc(STAFF[i].name)}</div><div class="tt">${esc(STAFF[i].title)}</div>
-      <div class="dg">replica ${short(digests[i])} · ${d.size()} writes</div>
-      ${locked ? '<div class="lk">lease expired — locked</div>' : grantLive(d) ? '' : '<div class="lk">grant revoked — lease running down</div>'}
+  const fps = co.order.map((id) => co.nodes[id].fingerprint());
+  $('devices').innerHTML = co.order.map((id, i) => {
+    const d = co.nodes[id];
+    const L = leaseOf(id);
+    const ai = isAgent(id);
+    const lib = ai ? Object.keys(co.libs[id] || {}).length : 0;
+    const n = ai ? co.ledger.filter((x) => x.agent === id).length : 0;
+    const state = !grantLive(id) ? '<div class="lk">grant revoked — fired</div>' : paused(id) ? '<div class="lk">paused by the watchers</div>' : L.action === 'lock' ? '<div class="lk">lease expired — locked</div>' : '';
+    return `<div class="dev ${id === ui.sel ? 'sel' : ''}" data-dev="${id}" role="listitem" tabindex="0" aria-label="${esc(displayName(id))}">
+      <span class="net ${co.online[id] ? 'up' : 'down'}" data-net="${id}" role="button" aria-label="toggle network">${co.online[id] ? 'online' : 'offline'}</span>
+      <div class="nm"><span class="kind ${ai ? 'ai' : 'hu'}">${ai ? 'AI' : 'HUMAN'}</span>${esc(displayName(id).replace(' agent', ''))}</div>
+      <div class="tt">${ai ? `${lib} brain${lib === 1 ? '' : 's'} · ${n} decisions` : esc(HUMANS.find((h) => h.id === id).title)}</div>
+      <div class="dg">replica ${short(fps[i])} · ${d.size()} writes</div>${state}
     </div>`;
   }).join('');
-  const on = digests.filter((_, i) => demo.online[i]);
-  const conv = on.every((d) => d === on[0]);
-  const all = digests.every((d) => d === digests[0]);
+  const on = fps.filter((_, i) => co.online[co.order[i]]);
+  const all = fps.every((f) => f === fps[0]);
+  const conv = on.every((f) => f === on[0]);
   $('conv').className = 'badge ' + (all ? 'ok' : 'warn');
-  $('conv').textContent = all ? 'ALL 5 DEVICES CONVERGED · ' + short(digests[0]) : conv ? `${on.length} online converged · ${digests.length - on.length} offline diverged` : 'syncing…';
-  $('netinfo').textContent = `${demo.online.filter(Boolean).length}/5 online · peer-to-peer anti-entropy every 0.7s`;
+  $('conv').textContent = all ? `ALL ${fps.length} DEVICES CONVERGED · ${short(fps[0])}` : conv ? `${on.length} online converged · ${fps.length - on.length} offline` : 'syncing…';
+  $('netinfo').textContent = `${on.length}/${fps.length} online · event ${co.n}${co.n >= SHIFT ? ' · shift complete' : ''}`;
+  $('run').textContent = ui.running && co.n < SHIFT ? 'Pause' : 'Run';
+  $('speeds').innerHTML = SPEEDS.map((s) => `<button class="sm ${ui.speed === s ? 'on' : ''}" data-speed="${s}">${s}×</button>`).join(' ');
 }
 
+function openWatch(node) { return node.list('watch').filter((w) => w.status === 'open'); }
 function renderTabs() {
-  $('tabs').innerHTML = TABS.map((t) => `<button class="${t === tab ? 'on' : ''}" data-tab="${t}">${t}</button>`).join('');
+  const node = current();
+  const nWatch = node && mode === 'demo' ? openWatch(node).length : 0;
+  $('tabs').innerHTML = TABS.map((t) => `<button class="${t === tab ? 'on' : ''}" data-tab="${t}">${t}${t === 'Watch' && nWatch ? `<span class="cnt">${nWatch}</span>` : ''}</button>`).join('');
 }
 
 function render() {
@@ -282,67 +248,176 @@ function render() {
   renderTabs();
   const node = current();
   if (!node) { $('app').innerHTML = ''; return; }
-  const idx = mode === 'demo' ? demo.sel : 0;
-  if (SENSITIVE.has(tab) && leaseOf(idx).action === 'lock') {
+  if (mode === 'demo' && SENSITIVE.has(tab) && leaseOf(ui.sel).action === 'lock') {
     $('app').innerHTML = `<div class="lock"><b>This device's data lease has expired.</b><br>Its grant was revoked, so it could not renew; the
       ${esc(tab)} data cached here is sealed under a key it can no longer refresh. The company carries on everywhere else.</div>`;
     return;
   }
+  const view = (mode === 'real' && ['Board', 'Agents', 'Watch', 'Brains'].includes(tab)) ? 'RealOnly' : tab;
   const focus = document.activeElement && document.activeElement.id;
   const keep = focus === 'doc' ? { s: document.activeElement.selectionStart, e: document.activeElement.selectionEnd } : null;
-  $('app').innerHTML = VIEWS[tab](node);
+  const scrollers = [...document.querySelectorAll('#app .feed, #app .log, #app .msgs, #app .stage')].map((el) => el.scrollTop);
+  $('app').innerHTML = VIEWS[view](node);
+  [...document.querySelectorAll('#app .feed, #app .log, #app .msgs, #app .stage')].forEach((el, i) => { if (scrollers[i] !== undefined) el.scrollTop = scrollers[i]; });
   if (keep && $('doc')) { $('doc').focus(); $('doc').setSelectionRange(keep.s, keep.e); }
 }
 
 const can = (node, c) => node.canWrite(c);
+const readonlyNote = (node) => (mode === 'demo' && isAgent(ui.sel) ? `<p class="dim">This is the ${esc(displayName(ui.sel))}'s device — the agent writes here; you watch.</p>` : '');
+const outcomeMark = (x) => (x.state !== 'done' || (x.label !== 0 && x.label !== 1) ? '' : x.label === x.truth ? '<span class="ok" title="matched the outcome">✓</span>' : '<span class="bad" title="the outcome went the other way">✗</span>');
+const ruleText = (r) => `${r.w > 0 ? '+' : ''}${r.w} if ${esc(r.feat)} ${r.op === '>' ? '>' : '≤'} ${+r.v.toFixed(3)}`;
+
 const VIEWS = {
+  RealOnly() {
+    return `<div class="panel"><h3>The AI layer runs in the live company</h3><p>Board, Agents, Watch and Brains belong to the AI company demo above —
+      switch to <b>The AI company · live</b>. Your own company here starts with people; grant an agent device the same way you grant a teammate.</p></div>`;
+  },
+  Board(node) {
+    const k = boardKpis(co.ledger);
+    const entries = node.list('journal').map((j) => ({ id: j.id, date: j.date, memo: j.memo, lines: j.lines }));
+    const pl = profitAndLoss(entries), bs = balanceSheet(entries);
+    const watch = openWatch(node).length;
+    const quar = node.list('quarantine').length;
+    const { a } = vaultState(node);
+    const rowsA = AGENTS.map((ag) => {
+      const s = k.perAgent[ag.id];
+      const decided = co.ledger.filter((x) => x.agent === ag.id).length;
+      const mesh = co.ledger.filter((x) => x.agent === ag.id && x.by && x.by.startsWith('mesh:')).length;
+      const status = !grantLive(ag.id) ? '<span class="bad">fired</span>' : paused(ag.id) ? '<span class="warn">paused</span>' : co.online[ag.id] ? '<span class="ok">running</span>' : '<span class="warn">offline</span>';
+      return `<tr><td><span class="kind ai">AI</span>${esc(ag.name)}</td><td>${status}</td><td class="n">${Object.keys(co.libs[ag.id] || {}).length}</td>
+        <td class="n">${s ? decided : '—'}</td><td class="n">${s && s.done ? pct(s.accuracy) : '—'}</td><td class="n">${s ? s.watched : '—'}</td><td class="n">${s ? mesh : '—'}</td></tr>`;
+    }).join('');
+    return `<div class="kpis">
+      <div class="kpi"><div class="v">${k.total}</div><div class="l">pieces of work handled</div></div>
+      <div class="kpi"><div class="v ok">${pct(k.automated)}</div><div class="l">done end to end by agents</div></div>
+      <div class="kpi"><div class="v">${k.done ? pct(k.accuracy) : '—'}</div><div class="l">of agent calls matched the real outcome</div></div>
+      <div class="kpi"><div class="v warn">${watch}</div><div class="l">waiting for a human (Watch)</div></div>
+      <div class="kpi"><div class="v vio">${k.crossChecked}</div><div class="l">money / security calls a second brain confirmed</div></div>
+      <div class="kpi"><div class="v">${k.viaMesh}</div><div class="l">answered by another device's brain (the mesh)</div></div>
+      <div class="kpi"><div class="v">${co.learned} · ${co.regrowths.promoted}/${co.regrowths.tried}</div><div class="l">brains learned · regrowths promoted / tried</div></div>
+      <div class="kpi"><div class="v bad">${quar}</div><div class="l">hostile messages quarantined unread</div></div>
+    </div>
+    <div class="grid two"><div class="panel"><h3>The agents</h3><div class="tablewrap"><table>
+      <tr><th>Agent</th><th>Status</th><th class="n">Brains</th><th class="n">Decisions</th><th class="n">Right</th><th class="n">To humans</th><th class="n">Via mesh</th></tr>${rowsA}</table></div>
+      <p class="note">"Right" scores each finished call against the outcome that came back later — the agent never saw it when it decided. Every call above
+      ran on verified brains on the company's own devices: no per-call AI bill. No model tier is connected — anything no brain can confirm goes to a human.</p></div>
+    <div class="panel"><h3>The business</h3><table>
+      <tr><td>Income</td><td class="n">${gbp(pl.income)}</td></tr><tr><td>Costs</td><td class="n">${gbp(pl.expense)}</td></tr>
+      <tr><td><b>Profit</b></td><td class="n ${pl.profit >= 0 ? 'ok' : 'warn'}"><b>${gbp(pl.profit)}</b></td></tr>
+      <tr><td>Balance sheet balances</td><td class="n ${bs.balanced ? 'ok' : 'bad'}">${bs.balanced ? '✓' : '✗'}</td></tr>
+      <tr><td>Entries in the vault (audits)</td><td class="n ${a.ok ? 'ok' : 'bad'}">${a.size} ${a.ok ? '✓' : '✗'}</td></tr>
+      <tr><td>Leads fast-tracked</td><td class="n">${node.list('crm').length}</td></tr>
+      <tr><td>Payments held as fraud</td><td class="n">${node.list('payments').filter((p) => p.status === 'held').length}</td></tr>
+      <tr><td>Intrusions quarantined</td><td class="n">${node.list('security').length}</td></tr>
+      <tr><td>Humans' calls (right vs outcome)</td><td class="n">${co.human.done ? `${co.human.right}/${co.human.done}` : '—'}</td></tr></table>
+      <p class="note">This board is this device's replica — ${esc(displayName(ui.sel))}. Every device that has seen the same signed writes shows the same company.</p></div></div>`;
+  },
+  Agents(node) {
+    const recs = node.list('decisions').slice(-80).reverse();
+    const cards = AGENTS.map((a) => `<div class="item"><span class="grow"><span class="kind ai">AI</span><b>${esc(a.name)}</b> <span class="dim">— ${esc(a.job)}</span><br>
+      <span class="mono dim">brains: ${Object.entries(co.src[a.id] || {}).map(([d, s]) => `${esc(d)} (${esc(s.source)})`).join(' · ') || 'none'}</span></span></div>`).join('');
+    return `<div class="grid two"><div class="panel"><h3>Live — every decision, as this device has it (${node.list('decisions').length})</h3><div class="feed">${recs.map((r) => {
+      const led = co.byEvent.get(r.event);
+      const chip = r.by === 'screen' ? '<span class="chip quar">quarantined</span>' : r.state === 'done' ? '<span class="chip done">done</span>' : '<span class="chip watch">to a human</span>';
+      return `<div class="ev">${chip}<span><b>${esc(agentName(r.agent))}</b> · ${esc(r.action || '—')} <span class="dim">· ${esc(r.channel)} · ${esc(r.customer)}</span> ${led ? outcomeMark(led) : ''}</span>
+        <div class="meta">${esc(r.by)}${r.cross ? ` · confirmed by ${esc(agentName(r.second))}` : ''} · confidence ${(r.conf / 1000).toFixed(3)}${r.receipt ? ' · receipt ' + esc(r.receipt) : ''} · ${esc(r.why)}</div></div>`;
+    }).join('') || '<p class="dim">The door opens in a moment…</p>'}</div></div>
+    <div class="panel"><h3>Who runs what</h3>${cards}
+      <p class="note">Work lands at a door that does not know who handles it — a quarter of it reaches the wrong agent. That agent asks the mesh; the device whose
+      brain covers it answers, with a receipt. Ask about the same job ${LEARN_AFTER} times and an agent learns it: it takes the published brain and adopts it only if
+      it re-verifies on its own data.</p></div></div>`;
+  },
+  Watch(node) {
+    const human = selIsHuman() && can(node, null);
+    const items = openWatch(node).slice(-40).reverse();
+    const done = node.list('watch').filter((w) => w.status !== 'open').slice(-12).reverse();
+    const quar = node.list('quarantine').slice(-20).reverse();
+    const ctl = AGENTS.map((a) => `<div class="item"><span class="grow"><span class="kind ai">AI</span>${esc(a.name)} ${paused(a.id) ? '<span class="warn">· paused</span>' : ''}</span>
+      ${human ? `<button class="sm" data-act="${paused(a.id) ? 'resume' : 'pause'}" data-id="${a.id}">${paused(a.id) ? 'Resume' : 'Pause'}</button>` : ''}</div>`).join('');
+    const pol = policyOf(node).minConfidence;
+    return `<div class="grid two"><div class="panel"><h3>Waiting for a human — ${openWatch(node).length}</h3>
+      ${human ? '' : '<p class="dim">Select a human device (Owner or AI overseer) to clear these.</p>'}
+      <div class="feed">${items.map((w) => {
+        const acts = ACTIONS[w.channel] ? [ACTIONS[w.channel][1], ACTIONS[w.channel][0]] : [];
+        return `<div class="ev"><span class="chip watch">${esc(w.channel || '?')}</span><span><b>${esc(agentName(w.agent))}</b> · ${esc(w.customer)}${w.amount ? ' · ' + gbp(w.amount) : ''}
+          ${w.action ? `<span class="dim"> · proposes</span> <b>${esc(w.action)}</b>` : '<span class="dim"> · no proposal</span>'}</span>
+          <div class="meta">${esc(w.why)}</div>
+          ${human ? `<div class="meta">${acts.map((x) => `<button class="sm ${x === w.action ? 'primary' : ''}" data-act="resolve" data-id="${esc(w.id)}" data-pick="${esc(x)}">${esc(x)}</button>`).join(' ')}</div>` : ''}</div>`;
+      }).join('') || '<p class="dim">Nothing waiting — the agents have it.</p>'}</div>
+      ${done.length ? `<h3 style="margin-top:14px">Recently cleared</h3><div class="log">${done.map((w) => `<div>${esc(w.channel)} · ${esc(w.customer)} → ${esc(w.action || '—')}${w.resolvedBy ? ' · chosen by ' + esc(w.resolvedBy) : ''}${w.executedBy ? ' · done by ' + esc(agentName(w.executedBy)) : ' · waiting for the agent'}</div>`).join('')}</div>` : ''}
+    </div><div class="panel"><h3>Controls</h3>${ctl}
+      ${human ? `<div class="row" style="margin-top:10px"><button class="danger" data-act="pause-all">Pause every agent</button><button data-act="resume-all">Resume all</button></div>
+      <div class="row"><label for="mc" class="dim">Second brain below confidence</label><select id="mc">${[50, 100, 200, 350].map((v) => `<option value="${v}" ${Math.round(pol * 1000) === v ? 'selected' : ''}>${(v / 1000).toFixed(2)}</option>`).join('')}</select></div>` : ''}
+      <p class="note">Pause stops an agent acting (it still triages: its work goes to the humans). To fire an agent, revoke its grant in People — every device then refuses its writes.</p>
+      <h3 style="margin-top:14px">Quarantined unread — ${node.list('quarantine').length}</h3>
+      <div class="log">${quar.map((q) => `<div><span class="bad">${esc(q.flags)}</span> · ${esc(q.customer)} · ${esc(q.preview)}</div>`).join('') || '<span class="dim">No hostile messages yet — press "Send a hostile message".</span>'}</div>
+    </div></div>`;
+  },
+  Brains(node) {
+    const sel = ui.sel;
+    const lib = isAgent(sel) ? co.libs[sel] : null;
+    const pubs = node.list('brain');
+    const adoptions = node.list('adopt').slice(-40).reverse();
+    const libHtml = lib ? Object.entries(lib).map(([d, p]) => {
+      const s = co.src[sel][d] || {};
+      return `<div class="card"><b>${esc(d)}</b> <span class="dim">· ${esc(s.source || '')} · pattern ${esc(p.patternId || '')}</span><br>
+        <span class="mono">held-out AUC ${auc3(p.heldAuc)} · on this device's data ${auc3(s.localAuc)} (${s.n || 0} cases)</span>
+        <ul class="rules">${p.rules.map((r) => `<li>${ruleText(r)}</li>`).join('')}<li>→ act when the score is above ${+p.threshold.toFixed(3)}; abstain when the input is outside what it was verified on</li></ul>
+        ${NOTES[d] ? `<p class="note">${esc(d === 'shopper' ? 'Real data: UCI Online Shoppers sessions (CC BY 4.0).' : 'Synthetic stream: ' + NOTES[d])}</p>` : ''}</div>`;
+    }).join('') : '';
+    const asks = isAgent(sel) ? Object.entries(co.asks[sel] || {}).filter(([, n]) => n > 0) : [];
+    return `<div class="grid two"><div class="panel"><h3>The mycelium — who answers, learns from and confirms whom</h3>${mycelium()}
+      <p class="note"><span class="ok">— learned brain</span> · <span style="color:var(--accent2)">- - answered via the mesh</span> · <span class="vio">··· second brain confirmed</span>. A brain travels as a
+      signed record on the spine; a device takes it only after re-verifying it on its own data, so a poisoned brain dies at the first device that checks.</p>
+      <h3 style="margin-top:14px">Growth log</h3><div class="log">${ui.brainLog.slice(-60).reverse().map((x) => `<div>${esc(x)}</div>`).join('')}</div></div>
+    <div class="panel"><h3>${isAgent(sel) ? esc(displayName(sel)) + "'s brain — readable, every rule" : 'Brains published on the spine'}</h3>
+      ${libHtml || pubs.map((r) => `<div class="item"><span class="grow"><b>${esc(r.domain)}</b> · ${esc(agentName(r.by))} · ${esc(r.source)} <span class="mono dim">· ${esc(r.patternId)} · publisher claims ${(r.localAuc / 1000).toFixed(3)}${(() => { const mine = node.list('adopt').filter((x) => x.patternId === r.patternId && x.by === ui.sel).pop(); return mine ? ` · measured here ${(mine.localAuc / 1000).toFixed(3)} ${mine.adopted ? '✓' : '✗ refused'}` : ''; })()}</span></span></div>`).join('')}
+      ${asks.length ? `<p class="note">Asked the mesh about: ${asks.map(([d, n]) => `${esc(d)} ×${n}`).join(', ')} — learns at ${LEARN_AFTER}.</p>` : ''}
+      <h3 style="margin-top:14px">Adoptions, refusals and regrowths (signed, on the spine)</h3>
+      <div class="log">${adoptions.map((x) => `<div><span class="${x.adopted ? 'ok' : 'warn'}">${x.adopted ? 'ADOPTED' : 'REFUSED'}</span> ${esc(agentName(x.by))} · ${esc(x.domain)} · ${esc(x.source)}${x.from && x.from !== x.by ? ' from ' + esc(agentName(x.from)) : ''} · ${esc(x.reason)}</div>`).join('')}</div></div></div>`;
+  },
   Tasks(node) {
-    const items = node.list('tasks');
-    const w = can(node, 'tasks');
-    return `<div class="panel"><h3>Tasks — ${items.length}</h3>
-      ${w ? `<div class="row"><input id="tt" placeholder="New task" maxlength="200"><button class="primary" data-act="task-add">Add</button></div>` : '<p class="dim">This device has no write scope on tasks.</p>'}
+    const items = node.list('tasks').slice(-60).reverse();
+    const w = can(node, 'tasks') && selIsHuman();
+    return `<div class="panel"><h3>Tasks — ${node.list('tasks').length}</h3>${readonlyNote(node)}
+      ${w ? `<div class="row"><input id="tt" placeholder="New task" maxlength="200" aria-label="New task"><button class="primary" data-act="task-add">Add</button></div>` : ''}
       ${items.map((t) => `<div class="item"><span class="chip ${esc(t.status)}">${esc(t.status || 'todo')}</span>
         <span class="grow">${esc(t.title)} <span class="dim">· ${esc(t.owner || '')}</span></span>
-        ${w ? `<button data-act="task-cycle" data-id="${esc(t.id)}">Next</button><button class="danger" data-act="task-del" data-id="${esc(t.id)}">Delete</button>` : ''}</div>`).join('') || '<p class="dim">No tasks.</p>'}
+        ${w ? `<button class="sm" data-act="task-cycle" data-id="${esc(t.id)}">Next</button><button class="sm danger" data-act="task-del" data-id="${esc(t.id)}">Delete</button>` : ''}</div>`).join('') || '<p class="dim">No tasks.</p>'}
     </div>`;
   },
   Chat(node) {
-    const msgs = node.list('msg');
-    const w = can(node, 'msg');
-    return `<div class="panel"><h3>#general — ${msgs.length} messages</h3>
+    const msgs = node.list('msg').slice(-80);
+    const w = can(node, 'msg') && selIsHuman();
+    return `<div class="panel"><h3>#general — ${node.list('msg').length} messages</h3>
       <div class="msgs" id="msgs">${msgs.map((m) => `<div class="msg"><div class="who">${esc(m.by || '')}</div>${esc(m.body)}</div>`).join('')}</div>
-      ${w ? `<div class="row"><input id="mt" placeholder="Message the team" maxlength="1500"><button class="primary" data-act="msg-send">Send</button></div>` : '<p class="dim">No write scope on chat.</p>'}
+      ${w ? `<div class="row"><input id="mt" placeholder="Message the company" maxlength="1500" aria-label="Message"><button class="primary" data-act="msg-send">Send</button></div>` : readonlyNote(node)}
     </div>`;
   },
   CRM(node) {
     const deals = node.list('crm');
-    const w = can(node, 'crm');
+    const w = can(node, 'crm') && selIsHuman();
     const stages = ['lead', 'qualified', 'proposal', 'won', 'lost'];
     const pipe = deals.filter((d) => d.stage !== 'lost' && d.stage !== 'won').reduce((s, d) => s + (d.value || 0), 0);
-    return `<div class="panel"><h3>Pipeline — ${gbp(pipe)} open · ${gbp(deals.filter((d) => d.stage === 'won').reduce((s, d) => s + (d.value || 0), 0))} won</h3>
-      ${w ? `<div class="row"><input id="cn" placeholder="Company" maxlength="120"><input id="cc" placeholder="Contact" maxlength="120"><input id="cv" placeholder="Value £" inputmode="numeric" style="max-width:120px"><button class="primary" data-act="crm-add">Add lead</button></div>` : '<p class="dim">No write scope on the CRM.</p>'}
-      <div class="grid cols">${stages.map((s) => `<div class="stage"><h4>${s}</h4>${deals.filter((d) => d.stage === s).map((d) => `
-        <div class="card"><b>${esc(d.name)}</b><br><span class="dim">${esc(d.contact || '')}</span><br><span class="v">${gbp(d.value || 0)}</span>
-        ${w && s !== 'won' && s !== 'lost' ? `<div class="row" style="margin:6px 0 0"><button data-act="crm-next" data-id="${esc(d.id)}">Advance</button><button class="danger" data-act="crm-lose" data-id="${esc(d.id)}">Lost</button></div>` : ''}</div>`).join('')}</div>`).join('')}</div>
+    return `<div class="panel"><h3>Pipeline — ${gbp(pipe)} open · ${gbp(deals.filter((d) => d.stage === 'won').reduce((s, d) => s + (d.value || 0), 0))} won</h3>${readonlyNote(node)}
+      ${w ? `<div class="row"><input id="cn" placeholder="Company" maxlength="120" aria-label="Company"><input id="cc" placeholder="Contact" maxlength="120" aria-label="Contact"><input id="cv" placeholder="Value £" inputmode="numeric" style="max-width:120px" aria-label="Value"><button class="primary" data-act="crm-add">Add lead</button></div>` : ''}
+      <div class="grid cols">${stages.map((s) => `<div class="stage"><h4>${s} · ${deals.filter((d) => d.stage === s).length}</h4>${deals.filter((d) => d.stage === s).slice(-30).reverse().map((d) => `
+        <div class="card"><b>${esc(d.name)}</b><br><span class="dim">${esc(d.contact || '')} · ${esc(d.owner || '')}</span><br><span class="v">${gbp(d.value || 0)}</span>
+        ${w && s !== 'won' && s !== 'lost' ? `<div class="row" style="margin:6px 0 0"><button class="sm" data-act="crm-next" data-id="${esc(d.id)}">Advance</button><button class="sm danger" data-act="crm-lose" data-id="${esc(d.id)}">Lost</button></div>` : ''}</div>`).join('')}</div>`).join('')}</div>
     </div>`;
   },
   Docs(node) {
-    const w = can(node, 'docs');
-    return `<div class="panel"><h3>Q4 plan — live co-edit (RGA text, no server)</h3>
-      <textarea id="doc" rows="9" ${w ? '' : 'readonly'}>${esc(node.text('docs', 'q4-plan'))}</textarea>
-      <p class="dim" style="font-size:12px;margin:8px 0 0">${w ? 'Type here, take this device offline, type on another, reconnect — both edits survive, in one order, on every device.' : 'This device has read access only.'}</p>
+    const w = can(node, 'docs') && selIsHuman();
+    return `<div class="panel"><h3>Operating policy — live co-edit (RGA text, no server)</h3>
+      <textarea id="doc" rows="7" ${w ? '' : 'readonly'} aria-label="Operating policy">${esc(node.text('docs', 'policy'))}</textarea>
+      <p class="dim" style="font-size:12px;margin:8px 0 0">${w ? 'Type here, take this device offline, type on another, reconnect — both edits survive, in one order, on every device.' : 'Read only on this device.'}</p>
     </div>`;
   },
   Books(node) {
     const entries = node.list('journal').map((j) => ({ id: j.id, date: j.date, memo: j.memo, lines: j.lines }));
-    const tb = trialBalance(entries);
-    const pl = profitAndLoss(entries);
-    const bs = balanceSheet(entries);
-    const w = can(node, 'journal') && can(node, 'vault');
-    return `<div class="grid two"><div class="panel"><h3>Journal — ${entries.length} entries</h3>
-      ${w ? `<div class="row"><select id="jt"><option value="sale">Invoice a sale (+20% VAT)</option><option value="paid">Customer pays an invoice</option><option value="rent">Pay rent</option><option value="limb">Per-use AI limb</option></select>
-        <input id="ja" placeholder="Net £" inputmode="numeric" style="max-width:120px"><button class="primary" data-act="post">Post + sequence</button></div>` : '<p class="dim">Only finance posts to the books on this device.</p>'}
-      <table><tr><th>Date</th><th>Memo</th><th class="n">Amount</th></tr>${entries.map((e) => { const v = validEntry(e); return `<tr><td>${esc(e.date)}</td><td>${esc(e.memo)}</td><td class="n">${v.ok ? gbp(v.total) : '<span class="bad">invalid</span>'}</td></tr>`; }).join('')}</table>
+    const tb = trialBalance(entries), pl = profitAndLoss(entries), bs = balanceSheet(entries);
+    return `<div class="grid two"><div class="panel"><h3>Journal — ${entries.length} entries, posted by the Finance agent</h3>
+      <div class="tablewrap" style="max-height:480px;overflow:auto"><table><tr><th>Date</th><th>Memo</th><th class="n">Amount</th></tr>${entries.slice(-120).reverse().map((e) => { const v = validEntry(e); return `<tr><td>${esc(e.date)}</td><td>${esc(e.memo)}</td><td class="n">${v.ok ? gbp(v.total) : '<span class="bad">invalid</span>'}</td></tr>`; }).join('')}</table></div>
     </div><div class="panel"><h3>Trial balance</h3>
       <table><tr><th>Account</th><th class="n">Balance</th></tr>${tb.rows.map((r) => `<tr><td>${esc(r.code)} ${esc(r.name)}</td><td class="n">${gbp(r.balance)}</td></tr>`).join('')}
       <tr><th>Debits = credits</th><th class="n ${tb.balanced ? 'ok' : 'bad'}">${gbp(tb.dr)} ${tb.balanced ? '✓' : '✗'}</th></tr></table>
@@ -356,44 +431,43 @@ const VIEWS = {
     const first = heads.slice().sort((x, y) => x.size - y.size)[0];
     let inc = null, con = null;
     if (top && a.leaves.length) {
-      const m = a.leaves.length - 1;
+      const m = Math.min(a.leaves.length, top.size) - 1;
       inc = verifyInclusion(a.leaves[m], m, top.size, inclusionProof(m, a.leaves.slice(0, top.size)), top.root);
       if (first && first.size < top.size) con = verifyConsistency(first.size, top.size, first.root, top.root, consistencyProof(first.size, a.leaves.slice(0, top.size)));
     }
     return `<div class="grid two"><div class="panel"><h3>The one-true-record — a transparency log, not a blockchain</h3>
-      <p>Finance sequences each posted entry into an append-only Merkle log (RFC 9162, the Certificate Transparency design). Any device,
-      or anyone outside the company, can check an entry is in the books and that the books only ever grew.</p>
+      <p>The Finance agent sequences every posting into an append-only Merkle log (RFC 9162, the Certificate Transparency design); the Audit agent co-signs
+      the tree head every ten entries. Anyone — inside the company or out — can check an entry is in the books and that the books only ever grew.</p>
       <table><tr><td>Entries in the log</td><td class="n">${a.size}</td></tr>
       <tr><td>Rebuilt here, every tree head matches</td><td class="n ${a.ok ? 'ok' : 'bad'}">${a.ok ? '✓' : '✗ ' + a.bad.length + ' bad'}</td></tr>
       <tr><td>Latest root</td><td class="n mono">${short(a.root)}…</td></tr>
       <tr><td>Inclusion proof (latest entry, hashes only)</td><td class="n ${inc ? 'ok' : 'warn'}">${inc === null ? '—' : inc ? '✓ verified' : '✗'}</td></tr>
       <tr><td>Consistency proof (first head → latest)</td><td class="n ${con === false ? 'bad' : 'ok'}">${con === null ? '—' : con ? '✓ only appended' : '✗ rewritten'}</td></tr>
-      <tr><td>Witness co-signatures</td><td class="n">${cos.length}</td></tr></table>
-      ${can(node, 'vault_cosig') ? '<div class="row" style="margin-top:10px"><button data-act="witness">Witness the latest head</button></div>' : ''}
-    </div><div class="panel"><h3>Leaves</h3><div class="log">${recs.sort((x, y) => x.index - y.index).map((r) => `<div>#${r.index} ${esc(r.entry)} · ${short(r.leaf)}</div>`).join('')}</div></div></div>`;
+      <tr><td>Audit agent co-signatures</td><td class="n">${cos.length}</td></tr></table>
+    </div><div class="panel"><h3>Leaves</h3><div class="log">${recs.sort((x, y) => y.index - x.index).slice(0, 200).map((r) => `<div>#${r.index} ${esc(r.entry)} · ${short(r.leaf)}</div>`).join('')}</div></div></div>`;
   },
   People(node) {
     const v = node.view();
     const ppl = node.list('people');
-    const admin = can(node, null);
+    const admin = can(node, null) && selIsHuman();
     const isOwner = node.pub === node.genesis;
-    return `<div class="grid two"><div class="panel"><h3>The role tree — owner → admins → staff</h3>
+    return `<div class="grid two"><div class="panel"><h3>The role tree — owner → admin → agents</h3><div class="tablewrap">
       <table><tr><th>Who</th><th>Role</th><th>Scope</th><th></th></tr>
-      <tr><td>${esc(nameOf(node.genesis))}</td><td>owner</td><td>everything</td><td></td></tr>
-      ${v.roster.map((r) => `<tr><td>${esc(nameOf(r.to))}</td><td>${esc(r.role)}</td><td class="mono">${esc(r.cols.join(', '))}</td>
-        <td>${r.revoked ? '<span class="warn">revoked</span>' : admin && r.role !== 'admin' ? `<button class="danger" data-act="revoke" data-g="${esc(r.grant)}" data-to="${esc(r.to)}">Revoke</button>` : ''}</td></tr>`).join('')}</table>
-      ${mode === 'real' && admin ? `<div class="row" style="margin-top:10px"><input id="gk" placeholder="Teammate's device key (64 hex)" maxlength="64"><select id="gr"><option value="staff">staff</option>${isOwner ? '<option value="admin">admin</option>' : ''}</select><button class="primary" data-act="grant">Grant</button></div>` : ''}
+      <tr><td>${esc(nameOfPub(node.genesis))}</td><td>owner</td><td>everything</td><td></td></tr>
+      ${v.roster.map((r) => `<tr><td>${esc(nameOfPub(r.to))}</td><td>${esc(r.role)}</td><td class="mono">${esc(r.cols.join(', '))}</td>
+        <td>${r.revoked ? '<span class="warn">revoked</span>' : admin && r.role !== 'admin' ? `<button class="sm danger" data-act="revoke" data-g="${esc(r.grant)}" data-to="${esc(r.to)}">${mode === 'demo' ? 'Fire' : 'Revoke'}</button>` : ''}</td></tr>`).join('')}</table></div>
+      ${mode === 'real' && admin ? `<div class="row" style="margin-top:10px"><input id="gk" placeholder="Teammate's device key (64 hex)" maxlength="64" aria-label="Device key"><select id="gr" aria-label="Role"><option value="staff">staff</option>${isOwner ? '<option value="admin">admin</option>' : ''}</select><button class="primary" data-act="grant">Grant</button></div>` : ''}
+      <p class="note">Firing an agent revokes its grant at its last write: every device refuses anything it signs after that, its data lease stops renewing, and the door routes its work to the others.</p>
     </div><div class="panel"><h3>Directory — personal details sealed per person</h3>
-      ${ppl.map((p) => `<div class="item"><span class="grow"><b>${esc(p.name)}</b> <span class="dim">${esc(p.title)}</span><br>
-        <span class="mono dim" data-sealed="${esc(p.id)}">${p.privateSealed ? 'sealed · ' + short(p.privateSealed) + '…' : '—'}</span></span>
-        ${mode === 'demo' && isOwner ? `<button data-act="reveal" data-id="${esc(p.id)}">Reveal</button><button class="danger" data-act="erase" data-id="${esc(p.id)}">Erase</button>` : ''}</div>`).join('') || '<p class="dim">No directory entries.</p>'}
-      <p class="dim" style="font-size:12px">Erase destroys the person's key: every copy of their sealed details, on every device, goes dark at once —
-      while the record, the history and the vault all still verify.</p></div></div>`;
+      ${ppl.map((p) => `<div class="item"><span class="grow"><span class="kind ${p.kind === 'agent' ? 'ai' : 'hu'}">${p.kind === 'agent' ? 'AI' : 'HUMAN'}</span><b>${esc(p.name)}</b> <span class="dim">${esc(p.title)}</span><br>
+        <span class="mono dim" data-sealed="${esc(p.id)}">${p.privateSealed ? 'sealed · ' + short(p.privateSealed) + '…' : 'no personal details — an agent'}</span></span>
+        ${mode === 'demo' && isOwner && p.privateSealed ? `<button class="sm" data-act="reveal" data-id="${esc(p.id)}">Reveal</button><button class="sm danger" data-act="erase" data-id="${esc(p.id)}">Erase</button>` : ''}</div>`).join('') || '<p class="dim">No directory entries.</p>'}
+      <p class="dim" style="font-size:12px">Erase destroys the person's key: every copy of their sealed details, on every device, goes dark at once — while the record, the history and the vault all still verify.</p></div></div>`;
   },
   Proof(node) {
     const v = node.view();
-    const devs = mode === 'demo' ? demo.devices : [real.node];
-    const log = mode === 'demo' ? demo.gateLog : real.gateLog;
+    const devs = mode === 'demo' ? co.order.map((id) => co.nodes[id]) : [real.node];
+    const log = mode === 'demo' ? ui.gateLog : real.gateLog;
     return `<div class="grid two"><div class="panel"><h3>This device's replica</h3>
       <table><tr><td>Signed writes held</td><td class="n">${node.size()}</td></tr>
       <tr><td>Applied to the company</td><td class="n">${v.report.applied}</td></tr>
@@ -401,73 +475,99 @@ const VIEWS = {
       <tr><td>Equivocating writers flagged</td><td class="n ${v.report.equivocators.length ? 'warn' : ''}">${v.report.equivocators.length}</td></tr>
       <tr><td>Lamport clock</td><td class="n">${node.clock()}</td></tr>
       <tr><td>Company digest (SHA-256 of the canonical state)</td><td class="n mono">${short(node.digest())}…</td></tr></table>
-      <h3 style="margin-top:14px">Every device</h3><table>${devs.map((d) => `<tr><td>${esc(d.name || 'this device')}</td><td class="n mono">${short(d.digest())}</td></tr>`).join('')}</table>
-      <div class="row" style="margin-top:12px"><button class="primary" data-act="sim">Run the hostile-network simulation</button></div>
-      <pre class="mono" id="simout" style="white-space:pre-wrap;margin:0"></pre>
+      <h3 style="margin-top:14px">Every device — company digest</h3><table>${devs.map((d) => `<tr><td>${esc(d.name || 'this device')}</td><td class="n mono">${short(d.digest())}</td></tr>`).join('')}</table>
+      <div class="row" style="margin-top:12px"><button class="primary" data-act="sim">Run the hostile-network simulation</button><button data-act="receipt">Re-check a brain receipt</button></div>
+      <pre class="mono" id="simout" style="white-space:pre-wrap;margin:0">${esc(ui.proofOut)}</pre>
     </div><div class="panel"><h3>The gate — refused at the door</h3>
       <div class="log">${log.slice(-60).reverse().map((x) => `<div>${esc(x)}</div>`).join('') || '<span class="dim">Nothing refused yet — press "Attack this device".</span>'}</div></div></div>`;
   },
 };
 
+// the mycelium map: six agent devices on a ring; edges are learned brains, mesh answers and second-brain confirmations
+function mycelium() {
+  const W = 520, H = 330, cx = W / 2, cy = H / 2 + 6, R = 120;
+  const pos = {};
+  AGENTS.forEach((a, i) => { const t = -Math.PI / 2 + (i * 2 * Math.PI) / AGENTS.length; pos[a.id] = [cx + R * 1.45 * Math.cos(t), cy + R * Math.sin(t)]; });
+  const line = (a, b, cls, w) => { const [x1, y1] = pos[a], [x2, y2] = pos[b]; return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${cls}" stroke-width="${w}" ${cls === 'var(--accent2)' ? 'stroke-dasharray="6 5"' : cls === 'var(--violet)' ? 'stroke-dasharray="2 4"' : ''} stroke-linecap="round" opacity=".85"/>`; };
+  let edges = '';
+  for (const a of AGENTS) for (const [d, s] of Object.entries(co.src[a.id] || {})) {
+    const from = (s.source || '').startsWith('learned from ') ? AGENTS.find((x) => 'learned from ' + x.name === s.source) : null;
+    if (from) edges += line(from.id, a.id, 'var(--accent)', 3);
+  }
+  const width = (n) => Math.min(6, 1 + Math.log2(1 + n));
+  for (const [k, n] of co.meshEdges) { const [f, t] = k.split('>'); if (pos[f] && pos[t]) edges += line(f, t, 'var(--accent2)', width(n)); }
+  for (const [k, n] of co.crossEdges) { const [f, t] = k.split('>'); if (pos[f] && pos[t]) edges += line(f, t, 'var(--violet)', width(n)); }
+  const nodes = AGENTS.map((a) => { const [x, y] = pos[a.id]; const on = co.online[a.id] && grantLive(a.id);
+    return `<g><circle cx="${x}" cy="${y}" r="26" fill="var(--panel2)" stroke="${on ? 'var(--violet)' : 'var(--bad)'}" stroke-width="2"/>
+      <text x="${x}" y="${y + 4}" text-anchor="middle">${esc(a.name.replace(' agent', ''))}</text>
+      <text x="${x}" y="${y + 42}" text-anchor="middle" style="fill:var(--dim);font-size:11px">${Object.keys(co.libs[a.id] || {}).length} brains</text></g>`; }).join('');
+  return `<svg class="myc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of which agent devices answer, teach and confirm which">${edges}${nodes}</svg>`;
+}
+
 // ── actions ───────────────────────────────────────────────────────────────────────────────────────
+async function setControl(id, p) { const n = current(); if (can(n, null)) await co.setControl(ui.sel, id, p); }
 async function act(a, el) {
   const node = current();
   if (!node) return;
   const val = (id) => ($(id) ? $(id).value.trim() : '');
-  if (a === 'task-add' && val('tt')) await node.put('tasks', uid(node, 't'), { title: val('tt').slice(0, 200), owner: node.name.split(' ')[0] || 'me', status: 'todo' });
+  if (a === 'task-add' && val('tt')) await node.put('tasks', uid(node, 't'), { title: val('tt').slice(0, 200), owner: node.name, status: 'todo' });
   else if (a === 'task-cycle') { const t = node.list('tasks').find((x) => x.id === el.dataset.id); const n = { todo: 'doing', doing: 'done', done: 'todo' }[t && t.status] || 'doing'; await node.put('tasks', el.dataset.id, { status: n }); }
   else if (a === 'task-del') await node.del('tasks', el.dataset.id);
-  else if (a === 'msg-send' && val('mt')) await postMsg(node, val('mt'));
-  else if (a === 'crm-add' && val('cn')) await node.put('crm', uid(node, 'c'), { name: val('cn').slice(0, 120), contact: val('cc').slice(0, 120), stage: 'lead', value: Math.max(0, Math.round((parseFloat(val('cv')) || 0) * 100)), owner: node.name.split(' ')[0] || 'me' });
+  else if (a === 'msg-send' && val('mt')) await node.put('msg', uid(node, 'm'), { ch: 'general', body: val('mt').slice(0, 1500), by: node.name });
+  else if (a === 'crm-add' && val('cn')) await node.put('crm', uid(node, 'c'), { name: val('cn').slice(0, 120), contact: val('cc').slice(0, 120), stage: 'lead', value: Math.max(0, Math.round((parseFloat(val('cv')) || 0) * 100)), owner: node.name });
   else if (a === 'crm-next') { const d = node.list('crm').find((x) => x.id === el.dataset.id); const n = { lead: 'qualified', qualified: 'proposal', proposal: 'won' }[d && d.stage]; if (n) await node.put('crm', el.dataset.id, { stage: n }); }
   else if (a === 'crm-lose') await node.put('crm', el.dataset.id, { stage: 'lost' });
-  else if (a === 'post') {
-    const net = Math.round((parseFloat(val('ja')) || 0) * 100);
-    if (net > 0) {
-      const today = new Date().toISOString().slice(0, 10);
-      const T = {
-        sale: { memo: 'Invoice', lines: [['1100', net + Math.round(net * 0.2), 0], ['4000', 0, net], ['2200', 0, Math.round(net * 0.2)]] },
-        paid: { memo: 'Customer payment', lines: [['1200', net, 0], ['1100', 0, net]] },
-        rent: { memo: 'Rent', lines: [['7100', net, 0], ['1200', 0, net]] },
-        limb: { memo: 'Per-use AI limb', lines: [['7510', net, 0], ['1200', 0, net]] },
-      }[val('jt')];
-      await postEntry(node, { date: today, ...T });
-    }
-  }
-  else if (a === 'witness') await witnessHead(node);
+  else if (a === 'pause' || a === 'resume') await setControl(el.dataset.id, a === 'pause');
+  else if (a === 'pause-all' || a === 'resume-all') for (const ag of AGENTS) await setControl(ag.id, a === 'pause-all');
+  else if (a === 'resolve') await co.resolve(ui.sel, el.dataset.id, el.dataset.pick);
   else if (a === 'revoke') {
     const max = Math.max(0, ...node.hashes().map((h) => { try { const e = JSON.parse(new TextDecoder().decode(node.bytes(h))); return e.from === el.dataset.to ? e.seq : 0; } catch { return 0; } }));
     await node.revoke(el.dataset.g, max);
   }
   else if (a === 'grant') { const k = val('gk').toLowerCase(); if (/^[0-9a-f]{64}$/.test(k)) await node.grant(uid(node, 'g'), k, val('gr') || 'staff', val('gr') === 'admin' ? ['*'] : ['tasks', 'msg', 'docs', 'crm']); }
-  else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await demo.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = t === null ? 'erased — key destroyed, unreadable on every device' : t; return; }
-  else if (a === 'erase') { demo.ring.shred(el.dataset.id); const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = 'erased — key destroyed, unreadable on every device'; return; }
-  else if (a === 'sim') { $('simout').textContent = 'running 8 devices through partitions, drops, duplicates and attacks…'; const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); $('simout').textContent = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); return; }
+  else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await ui.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = t === null ? 'erased — key destroyed, unreadable on every device' : t; return; }
+  else if (a === 'erase') { ui.ring.shred(el.dataset.id); const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = 'erased — key destroyed, unreadable on every device'; return; }
+  else if (a === 'sim') { ui.proofOut = 'running 8 devices through partitions, drops, duplicates and attacks…'; render(); const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); ui.proofOut = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); }
+  else if (a === 'receipt') {
+    // re-check the latest verified answer: re-hash its receipt, match it to the signed decision on the spine, then tamper with it
+    const seen = new Map(node.list('decisions').map((r) => [r.event, r]));
+    const led = [...co.ledger].reverse().find((x) => x.receipt && seen.has(x.id));
+    if (!led) { ui.proofOut = 'No verified answer on this device yet.'; render(); return; }
+    const rec = seen.get(led.id);
+    const ok = verifyReceipt(led.receipt);
+    const onSpine = !!rec && rec.receipt === led.receipt.receiptHash.slice(0, 16);
+    const forged = verifyReceipt({ ...led.receipt, label: 1 - led.receipt.label });
+    ui.proofOut = [
+      'decision ' + led.id + ' · ' + agentName(led.agent) + ' · ' + led.domain + ' → ' + led.action,
+      'receipt re-hashes to itself: ' + (ok ? '✓' : '✗'),
+      "matches the signed decision on this device's spine: " + (rec ? (onSpine ? '✓' : '✗') : 'not synced here yet'),
+      'the same receipt with the label flipped: ' + (forged ? '✗ still verifies (broken)' : 'refused ✓'),
+      'covers: pattern ' + led.receipt.patternId + ' · held-out AUC ' + led.receipt.heldAuc + ' · route ' + led.receipt.routeScore + ' · score ' + led.receipt.score + ' · threshold ' + led.receipt.threshold + ' · label ' + led.receipt.label,
+    ].join('\n');
+  }
   render();
 }
 
 async function attack(node) {
-  const log = mode === 'demo' ? demo.gateLog : real.gateLog;
+  const log = mode === 'demo' ? ui.gateLog : real.gateLog;
   const own = node.hashes();
-  const someone = mode === 'demo' ? demo.people[3].keys : null;
+  const someone = mode === 'demo' ? co.keys.ops : null;
   const stranger = await generate();
   const shots = [];
-  const body = { from: node.genesis, op: { k: 'put', c: 'crm', id: 'forged', f: { name: 'pwned' }, l: 3 }, seq: 999999, v: 1 };
+  const body = { from: node.genesis, op: { k: 'put', c: 'payments', id: 'forged', f: { status: 'released' }, l: 3 }, seq: 999999, v: 1 };
   shots.push(['forged signature', utf8(canonical({ ...body, sig: 'ab'.repeat(64) }))]);
   if (own.length) { const b = node.bytes(own[own.length - 1]).slice(); b[Math.floor(b.length / 2)] ^= 4; shots.push(['bit-flipped write', b]); }
   if (own.length) shots.push(['replayed write', node.bytes(own[0])]);
   if (own.length) shots.push(['re-wrapped (non-canonical)', utf8('{ ' + new TextDecoder().decode(node.bytes(own[0])).slice(1))]);
   shots.push(['oversize', utf8('{' + 'x'.repeat(5000))]);
   shots.push(['junk bytes', globalThis.crypto.getRandomValues(new Uint8Array(40))]);
-  const sb = { from: stranger.pub, op: { k: 'put', c: 'tasks', id: 'intruder', f: { title: 'free money' }, l: 9 }, seq: 1, v: 1 };
+  const sb = { from: stranger.pub, op: { k: 'put', c: 'decisions', id: 'intruder', f: { action: 'release-payment' }, l: 9 }, seq: 1, v: 1 };
   shots.push(['stranger, validly signed', utf8(canonical({ ...sb, sig: await sign(stranger, utf8(canonical(sb))) }))]);
   if (someone) {
-    // a stolen insider key signs TWO different writes for one fresh sequence slot: the company keeps exactly one,
-    // the same one on every device, and flags the writer as an equivocator
     const slot = 500000 + Math.floor(Math.random() * 400000);
     for (const fork of ['A', 'B']) {
       const eb = { from: someone.pub, op: { k: 'put', c: 'tasks', id: 'fork', f: { title: 'fork ' + fork }, l: 2 }, seq: slot, v: 1 };
-      shots.push(['insider equivocation ' + fork, utf8(canonical({ ...eb, sig: await sign(someone, utf8(canonical(eb))) }))]);
+      shots.push(['stolen agent key, equivocation ' + fork, utf8(canonical({ ...eb, sig: await sign(someone, utf8(canonical(eb))) }))]);
     }
   }
   for (const [label, bytes] of shots) {
@@ -478,11 +578,16 @@ async function attack(node) {
   render();
 }
 
+// a customer writes something hostile: it reaches the Service agent, which never reads it — the screen quarantines it
+async function hostile() { await co.hostile(prng((Date.now() & 0xffff) + 7)); tab = 'Watch'; render(); }
+// a compromised agent publishes a sabotaged fraud brain: every device that tries it on its own data refuses it
+async function poison() { await co.poison(String(Date.now())); tab = 'Brains'; render(); }
+
 // Docs: map textarea edits to RGA ops (diff the common prefix/suffix)
 document.addEventListener('input', async (e) => {
   if (e.target.id !== 'doc') return;
   const node = current();
-  const before = node.text('docs', 'q4-plan');
+  const before = node.text('docs', 'policy');
   const after = e.target.value;
   let p = 0;
   while (p < before.length && p < after.length && before[p] === after[p]) p++;
@@ -490,43 +595,47 @@ document.addEventListener('input', async (e) => {
   while (s < before.length - p && s < after.length - p && before[before.length - 1 - s] === after[after.length - 1 - s]) s++;
   const removed = before.length - p - s;
   const added = after.slice(p, after.length - s);
-  if (removed > 0) await node.eraseAt('docs', 'q4-plan', p, removed);
-  if (added) await node.typeAt('docs', 'q4-plan', p, added);
+  if (removed > 0) await node.eraseAt('docs', 'policy', p, removed);
+  if (added) await node.typeAt('docs', 'policy', p, added);
 });
-
+document.addEventListener('change', async (e) => {
+  if (e.target.id === 'mc') { const n = current(); if (can(n, null)) await n.put('policy', 'agents', { minConfidence: +e.target.value, by: n.name }); render(); }
+});
 document.addEventListener('click', async (e) => {
-  const t = e.target;
+  const t = e.target.closest('button, [data-net], [data-dev]');
+  if (!t) return;
   if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
-  if (t.dataset.net !== undefined) { const i = +t.dataset.net; demo.online[i] = !demo.online[i]; render(); return; }
-  const dev = t.closest('.dev');
-  if (dev && mode === 'demo') { demo.sel = +dev.dataset.i; render(); return; }
+  if (t.dataset.speed) { ui.speed = +t.dataset.speed; ui.running = true; render(); return; }
+  if (t.dataset.net !== undefined) { const id = t.dataset.net; co.online[id] = !co.online[id]; render(); return; }
+  if (t.dataset.dev && mode === 'demo') { ui.sel = t.dataset.dev; render(); return; }
   if (t.dataset.act) { t.disabled = true; try { await act(t.dataset.act, t); } finally { t.disabled = false; } }
 });
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.dataset && e.target.dataset.dev) { ui.sel = e.target.dataset.dev; render(); return; }
   if (e.key !== 'Enter') return;
-  const map = { tt: 'task-add', mt: 'msg-send', cn: 'crm-add', ja: 'post' };
+  const map = { tt: 'task-add', mt: 'msg-send', cn: 'crm-add' };
   if (map[e.target.id]) act(map[e.target.id], e.target);
 });
+$('run').onclick = () => { if (co.n >= SHIFT) co.n = 0; ui.running = !ui.running; render(); };
 $('attack').onclick = () => attack(current());
-$('splitnet').onclick = () => { demo.online = demo.online.map((_, i) => i < 2); render(); };
-$('healnet').onclick = () => { demo.online = demo.online.map(() => true); render(); };
-$('m-demo').onclick = () => { mode = 'demo'; $('m-demo').classList.add('on'); $('m-real').classList.remove('on'); $('demo').classList.remove('hide'); $('real').classList.add('hide'); render(); };
-$('m-real').onclick = async () => { mode = 'real'; $('m-real').classList.add('on'); $('m-demo').classList.remove('on'); $('demo').classList.add('hide'); $('real').classList.remove('hide'); if (!real.node) await bootReal(); render(); };
+$('hostile').onclick = () => hostile();
+$('poison').onclick = () => poison();
+$('splitnet').onclick = () => { co.order.forEach((id, i) => { co.online[id] = i < 4; }); render(); };
+$('healnet').onclick = () => { co.order.forEach((id) => { co.online[id] = true; }); render(); };
+$('m-demo').onclick = () => { mode = 'demo'; $('m-demo').classList.add('on'); $('m-real').classList.remove('on'); $('demo').classList.remove('hide'); $('real').classList.add('hide'); if (!TABS.includes(tab)) tab = 'Board'; render(); };
+$('m-real').onclick = async () => { mode = 'real'; $('m-real').classList.add('on'); $('m-demo').classList.remove('on'); $('demo').classList.add('hide'); $('real').classList.remove('hide'); if (tab === 'Board' || tab === 'Agents' || tab === 'Watch' || tab === 'Brains') tab = 'Tasks'; if (!real.node) await bootReal(); render(); };
 if (new URLSearchParams(location.hash.slice(1)).get('join')) setTimeout(() => $('m-real').click(), 0);
 
 // ── run your own company: this tab is your device; other tabs join over BroadcastChannel ───────────
-// A founding tab keeps its identity in localStorage; a tab opened from an invite link keeps its OWN identity in
-// tab-scoped sessionStorage — so a teammate opening the link in another tab is a genuinely separate device.
 const JOIN = new URLSearchParams(location.hash.slice(1)).get('join');
 const STORE = () => { try { return JOIN ? sessionStorage : localStorage; } catch { return null; } };
 const LS = (k, v) => { try { const s = STORE(); if (!s) return null; if (v === undefined) return s.getItem(k); if (v === null) s.removeItem(k); else s.setItem(k, v); } catch { return null; } };
 async function bootReal() {
-  const joinG = JOIN;
-  let priv = LS('se.priv');
+  const priv = LS('se.priv');
   real.me = priv ? await importPriv(priv) : await generate();
   if (!priv) LS('se.priv', await exportPriv(real.me));
   let G = LS('se.genesis');
-  if (joinG && /^[0-9a-f]{64}$/.test(joinG) && joinG !== G) { G = joinG; LS('se.genesis', G); LS('se.env', null); }
+  if (JOIN && /^[0-9a-f]{64}$/.test(JOIN) && JOIN !== G) { G = JOIN; LS('se.genesis', G); LS('se.env', null); }
   if (!G) return;
   startReal(G);
 }
@@ -546,7 +655,6 @@ async function startReal(G) {
       const d = m.data || {};
       if (d.t === 'env' && typeof d.hex === 'string' && d.hex.length <= 8192) { const r = await real.node.receive(fromHex(d.hex)); if (!r.ok && r.reason !== 'replay') real.gateLog.push(`${new Date().toLocaleTimeString()} tab → REFUSED · ${r.reason}`); render(); }
       else if ((d.t === 'hello' || d.t === 'have') && Array.isArray(d.have)) {
-        // set reconciliation: send every signed write the other tab lacks; answer a hello with our own list
         if (typeof d.from === 'string') real.peers.add(d.from);
         const theirs = new Set(d.have);
         for (const b of real.node.give(real.node.have().filter((h) => !theirs.has(h)))) real.chan.postMessage({ t: 'env', hex: toHex(b) });
@@ -562,7 +670,7 @@ function renderReal() {
   if (!real.node) {
     box.innerHTML = `<h3 style="margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)">Run your own company</h3>
       <p>This browser tab becomes a device in your company. Its Ed25519 key is made here and never leaves it. Found a company and you are the owner;
-      share the invite link and every tab that opens it (same machine, today — WebRTC between machines is the next layer) joins and syncs peer to peer.</p>
+      share the invite link and every tab that opens it joins and syncs peer to peer (same machine today — WebRTC between machines is the next layer).</p>
       <div class="row"><button class="primary" id="found">Found a company on this device</button></div>`;
     $('found').onclick = async () => { LS('se.genesis', real.me.pub); LS('se.env', null); await startReal(real.me.pub); render(); };
     $('rconv').textContent = 'no company yet';
@@ -573,39 +681,42 @@ function renderReal() {
   const link = location.origin + location.pathname + '#join=' + n.genesis;
   box.innerHTML = `<div class="row"><b>${owner ? 'You own this company.' : 'You have joined a company.'}</b>
     <span class="dim">Your device key:</span><span class="mono">${esc(n.pub)}</span></div>
-    <div class="row"><span class="dim">Invite link:</span><input value="${esc(link)}" readonly style="flex:1 1 300px"><button id="copy">Copy</button>
+    <div class="row"><span class="dim">Invite link:</span><input value="${esc(link)}" readonly style="flex:1 1 300px" aria-label="Invite link"><button id="copy">Copy</button>
     <button class="danger" id="leave">Leave / reset this device</button></div>
     ${!owner && !n.canWrite('tasks') ? '<p class="warn" style="margin:4px 0 0">Waiting for a grant — send your device key above to the owner or an admin; they grant you in People.</p>' : ''}`;
   $('copy').onclick = () => navigator.clipboard && navigator.clipboard.writeText(link);
   $('leave').onclick = () => { LS('se.genesis', null); LS('se.env', null); LS('se.priv', null); location.href = location.pathname; };
   $('rconv').className = 'badge ok';
-  $('rconv').textContent = `replica ${short(n.digest())} · ${n.size()} signed writes`;
+  $('rconv').textContent = `replica ${short(n.fingerprint())} · ${n.size()} signed writes`;
   $('rinfo').textContent = `${real.peers.size} other tab${real.peers.size === 1 ? '' : 's'} connected · stored on this device only`;
 }
 
-// ── the heartbeat: anti-entropy between online devices + data leases ──────────────────────────────
+// ── the heartbeat: the door, the spine, the leases ─────────────────────────────────────────────────
 let busy = false;
 setInterval(async () => {
-  if (busy || mode !== 'demo' || !demo.devices.length) return;
+  if (busy || !ui.ready) return;
   busy = true;
   try {
-    const moved = await syncAll(demo.devices, demo.online);
+    await co.syncAll();
+    if (ui.running && co.n < SHIFT) for (let i = 0; i < ui.speed && co.n < SHIFT; i++) await co.next();
+    await co.housekeeping();
     const now = Date.now();
-    let leaseChange = false;
-    demo.devices.forEach((d, i) => {
-      const L = decideLease(demo.leases[i], now, grantLive(d), LEASE_WIN);
-      if (L.action === 'renew') { const r = renew(demo.leases[i], now, grantLive(d)); if (r) demo.leases[i] = r; }
-      if (L.action === 'lock') leaseChange = true;
-    });
-    const typing = document.activeElement && document.activeElement.tagName === 'INPUT';
-    if ((moved || leaseChange) && !typing) render(); else if (moved) renderDevices();
+    for (const id of co.order) {
+      const L = decideLease(ui.leases[id], now, grantLive(id), LEASE_WIN);
+      if (L.action === 'renew') { const r = renew(ui.leases[id], now, grantLive(id)); if (r) ui.leases[id] = r; }
+    }
+    const typing = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT');
+    if (mode === 'demo') { if (!typing) render(); else renderDevices(); }
+  } catch (e) {
+    $('kstat').textContent = 'heartbeat error: ' + e.message;
+    $('kstat').className = 'pill bad';
   } finally { busy = false; }
-}, 700);
+}, TICK);
 
 (async () => {
   try {
-    await bootDemo();
-    $('kstat').textContent = 'kernel live';
+    await bootCompany();
+    $('kstat').textContent = 'company live';
     $('kstat').className = 'pill ok';
     render();
   } catch (e) {
@@ -613,6 +724,7 @@ setInterval(async () => {
     $('kstat').className = 'pill bad';
   }
 })();
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>

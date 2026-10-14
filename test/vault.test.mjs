@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { leafHash, nodeHash, split, root, inclusionProof, verifyInclusion, consistencyProof, verifyConsistency, audit } from '../src/vault.mjs';
+import { leafHash, nodeHash, split, root, inclusionProof, verifyInclusion, consistencyProof, verifyConsistency, audit, prefixRoots } from '../src/vault.mjs';
 
 // RFC 6962 reference leaves (the certificate-transparency test vectors)
 const hex = (s) => Uint8Array.from(s.match(/../g) || [], (b) => parseInt(b, 16));
@@ -122,4 +122,18 @@ test('audit: rebuild the log, check every tree head, catch gaps, duplicates and 
   assert.equal(dup.dupes, 1);
   assert.equal(audit([null, { index: -1, leaf: many[0] }, { index: 0, leaf: 'zz' }], []).size, 0);
   assert.equal(audit('x', 'y').ok, true);
+});
+
+test('prefixRoots: every prefix root in one pass equals the RFC 9162 tree hash of that prefix', () => {
+  const leaves = Array.from({ length: 70 }, (_, i) => leafHash('entry ' + i));
+  const roots = prefixRoots(leaves);
+  assert.equal(roots.length, 71);
+  for (let k = 0; k <= 70; k++) assert.equal(roots[k], root(leaves.slice(0, k)), 'prefix ' + k);
+  assert.deepEqual(prefixRoots([]), [root([])]);
+  const heads = [5, 8, 33, 64, 70].map((k) => ({ size: k, root: roots[k] }));
+  assert.equal(audit(leaves.map((leaf, index) => ({ index, leaf })), heads).ok, true);
+  assert.equal(audit(leaves.map((leaf, index) => ({ index, leaf })), [{ size: 71, root: roots[70] }]).ok, false);   // a head past the end
+  assert.equal(audit(leaves.map((leaf, index) => ({ index, leaf })), [{ size: 71 }]).ok, false);                  // past the end with NO root: undefined must never match undefined
+  assert.equal(audit(leaves.map((leaf, index) => ({ index, leaf })), [{ size: 70 }]).ok, false);
+  assert.equal(audit(leaves.map((leaf, index) => ({ index, leaf })), [{ size: 70, root: roots[70] }]).root, roots[70]);
 });

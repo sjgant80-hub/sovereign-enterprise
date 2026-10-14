@@ -1,25 +1,40 @@
 # Sovereign Enterprise
 
-> A company's whole operational layer — tasks, chat, CRM, documents, double-entry books, a transparency-log vault and the people
-> directory — running on the employees' own devices, peer to peer. Every write is Ed25519-signed by the device that made it and
-> checked by a verify-before-parse gate before it is read. The company state is a pure function of the set of signed writes, so
-> devices converge regardless of delivery order. No per-seat software; nothing leaves the building.
+> A full AI company on its own devices. Six AI agents (sales, service, finance, operations, systems, audit) run the company end to
+> end; two humans watch. Every device is a brain — a verified, readable pattern library (the Konomi SLM) that answers only inside
+> what it was verified on and abstains outside it — and the brains share what they learn over a signed peer-to-peer spine. Money and
+> security calls need a second, independent brain to agree; what no brain can confirm waits for a human. Nothing leaves the building.
 
 Live: https://sjgant80-hub.github.io/sovereign-enterprise/
 White paper: https://sjgant80-hub.github.io/sovereign-enterprise/whitepaper.html
 Source: https://github.com/sjgant80-hub/sovereign-enterprise
 
+## How the AI company works
+- Each agent is a device with its own Ed25519 key, a grant scoped to its department, and a dedicated brain file it re-verifies on its
+  own data before trusting it.
+- Work lands at a door that does not know who handles it; an agent that cannot answer asks the mesh, and the device whose brain covers
+  the case answers with a receipt.
+- An agent asked about the same work repeatedly adopts the published brain — only if it re-verifies on its own data. A poisoned brain
+  is refused by every device that checks it.
+- High-stakes calls (holding a payment, credit terms, quarantining a machine) need an independent brain on another device to agree; the
+  Audit agent grows its own for exactly that.
+- Outcomes come back; an agent regrows its brain and promotes the new one only if it beats the old on outcomes neither saw.
+- Inbound text is screened for invisible characters, bidi tricks, tag-character smuggling and injection phrasing before any brain reads it.
+
+## Measured (re-runnable: node tools/run-company.mjs --check)
+- A working day of 480 pieces of work: 77.7% done end to end by agents; 76.7% of agent calls matched the real outcome; 120 money and
+  security calls confirmed by an independent second brain; a poisoned brain refused by 5 of 5 devices; every device converged; books
+  balanced; vault audited.
+
 ## The white paper — the AI-native office
-- AI runs 90% of a modelled 50-person UK office's operational work on owned machines (an office hub plus two AI boxes);
-  five AI-native people oversee it.
+- AI runs 90% of a modelled 50-person UK office's operational work on owned machines; five AI-native people oversee it.
 - Five-year cost: £12.6m today, £12.7m with an AI seat on every desk, £2.3m AI-native and owned — £10.3m saved (82%).
-- Every figure is computed by a tested kernel (src/office.mjs) from sourced UK data (data/basis.json: ONS, gov.uk, DESNZ,
-  vendor price pages, LMSYS throughput).
 
 ## Proof
-- 76 tests; a byte-reproducible hostile-network simulation (16 devices, partitions, 90 attacks, converged);
-  a mutation + fuzz witness over every decision kernel.
+- Unit, boundary, hostile-input and integration suites; two byte-reproducible re-runs (the AI company's working day; a hostile-network
+  simulation); a mutation + fuzz witness over every decision kernel.
 
 ## Credits
-- GEP / WIPER / BES / Dual-Map design lens: Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Services, LLC).
-- Konomi: Thomas Frumkin. MIT licensed.
+- Konomi architecture and the Konomi SLM lineage: Thomas Frumkin.
+- GEP / WIPER / BES / Dual-Map design lens: Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Service, LLC).
+- Real sales data: UCI Online Shoppers Purchasing Intention (Sakar & Kastro, 2018), CC BY 4.0. MIT licensed.

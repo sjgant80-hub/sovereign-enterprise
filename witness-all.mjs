@@ -7,6 +7,11 @@
 //   books.mjs — double-entry (what the money says)
 //   lease.mjs — data leases + crypto-shredding (what a leaver / an erasure leaves behind)
 //   office.mjs — the AI-native office cost + capacity kernel (every number the white paper shows)
+//   brain.mjs  — every node a brain: route → gate → verified answer or ABSTAIN; adopt-only-if-it-re-verifies-here
+//   agent.mjs  — what an agent does with an answer: screen, own, mesh, second-brain cross-check, watch list
+//   screen.mjs — inbound text screen (invisible Unicode, bidi, tag smuggling, prompt injection)
+//   grow.mjs   — a node grows its own brain on its own data, graded on held-out rows it never grew on
+//   company.mjs — the AI company: the door, each agent's step, what decisions write, learning, regrowth, the board
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +26,11 @@ export const PAIRS = [
   ['src/books.mjs', ['test/books.test.mjs']],
   ['src/lease.mjs', ['test/lease.test.mjs']],
   ['src/office.mjs', ['test/office.test.mjs']],
+  ['src/brain.mjs', ['test/brain.test.mjs', 'test/fuzz.test.mjs']],
+  ['src/agent.mjs', ['test/agent.test.mjs', 'test/fuzz.test.mjs']],
+  ['src/screen.mjs', ['test/agent.test.mjs', 'test/fuzz.test.mjs']],
+  ['src/grow.mjs', ['test/grow.test.mjs']],
+  ['src/company.mjs', ['test/company.test.mjs', 'test/fuzz.test.mjs']],
 ];
 const only = process.argv.slice(2);
 let allClean = true; const rows = [];

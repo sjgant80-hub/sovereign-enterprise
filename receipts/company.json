@@ -1,0 +1,132 @@
+{
+ "model": "sovereign-enterprise/company-run/1",
+ "seed": 20261014,
+ "date": "2026-10-14",
+ "events": 480,
+ "speed": 3,
+ "script": [
+  {
+   "tick": 20,
+   "act": "hostile message",
+   "result": "quarantined"
+  },
+  {
+   "tick": 40,
+   "act": "poisoned brain offered",
+   "adopted": 0,
+   "refused": 5
+  },
+  {
+   "tick": 60,
+   "act": "Audit agent offline"
+  },
+  {
+   "tick": 80,
+   "act": "Audit agent back online"
+  },
+  {
+   "tick": 100,
+   "act": "overseer approved a held call",
+   "channel": "churn",
+   "action": "standard-reply"
+  },
+  {
+   "tick": 120,
+   "act": "Systems agent fired"
+  }
+ ],
+ "summary": {
+  "events": 480,
+  "decisions": 480,
+  "automatedPermille": 777,
+  "rightPermille": 767,
+  "correct": 286,
+  "done": 373,
+  "toHumans": 107,
+  "quarantined": 7,
+  "crossChecked": 120,
+  "viaMesh": 63,
+  "learned": 15,
+  "regrowthsTried": 3,
+  "regrowthsPromoted": 1,
+  "perAgent": {
+   "sales": {
+    "done": 99,
+    "correct": 82,
+    "watched": 15,
+    "brains": [
+     "churn",
+     "fraud",
+     "intrusion",
+     "inventory",
+     "shopper"
+    ]
+   },
+   "service": {
+    "done": 52,
+    "correct": 39,
+    "watched": 28,
+    "brains": [
+     "churn",
+     "fraud",
+     "inventory",
+     "shopper"
+    ]
+   },
+   "finance": {
+    "done": 74,
+    "correct": 50,
+    "watched": 32,
+    "brains": [
+     "churn",
+     "credit",
+     "fraud",
+     "intrusion",
+     "inventory",
+     "shopper"
+    ]
+   },
+   "ops": {
+    "done": 108,
+    "correct": 88,
+    "watched": 16,
+    "brains": [
+     "energy",
+     "fraud",
+     "inventory",
+     "maintenance"
+    ]
+   },
+   "systems": {
+    "done": 40,
+    "correct": 27,
+    "watched": 16,
+    "brains": [
+     "churn",
+     "fraud",
+     "intrusion",
+     "shopper"
+    ]
+   }
+  },
+  "books": {
+   "entries": 88,
+   "income": 278130,
+   "expense": 3235934,
+   "profit": -2957804,
+   "balanced": true
+  },
+  "vault": {
+   "size": 88,
+   "audits": true,
+   "root": "284f8e6cf870d188a9b5dcd14975aa01826c91d29e2130ffe7e19e42a3a2b092",
+   "cosigned": 8
+  },
+  "writes": 1442,
+  "digest": "ab46606909dd8def3dd025f7dbb5da3cf13c93b59415f23d2675d402342216e1",
+  "converged": true
+ },
+ "systemsDecisionsTotal": 56,
+ "growthLog": 27,
+ "receiptHash": "fd6929f38331e1690c008d0f4e5e4430fe50e0ddb36ad7588be50a43c7e57d6f"
+}

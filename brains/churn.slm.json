@@ -1,0 +1,103 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "churn",
+ "title": "Subscription churn",
+ "role": "service",
+ "real": false,
+ "note": "Subscription churn — churn=1. Ground-truth risk rises with short tenure, many support tickets, a big usage drop, little contract left and few weekly logins. Realistic-synthetic.",
+ "features": [
+  "tenureMonths",
+  "monthlySpend",
+  "supportTickets",
+  "usageDropPct",
+  "contractMonthsLeft",
+  "loginsPerWeek"
+ ],
+ "rules": [
+  {
+   "feat": "supportTickets",
+   "op": ">",
+   "v": 2,
+   "w": 1
+  },
+  {
+   "feat": "usageDropPct",
+   "op": ">",
+   "v": 5.129222,
+   "w": 0.25
+  },
+  {
+   "feat": "usageDropPct",
+   "op": ">",
+   "v": 25.006967,
+   "w": 1
+  },
+  {
+   "feat": "contractMonthsLeft",
+   "op": ">",
+   "v": 9.628605,
+   "w": -1
+  },
+  {
+   "feat": "tenureMonths",
+   "op": "<=",
+   "v": 20.063361,
+   "w": 1
+  }
+ ],
+ "base": 0.4875,
+ "threshold": 1.25,
+ "spread": 4.25,
+ "dist": {
+  "tenureMonths": {
+   "min": 0,
+   "q1": 9.109576,
+   "med": 20.063361,
+   "q3": 31.472335,
+   "max": 83.213528
+  },
+  "monthlySpend": {
+   "min": 0,
+   "q1": 37.95412,
+   "med": 54.326885,
+   "q3": 72.259619,
+   "max": 156.555569
+  },
+  "supportTickets": {
+   "min": 2,
+   "q1": 2,
+   "med": 3,
+   "q3": 4,
+   "max": 8
+  },
+  "usageDropPct": {
+   "min": -40,
+   "q1": 1.898201,
+   "med": 15.30971,
+   "q3": 28.855366,
+   "max": 79.70524
+  },
+  "contractMonthsLeft": {
+   "min": 0,
+   "q1": 2.415871,
+   "med": 6.000635,
+   "q3": 9.628605,
+   "max": 21.169156
+  },
+  "loginsPerWeek": {
+   "min": 0,
+   "q1": 3.574962,
+   "med": 6.063396,
+   "q3": 8.738915,
+   "max": 19.088181
+  }
+ },
+ "heldAuc": 0.764505,
+ "heldAcc": 0.669444,
+ "held": 720,
+ "train": 1680,
+ "patternId": "c250ad28fc483fe2",
+ "seed": "◊ seed.v1 churn 80658 f:1f520f656aeb8e1d9311 a29d9a8c2206",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}

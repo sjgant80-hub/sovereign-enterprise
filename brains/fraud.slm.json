@@ -1,0 +1,103 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "fraud",
+ "title": "Card fraud",
+ "role": "finance",
+ "real": false,
+ "note": "Card fraud — fraud=1. Ground-truth risk rises with large amounts, late-night hour, distance from home, a burst of recent transactions, higher merchant risk and card-not-present. Realistic-synthetic.",
+ "features": [
+  "amount",
+  "hourOfDay",
+  "distanceKm",
+  "recentTx",
+  "merchantRisk",
+  "cardNotPresent"
+ ],
+ "rules": [
+  {
+   "feat": "amount",
+   "op": ">",
+   "v": 74.195409,
+   "w": 0.5
+  },
+  {
+   "feat": "recentTx",
+   "op": "<=",
+   "v": 4.024268,
+   "w": -0.5
+  },
+  {
+   "feat": "amount",
+   "op": ">",
+   "v": 196.482375,
+   "w": 1
+  },
+  {
+   "feat": "cardNotPresent",
+   "op": "<=",
+   "v": 0,
+   "w": -1
+  },
+  {
+   "feat": "merchantRisk",
+   "op": ">",
+   "v": 0.376646,
+   "w": 0.5
+  }
+ ],
+ "base": 0.175595,
+ "threshold": 0,
+ "spread": 3.5,
+ "dist": {
+  "amount": {
+   "min": 0,
+   "q1": 0,
+   "med": 59.090583,
+   "q3": 121.301413,
+   "max": 337.025735
+  },
+  "hourOfDay": {
+   "min": 0,
+   "q1": 9.0959,
+   "med": 13.29182,
+   "q3": 17.108596,
+   "max": 23
+  },
+  "distanceKm": {
+   "min": 8.014094,
+   "q1": 21.181122,
+   "med": 35.812115,
+   "q3": 53.514283,
+   "max": 137.894837
+  },
+  "recentTx": {
+   "min": 2.000636,
+   "q1": 2.676154,
+   "med": 3.368198,
+   "q3": 4.327993,
+   "max": 9.12826
+  },
+  "merchantRisk": {
+   "min": 0,
+   "q1": 0.13933,
+   "med": 0.297714,
+   "q3": 0.470979,
+   "max": 1
+  },
+  "cardNotPresent": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 1,
+   "max": 1
+  }
+ },
+ "heldAuc": 0.76476,
+ "heldAcc": 0.790278,
+ "held": 720,
+ "train": 1680,
+ "patternId": "f98d9899aab1ecfb",
+ "seed": "◊ seed.v1 fraud 48495 f:1fe0be92799708e55618 31b7a5e8cdc8",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}

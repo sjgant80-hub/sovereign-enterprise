@@ -110,7 +110,36 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
     services receive only what a single call needs — the voice of one call, the text of one hard question.</p></div>
 </div>
 
-<h2>5 · A day in the AI-native office</h2>
+<h2>5 · The full AI company: every device is a brain</h2>
+<p>Go one step further than an office with AI in it. In the full AI company the agents run every department end to end and the people
+  watch. Each agent is a device on the spine with its own key, a grant scoped to its department, and a <b>brain</b>: a small, readable
+  library of verified patterns (the Konomi SLM) — each pattern earned its place by predicting cases it never saw, and it answers only
+  inside what it was verified on. Outside that, it abstains. It never guesses.</p>
+<div class="scroll"><table id="brains"></table></div>
+<p>The brains are not one big model in one place. They are distributed — a mycelium — and five rules make them one intelligence:</p>
+<div class="tier">
+  <div class="card"><b>Trust nothing until it re-verifies here</b><p>An agent loads even its own department's brain file only after it
+    re-checks it on its own data. A brain offered by another device is adopted the same way — so a poisoned brain dies at the first
+    device that checks it, whatever it claims about itself.</p></div>
+  <div class="card"><b>Ask the mesh</b><p>Work arrives at a door that does not know who handles it. An agent that cannot answer asks the
+    other devices; the one whose brain covers the case answers, with a receipt that names the pattern and the score.</p></div>
+  <div class="card"><b>Learn what you are asked</b><p>An agent asked about the same kind of work again and again takes the published brain
+    for it — and keeps it only if it re-verifies on that agent's own data. The company's knowledge spreads to where the work lands.</p></div>
+  <div class="card"><b>A second, independent brain for money and security</b><p>Holding a payment, setting credit terms, quarantining a
+    machine: a second brain on another device, grown on its own data, must agree. A copy of the same brain is not a check and is refused.
+    Disagreement goes to a person.</p></div>
+  <div class="card"><b>Regrow on outcomes — and only promote a winner</b><p>Outcomes come back. An agent regrows its brain on them, and the
+    new brain replaces the old only if it beats it on outcomes neither brain grew on.</p></div>
+  <div class="card"><b>Screen everything before it is read</b><p>Customer text is checked for invisible characters, direction tricks,
+    smuggled hidden text and injection phrasing before any brain sees it. Anything flagged is quarantined unread.</p></div>
+</div>
+<h3>A working day, re-run from scratch</h3>
+<p>This is not a mock-up. The same code the live page runs, re-run headlessly from a fixed seed — the door, the agents, the mesh, the
+  books — gives these results on every machine, byte for byte. Re-run it: <code>node tools/run-company.mjs --check</code>.</p>
+<div class="scroll"><table id="run"></table></div>
+<div class="callout" id="runscript"></div>
+
+<h2>6 · A day in the AI-native office</h2>
 <p>Six real workflows, step by step: which machine does each step, and where a person signs off.
   <span class="tag lap">laptop</span><span class="tag hub">hub</span><span class="tag box">AI box</span><span class="tag limb">per-use limb</span><span class="tag human">person</span></p>
 <div class="tier">
@@ -146,11 +175,11 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
     <li><span class="tag human">person</span>The lead reviews the variances the agent flags and signs the period closed.</li></ol></div>
 </div>
 
-<h2>6 · What it costs: five years, three ways</h2>
+<h2>7 · What it costs: five years, three ways</h2>
 <div class="scroll"><table id="cost"></table></div>
 <div class="callout" id="notcounted"></div>
 
-<h2>7 · The AI-native employee</h2>
+<h2>8 · The AI-native employee</h2>
 <p>The five people who remain are not doing the old jobs faster. They direct a workforce of agents, and they are the company's
   verifiers. Two rules make that work:</p>
 <div class="tier">
@@ -162,7 +191,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
     verifier is always a strong one.</p></div>
 </div>
 
-<h2>8 · The roll-out: twelve weeks</h2>
+<h2>9 · The roll-out: twelve weeks</h2>
 <div class="scroll"><table>
   <tr><th>Weeks</th><th>What goes live</th><th>What it replaces</th></tr>
   <tr><td>1–2</td><td>The hub and the AI boxes; every device on the company spine; owner, leads and roles</td><td>—</td></tr>
@@ -173,16 +202,18 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
   <tr><td>11–12</td><td>Voice on the phone line; cut-over; the old seats end</td><td>Front-line phone cover</td></tr>
 </table></div>
 
-<h2>9 · Proof</h2>
-<p>The company spine is open and re-runnable. It runs live on the <a href="index.html">company page</a>: five devices, partitions,
-  attacks, the books and the vault. Its kernels are proven by a unit and hostile-input test suite and a mutation witness. A
-  deterministic simulator puts a fleet of devices through partitions, dropped and duplicated messages and a live attacker, and every
-  run converges to the same company, byte for byte, with a receipt anyone can reproduce.</p>
+<h2>10 · Proof</h2>
+<p>Everything here is open and re-runnable. The full AI company runs live on the <a href="index.html">company page</a>: eight devices
+  (six agents, two people), the mesh, the books, the vault, the watch list, and the attacks — a hostile message, a poisoned brain, a
+  forged write. Its kernels — the spine, the brains, the agents, the screen, the growth and the company itself — are proven by a unit,
+  boundary and hostile-input test suite and a mutation witness. Two re-runs reproduce their receipts byte for byte on any machine: a
+  hostile-network simulation (a fleet of devices through partitions, dropped and duplicated messages and a live attacker), and the
+  working day of the AI company above.</p>
 <h3>Sources</h3>
 <ol class="src" id="sources"></ol>
 
 <p class="foot">The design lens — entropy-guided regulation (GEP), weighted pruning (WIPER), behavioural signatures (BES) and dual-map
-  checking — is the work of Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Services, LLC). Konomi — Thomas Frumkin.
+  checking — is the work of Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Service, LLC); the independent second brain and the held-for-a-human verdict draw on his &ldquo;From GEP Stabilization to Dual-Map Ethical Reasoning,&rdquo; Derivation v0.2. Konomi — Thomas Frumkin.
   Source: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a>.</p>
 </div>
 
@@ -213,6 +244,36 @@ $('depts').innerHTML = `<tr><th>Department</th><th>The work</th><th class="n">Pe
   office.departments.map((d) => { const k = p.departments.find((x) => x.id === d.id); return `<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.work)}</td><td class="n">${d.today}</td><td class="n">${fx1(k.aiFte)} FTE</td><td class="n">${fx1(k.humanFte)} FTE</td><td>${esc(k.overseenBy || '')}</td></tr>`; }).join('') +
   `<tr><td><b>Leadership</b></td><td>Direction, decisions, relationships</td><td class="n">${office.leadership.today}</td><td class="n">—</td><td class="n">—</td><td>The five below</td></tr>` +
   `<tr><th>Total</th><th></th><th class="n">${p.today.headcount}</th><th class="n">${fx1(p.capacity.aiHours / office.hoursPerFte)} FTE</th><th class="n">${fx1(p.human.remainderFte)} FTE</th><th>${p.sovereign.headcount} people · ${fx1(p.human.capacityFte)} FTE of oversight</th></tr>`;
+
+// ── the full AI company: the brain files and the re-run receipt, read as they are ──
+const [bIndex, run] = await Promise.all([fetch('brains/index.json').then((r) => r.json()), fetch('receipts/company.json').then((r) => r.json())]);
+const ROLE = { sales: 'Sales agent', service: 'Service agent', finance: 'Finance agent', ops: 'Ops agent', systems: 'Systems agent' };
+const STAKES = { fraud: 1, credit: 1, intrusion: 1 };
+$('brains').innerHTML = `<tr><th>Agent</th><th>Its brain</th><th class="n">Held-out AUC</th><th>Data</th><th>Second brain needed</th></tr>` +
+  Object.entries(bIndex).map(([d, m]) => `<tr><td>${esc(ROLE[m.role] || m.role)}</td><td>${esc(m.title)}</td><td class="n">${m.heldAuc.toFixed(3)}</td>
+    <td>${m.real ? 'real — UCI Online Shoppers sessions' : 'realistic-synthetic, stated rule'}</td><td>${STAKES[d] ? 'yes — money or security' : 'only when unsure'}</td></tr>`).join('') +
+  `<tr><td>Audit agent</td><td colspan="4">grows its own independent fraud, credit and intrusion brains on its own data — the second brain that must agree</td></tr>`;
+const S = run.summary, pm = (x) => (x / 10).toFixed(1) + '%';
+$('run').innerHTML = [
+  ['Pieces of work through the door', S.events],
+  ['Done end to end by agents', pm(S.automatedPermille)],
+  ['Agent calls that matched the real outcome (never seen when deciding)', pm(S.rightPermille) + ` (${S.correct} of ${S.done})`],
+  ['Held for a person', S.toHumans],
+  ['Money and security calls a second, independent brain confirmed', S.crossChecked],
+  ['Answered by another device\'s brain through the mesh', S.viaMesh],
+  ['Brains learned by being asked (each re-verified on the learner\'s own data)', S.learned],
+  ['Regrowths promoted / tried', S.regrowthsPromoted + ' / ' + S.regrowthsTried],
+  ['Hostile messages quarantined unread', S.quarantined],
+  ['Books: entries · balanced', S.books.entries + ' · ' + (S.books.balanced ? 'yes' : 'NO')],
+  ['Vault: entries · audits · Audit-agent co-signatures', S.vault.size + ' · ' + (S.vault.audits ? 'yes' : 'NO') + ' · ' + S.vault.cosigned],
+  ['All eight devices hold the same company', S.converged ? 'yes — digest ' + S.digest.slice(0, 16) : 'NO'],
+].map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${esc(v)}</td></tr>`).join('');
+const say = (x) => x.act === 'hostile message' ? `a hostile customer message was <b>${esc(x.result)}</b>`
+  : x.act === 'poisoned brain offered' ? `a compromised agent offered a poisoned "better" brain: <b>${x.refused} devices refused it, ${x.adopted} adopted it</b>`
+    : x.act === 'overseer approved a held call' ? `the overseer chose <b>${esc(x.action)}</b> on a held ${esc(x.channel)} call, and the agent carried it out`
+      : esc(x.act);
+$('runscript').innerHTML = `<b>The scripted day.</b> During the run: ${run.script.map(say).join('; ')}. Receipt <span style="font-family:var(--mono)">${esc(run.receiptHash.slice(0, 16))}</span> —
+  seed ${run.seed}, ${run.events} pieces of work. Sales runs on real data; the other seven streams are realistic-synthetic, generated from a stated rule plus seeded noise.`;
 
 $('roles').innerHTML = office.retained.map((r) => `<div class="card"><b>${esc(r.role)}</b><p>${esc(r.focus)}</p></div>`).join('');
 

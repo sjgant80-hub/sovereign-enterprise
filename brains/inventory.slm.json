@@ -1,0 +1,109 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "inventory",
+ "title": "Inventory stockout",
+ "role": "ops",
+ "real": false,
+ "note": "Inventory stockout — stockout=1. Ground-truth risk rises with low days-of-stock, long lead time, high demand variance, a big reorder gap and low supplier reliability. Realistic-synthetic.",
+ "features": [
+  "daysOfStock",
+  "leadTimeDays",
+  "demandVar",
+  "reorderGap",
+  "seasonalityIdx",
+  "supplierReliab"
+ ],
+ "rules": [
+  {
+   "feat": "daysOfStock",
+   "op": ">",
+   "v": 16.575384,
+   "w": -1
+  },
+  {
+   "feat": "daysOfStock",
+   "op": "<=",
+   "v": 9.235283,
+   "w": 1
+  },
+  {
+   "feat": "reorderGap",
+   "op": ">",
+   "v": 9.346314,
+   "w": 1
+  },
+  {
+   "feat": "demandVar",
+   "op": ">",
+   "v": 0.723903,
+   "w": 0.25
+  },
+  {
+   "feat": "leadTimeDays",
+   "op": ">",
+   "v": 13.740015,
+   "w": 0.5
+  },
+  {
+   "feat": "daysOfStock",
+   "op": "<=",
+   "v": 26.377143,
+   "w": 1
+  }
+ ],
+ "base": 0.449405,
+ "threshold": 1,
+ "spread": 4.75,
+ "dist": {
+  "daysOfStock": {
+   "min": 0,
+   "q1": 11.725209,
+   "med": 17.876075,
+   "q3": 24.547536,
+   "max": 53.664784
+  },
+  "leadTimeDays": {
+   "min": 0,
+   "q1": 5.827783,
+   "med": 9.787944,
+   "q3": 13.740015,
+   "max": 31.041391
+  },
+  "demandVar": {
+   "min": 0.400329,
+   "q1": 0.475395,
+   "med": 0.560987,
+   "q3": 0.677044,
+   "max": 1.144186
+  },
+  "reorderGap": {
+   "min": -15.279323,
+   "q1": 1.210264,
+   "med": 5.272502,
+   "q3": 9.346314,
+   "max": 27.291905
+  },
+  "seasonalityIdx": {
+   "min": 0,
+   "q1": 0.75259,
+   "med": 1.010654,
+   "q3": 1.27997,
+   "max": 2.516254
+  },
+  "supplierReliab": {
+   "min": 0.442283,
+   "q1": 0.735034,
+   "med": 0.813248,
+   "q3": 0.898672,
+   "max": 1
+  }
+ },
+ "heldAuc": 0.823875,
+ "heldAcc": 0.755556,
+ "held": 720,
+ "train": 1680,
+ "patternId": "255a08b47dc039a8",
+ "seed": "◊ seed.v1 inventory 84014 f:3fdb98f06f2367ec3233 968d23d343d9",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}

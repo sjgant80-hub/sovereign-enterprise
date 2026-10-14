@@ -1,0 +1,109 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "credit",
+ "title": "Loan default",
+ "role": "finance",
+ "real": false,
+ "note": "Consumer credit — default=1. Ground-truth risk rises with high debt-to-income, high credit utilisation, more delinquencies, lower income, higher loan-to-value and shorter employment. Realistic-synthetic.",
+ "features": [
+  "dti",
+  "utilisation",
+  "delinquencies",
+  "incomeK",
+  "loanToValue",
+  "employMonths"
+ ],
+ "rules": [
+  {
+   "feat": "loanToValue",
+   "op": ">",
+   "v": 0.740593,
+   "w": 0.5
+  },
+  {
+   "feat": "incomeK",
+   "op": ">",
+   "v": 12.746384,
+   "w": -2
+  },
+  {
+   "feat": "delinquencies",
+   "op": ">",
+   "v": 1,
+   "w": 2
+  },
+  {
+   "feat": "dti",
+   "op": "<=",
+   "v": 0.29723,
+   "w": -1
+  },
+  {
+   "feat": "utilisation",
+   "op": "<=",
+   "v": 0.396475,
+   "w": -2
+  },
+  {
+   "feat": "incomeK",
+   "op": ">",
+   "v": 42.652414,
+   "w": -1
+  }
+ ],
+ "base": 0.47381,
+ "threshold": -2.5,
+ "spread": 8.5,
+ "dist": {
+  "dti": {
+   "min": 0,
+   "q1": 0.248148,
+   "med": 0.346072,
+   "q3": 0.447086,
+   "max": 0.761353
+  },
+  "utilisation": {
+   "min": 0,
+   "q1": 0.352015,
+   "med": 0.505871,
+   "q3": 0.656848,
+   "max": 1.157478
+  },
+  "delinquencies": {
+   "min": 1,
+   "q1": 1,
+   "med": 1,
+   "q3": 2,
+   "max": 5
+  },
+  "incomeK": {
+   "min": 8,
+   "q1": 30.069099,
+   "med": 42.652414,
+   "q3": 54.626286,
+   "max": 99.896296
+  },
+  "loanToValue": {
+   "min": 0.121989,
+   "q1": 0.587918,
+   "med": 0.707971,
+   "q3": 0.827221,
+   "max": 1.243821
+  },
+  "employMonths": {
+   "min": 0,
+   "q1": 22.828971,
+   "med": 45.830285,
+   "q3": 70.320679,
+   "max": 174.699478
+  }
+ },
+ "heldAuc": 0.672547,
+ "heldAcc": 0.622222,
+ "held": 720,
+ "train": 1680,
+ "patternId": "007a6f1b6537c836",
+ "seed": "◊ seed.v1 credit 61909 f:3fe12684c373c911e40d 069941d3e51f",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}

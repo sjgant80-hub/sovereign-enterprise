@@ -1,0 +1,109 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "maintenance",
+ "title": "Predictive maintenance",
+ "role": "ops",
+ "real": false,
+ "note": "Predictive maintenance — failure-soon=1. Ground-truth risk rises with high vibration, high temperature, long time since service, sustained high load, machine age and rising error rate. Realistic-synthetic.",
+ "features": [
+  "vibration",
+  "tempC",
+  "hoursSinceService",
+  "loadPct",
+  "ageMonths",
+  "errorRate"
+ ],
+ "rules": [
+  {
+   "feat": "ageMonths",
+   "op": ">",
+   "v": 48.059781,
+   "w": 1
+  },
+  {
+   "feat": "tempC",
+   "op": ">",
+   "v": 55.475147,
+   "w": 2
+  },
+  {
+   "feat": "loadPct",
+   "op": "<=",
+   "v": 80.633911,
+   "w": -1
+  },
+  {
+   "feat": "loadPct",
+   "op": "<=",
+   "v": 64.794801,
+   "w": -0.25
+  },
+  {
+   "feat": "hoursSinceService",
+   "op": "<=",
+   "v": 514.496249,
+   "w": -1
+  },
+  {
+   "feat": "errorRate",
+   "op": ">",
+   "v": 0.903919,
+   "w": 1
+  }
+ ],
+ "base": 0.096429,
+ "threshold": 2,
+ "spread": 6.25,
+ "dist": {
+  "vibration": {
+   "min": 2.001394,
+   "q1": 2.387792,
+   "med": 2.797589,
+   "q3": 3.366517,
+   "max": 7.236612
+  },
+  "tempC": {
+   "min": 14.04011,
+   "q1": 47.204411,
+   "med": 55.475147,
+   "q3": 63.762011,
+   "max": 93.695761
+  },
+  "hoursSinceService": {
+   "min": 0,
+   "q1": 234.10536,
+   "med": 393.474413,
+   "q3": 558.668816,
+   "max": 1167.769774
+  },
+  "loadPct": {
+   "min": 0,
+   "q1": 53.40153,
+   "med": 64.794801,
+   "q3": 76.724263,
+   "max": 100
+  },
+  "ageMonths": {
+   "min": 0,
+   "q1": 19.505939,
+   "med": 35.583893,
+   "q3": 52.597423,
+   "max": 113.327656
+  },
+  "errorRate": {
+   "min": 0.500968,
+   "q1": 0.690087,
+   "med": 0.903919,
+   "q3": 1.182083,
+   "max": 2.562523
+  }
+ },
+ "heldAuc": 0.833599,
+ "heldAcc": 0.9,
+ "held": 720,
+ "train": 1680,
+ "patternId": "d172b1870649e48f",
+ "seed": "◊ seed.v1 maintenance 12162 f:3f69c7fdb3e499abd435 6ce9b5413117",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}

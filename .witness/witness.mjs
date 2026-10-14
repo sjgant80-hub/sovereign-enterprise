@@ -117,6 +117,14 @@ export function mutants(source) {
 // witness on itself). So before mutating we drop a sidecar backup holding the true original; if a prior
 // run was killed, that backup is still on disk and we self-heal from it on the next run. The estate can
 // never be left silently corrupted by an interrupted gate.
+// On Windows the test command runs under cmd.exe, and a timeout kills only cmd.exe: the `node --test` beneath it
+// and its per-file children keep running — a hung mutant then burns a CPU forever and starves every later run
+// (found 2026-10-14: 24 orphans, some 17 hours old). Reap the whole tree under the timed-out shell.
+function reapTree(pid) {
+  const ps = `Get-CimInstance Win32_Process | Where-Object { $_.ParentProcessId -eq ${Number(pid)} } | ForEach-Object { taskkill /T /F /PID $_.ProcessId | Out-Null }`;
+  spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { stdio: 'ignore', timeout: 15000 });
+}
+
 // opts: { testCmd?: string[], cwd?: string, cap?: number, timeout?: number, baseline?: string|array }
 export function runMutations(srcPath, opts = {}) {
   const backup = srcPath + '.witnessbak';
@@ -149,6 +157,7 @@ export function runMutations(srcPath, opts = {}) {
       const r = spawnSync(testCmd[0], testCmd.slice(1), { cwd, env: childEnv(), encoding: 'utf8', shell: process.platform === 'win32', maxBuffer: 1 << 26, timeout });
       // Killed unless the tests genuinely PASSED. status 0 = passed ⇒ survived. A timeout kills the child
       // (status null, signal set) ⇒ not passed ⇒ killed, which is correct: a mutant that hangs is caught.
+      if (r.status === null && process.platform === 'win32' && r.pid) reapTree(r.pid);
       const passed = r.status === 0;
       if (passed) {
         const entry = { line: m.line, mutation: `${m.from} → ${m.to}`, snippet: lineOf(original, m.line) };

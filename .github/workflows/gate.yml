@@ -7,8 +7,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: unit + boundary + hostile-input suites (spine, vault, books, leases, cost kernel)
+      - name: unit + boundary + hostile-input + integration suites (AI layer, company runtime, spine, vault, books, leases, cost kernel)
         run: node --test test/*.test.mjs
+      - name: the AI company's working day re-runs from scratch and must reproduce its receipt byte for byte
+        run: node tools/run-company.mjs --check
       - name: the hostile-network simulation re-runs and must reproduce its receipt byte for byte
         run: node tools/simulate.mjs --check
       - name: mutation + fuzz gate over every decision kernel (no unreviewed survivors)

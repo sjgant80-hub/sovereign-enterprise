@@ -41,6 +41,28 @@ export function root(leaves) {
   return nodeHash(root(leaves.slice(0, k)), root(leaves.slice(k)));
 }
 
+/**
+ * The Merkle Tree Hash of EVERY prefix, in one O(n log n) pass: out[k] = root(leaves.slice(0, k)).
+ * A prefix of size k splits into perfect subtrees by the binary digits of k, largest first; RFC 9162's tree hash of
+ * the prefix is those subtree roots folded from the right. A stack of perfect subtrees gives them as leaves arrive.
+ */
+export function prefixRoots(leaves) {
+  const out = [EMPTY];
+  const stack = [];
+  for (const leaf of leaves) {
+    let node = { size: 1, hash: leaf };
+    while (stack.length && stack[stack.length - 1].size === node.size) {
+      const left = stack.pop();
+      node = { size: left.size * 2, hash: nodeHash(left.hash, node.hash) };
+    }
+    stack.push(node);
+    let h = node.hash;
+    for (let j = stack.length - 2; j >= 0; j--) h = nodeHash(stack[j].hash, h);
+    out.push(h);
+  }
+  return out;
+}
+
 /** Inclusion proof for leaf m in a tree of the given leaves. */
 export function inclusionProof(m, leaves) {
   const n = leaves.length;
@@ -131,12 +153,12 @@ function validRecord(r) {
   if (typeof r.leaf !== 'string') return false;
   return HEX64.test(r.leaf);
 }
-function headMatches(h, leaves) {
+function headMatches(h, roots) {
   if (!h) return false;
   if (!Number.isInteger(h.size)) return false;
   if (h.size < 0) return false;
-  if (h.size > leaves.length) return false;
-  return root(leaves.slice(0, h.size)) === h.root;
+  if (h.size >= roots.length) return false;           // roots has one entry per prefix, 0..n
+  return roots[h.size] === h.root;
 }
 
 /**
@@ -157,11 +179,12 @@ export function audit(records, heads) {
     const leaves = [];
     while (byIndex.has(leaves.length)) leaves.push(byIndex.get(leaves.length));
     const gaps = byIndex.size - leaves.length;
+    const roots = prefixRoots(leaves);                    // every prefix root once — not one rebuild per tree head
     const bad = [];
     for (const h of Array.isArray(heads) ? heads : []) {
-      if (!headMatches(h, leaves)) bad.push(h);
+      if (!headMatches(h, roots)) bad.push(h);
     }
-    return { ok: bad.length === 0 && gaps === 0 && dupes === 0, size: leaves.length, root: root(leaves), leaves, bad, gaps, dupes };
+    return { ok: bad.length === 0 && gaps === 0 && dupes === 0, size: leaves.length, root: roots[leaves.length], leaves, bad, gaps, dupes };
   } catch {
     return { ok: false, size: 0, root: EMPTY, leaves: [], bad: [], gaps: 0, dupes: 0 };
   }

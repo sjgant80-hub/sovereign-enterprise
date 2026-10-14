@@ -1,0 +1,109 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "energy",
+ "title": "Grid overload",
+ "role": "ops",
+ "real": false,
+ "note": "Grid overload — overload=1. Ground-truth risk rises with high load, temperature extremes, peak hours and low wind supply. Realistic-synthetic.",
+ "features": [
+  "loadMW",
+  "tempC",
+  "hourOfDay",
+  "humidity",
+  "windMW",
+  "priceMWh"
+ ],
+ "rules": [
+  {
+   "feat": "loadMW",
+   "op": ">",
+   "v": 576.950332,
+   "w": 0.5
+  },
+  {
+   "feat": "loadMW",
+   "op": ">",
+   "v": 498.232989,
+   "w": 2
+  },
+  {
+   "feat": "loadMW",
+   "op": ">",
+   "v": 726.999635,
+   "w": 2
+  },
+  {
+   "feat": "tempC",
+   "op": ">",
+   "v": 31.018307,
+   "w": 2
+  },
+  {
+   "feat": "hourOfDay",
+   "op": ">",
+   "v": 16.183746,
+   "w": 0.5
+  },
+  {
+   "feat": "loadMW",
+   "op": "<=",
+   "v": 770.625392,
+   "w": -0.5
+  }
+ ],
+ "base": 0.31369,
+ "threshold": 2.5,
+ "spread": 7.5,
+ "dist": {
+  "loadMW": {
+   "min": 122.817982,
+   "q1": 498.232989,
+   "med": 597.88741,
+   "q3": 696.761141,
+   "max": 1108.798266
+  },
+  "tempC": {
+   "min": -14.055149,
+   "q1": 10.739735,
+   "med": 18.146403,
+   "q3": 25.543437,
+   "max": 48
+  },
+  "hourOfDay": {
+   "min": 0,
+   "q1": 10.572459,
+   "med": 13.838672,
+   "q3": 17.038015,
+   "max": 23
+  },
+  "humidity": {
+   "min": 0,
+   "q1": 42.096242,
+   "med": 54.495483,
+   "q3": 66.612921,
+   "max": 100
+  },
+  "windMW": {
+   "min": 0,
+   "q1": 74.786923,
+   "med": 120.359093,
+   "q3": 160.856855,
+   "max": 375.163016
+  },
+  "priceMWh": {
+   "min": 0,
+   "q1": 34.625193,
+   "med": 54.732479,
+   "q3": 75.642799,
+   "max": 150.380295
+  }
+ },
+ "heldAuc": 0.778,
+ "heldAcc": 0.7375,
+ "held": 720,
+ "train": 1680,
+ "patternId": "00d435d0ca3f2b1a",
+ "seed": "◊ seed.v1 energy 77492 f:3fd8f23cf347bfeb5a13 3fd0fb37c948",
+ "verified": true,
+ "lineage": "Grown by the Konomi SLM organ (sjgant80-hub/konomi-slm, tier ladder) — knowledge in a verified pattern library. Konomi architecture: Thomas Frumkin."
+}
