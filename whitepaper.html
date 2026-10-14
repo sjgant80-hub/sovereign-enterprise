@@ -116,13 +116,14 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
   library of verified patterns (the Konomi SLM) — each pattern earned its place by predicting cases it never saw, and it answers only
   inside what it was verified on. Outside that, it abstains. It never guesses.</p>
 <div class="scroll"><table id="brains"></table></div>
-<p>The brains are not one big model in one place. They are distributed — a mycelium — and five rules make them one intelligence:</p>
+<p>The brains are not one big model in one place. They are distributed — a mycelium — and these rules make them one intelligence:</p>
 <div class="tier">
   <div class="card"><b>Trust nothing until it re-verifies here</b><p>An agent loads even its own department's brain file only after it
     re-checks it on its own data. A brain offered by another device is adopted the same way — so a poisoned brain dies at the first
     device that checks it, whatever it claims about itself.</p></div>
-  <div class="card"><b>Ask the mesh</b><p>Work arrives at a door that does not know who handles it. An agent that cannot answer asks the
-    other devices; the one whose brain covers the case answers, with a receipt that names the pattern and the score.</p></div>
+  <div class="card"><b>Ask the mesh</b><p>Work arrives at a door that does not know who handles it. An agent that cannot answer posts a signed
+    question on the spine; the device whose brain covers the case posts a signed reply, with a receipt that names the pattern and the score.
+    There is no shared memory: every answer the company acts on is a record every device holds.</p></div>
   <div class="card"><b>Learn what you are asked</b><p>An agent asked about the same kind of work again and again takes the published brain
     for it — and keeps it only if it re-verifies on that agent's own data. The company's knowledge spreads to where the work lands.</p></div>
   <div class="card"><b>A second, independent brain for money and security</b><p>Holding a payment, setting credit terms, quarantining a
@@ -131,7 +132,16 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
   <div class="card"><b>Regrow on outcomes — and only promote a winner</b><p>Outcomes come back. An agent regrows its brain on them, and the
     new brain replaces the old only if it beats it on outcomes neither brain grew on.</p></div>
   <div class="card"><b>Screen everything before it is read</b><p>Customer text is checked for invisible characters, direction tricks,
-    smuggled hidden text and injection phrasing before any brain sees it. Anything flagged is quarantined unread.</p></div>
+    smuggled hidden text and injection phrasing before any brain sees it. Anything flagged is quarantined unread. A new kind of
+    attack a person confirms becomes a signed antibody; every device re-checks it on its own genuine messages and adopts it only if it
+    fires on none — caught once, refused everywhere.</p></div>
+  <div class="card"><b>Watch how every agent behaves</b><p>A valid key and grant are not enough. Each agent's own habits are learned and
+    frozen; an agent doing one thing every time, keeping clockwork time, or acting off its own work is paused by the AI overseer until a
+    person clears it — after Gary W. Floyd's Behavioral Entropy Signatures (Lumiea Systems Research Division — ThunderStruck Service, LLC).</p></div>
+  <div class="card"><b>A language model only where no brain reaches</b><p>Free text — reading what a customer wrote, sending it to the
+    right desk, drafting a reply — goes to a model the company chooses: on its own machine, in the browser, or a provider with its own key.
+    The spend is capped before any paid call, every call is audited on the spine, a model never acts alone on money or security, and its
+    replies are drafts a person sends.</p></div>
 </div>
 <h3>A working day, re-run from scratch</h3>
 <p>This is not a mock-up. The same code the live page runs, re-run headlessly from a fixed seed — the door, the agents, the mesh, the
@@ -179,7 +189,18 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
 <div class="scroll"><table id="cost"></table></div>
 <div class="callout" id="notcounted"></div>
 
-<h2>8 · The AI-native employee</h2>
+<h2>8 · Against the cloud: own it, don't rent it</h2>
+<p>The question every CFO asks next: why not run this in the cloud? The same kernel answers it from AWS's own published prices.</p>
+<div class="scroll"><table id="cloud"></table></div>
+<div class="callout" id="cloudnote"></div>
+
+<h2>9 · The rival you haven't met yet</h2>
+<p>An AI-native company — a competitor, or five of your own people who leave to start one — runs your business on the AI-native
+  cost base. With your revenue and margin, this is how far it can cut its prices and still earn the profit you earn.</p>
+<div class="scroll"><table id="rival"></table></div>
+<div class="callout" id="rivalnote"></div>
+
+<h2>10 · The AI-native employee</h2>
 <p>The five people who remain are not doing the old jobs faster. They direct a workforce of agents, and they are the company's
   verifiers. Two rules make that work:</p>
 <div class="tier">
@@ -191,7 +212,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
     verifier is always a strong one.</p></div>
 </div>
 
-<h2>9 · The roll-out: twelve weeks</h2>
+<h2>11 · The roll-out: twelve weeks</h2>
 <div class="scroll"><table>
   <tr><th>Weeks</th><th>What goes live</th><th>What it replaces</th></tr>
   <tr><td>1–2</td><td>The hub and the AI boxes; every device on the company spine; owner, leads and roles</td><td>—</td></tr>
@@ -202,9 +223,9 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
   <tr><td>11–12</td><td>Voice on the phone line; cut-over; the old seats end</td><td>Front-line phone cover</td></tr>
 </table></div>
 
-<h2>10 · Proof</h2>
-<p>Everything here is open and re-runnable. The full AI company runs live on the <a href="index.html">company page</a>: eight devices
-  (six agents, two people), the mesh, the books, the vault, the watch list, and the attacks — a hostile message, a poisoned brain, a
+<h2>12 · Proof</h2>
+<p>Everything here is open and re-runnable. The full AI company runs live on the <a href="index.html">company page</a>: nine devices
+  (six agents, two people and the office hub), the mesh, the books, the vault, the watch list, and the attacks — a hostile message, a poisoned brain, a
   forged write. Its kernels — the spine, the brains, the agents, the screen, the growth and the company itself — are proven by a unit,
   boundary and hostile-input test suite and a mutation witness. Two re-runs reproduce their receipts byte for byte on any machine: a
   hostile-network simulation (a fleet of devices through partitions, dropped and duplicated messages and a live attacker), and the
@@ -219,6 +240,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
 
 <script type="module">
 import { plan, gbp0, gbpM } from './src/office.mjs';
+import { cloudCompare, undercut } from './src/market.mjs';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pct = (x) => Math.round(x * 100) + '%';
@@ -226,6 +248,31 @@ const fx1 = (x) => (Math.round(x * 10) / 10).toLocaleString('en-GB');
 
 const [basis, office] = await Promise.all([fetch('data/basis.json').then((r) => r.json()), fetch('data/office.json').then((r) => r.json())]);
 const p = plan(office, basis);
+
+// ── against the cloud, and the rival — src/market.mjs, from AWS's published prices and the plan above ──
+{
+  const c = cloudCompare(p, basis);
+  const gpu = basis.awsGpuLondon, bed = basis.bedrockGptOss120b;
+  document.getElementById('cloud').innerHTML = '<tr><th>Running the company\'s AI for five years</th><th class="n">Cost</th></tr>' + [
+    ['Owned: ' + p.capacity.boxes + ' AI boxes bought once, plus their electricity running flat out around the clock', c.owned, 'win'],
+    ['Rented: the same dedicated capacity on AWS London — ' + gpu.product.split(' — ')[0] + ', $' + gpu.usdPerHour + '/hour, always on', c.dedicated, ''],
+    ['Pay per token: the same open-model class on Amazon Bedrock ($' + bed.inPerM + ' in / $' + bed.outPerM + ' out per million tokens)', c.perToken, ''],
+  ].map(([k, v, cls]) => '<tr><td>' + k + '</td><td class="n ' + cls + '">' + gbp0(v) + '</td></tr>').join('');
+  document.getElementById('cloudnote').innerHTML = '<b>Owning beats renting the same dedicated capacity ' + (Math.round(c.dedicatedTimes * 10) / 10) + '× — ' + gbp0(c.savedVsDedicated) + ' over five years.</b> '
+    + 'Paying per token is cheaper on raw compute at this volume, and the paper says so plainly: but every call sends the company\'s data out of the building, '
+    + 'the bill moves with the provider\'s prices, and in the full AI company most decisions need no language model at all — the agents\' own brains decide them on the company\'s devices. '
+    + 'The per-seat cloud software ends too: ' + gbp0(p.today.seatsYear1) + ' a year for this office, rising every year. Sources: the AWS EC2 price file for EU (London) and the Amazon Bedrock pricing page, read 2026-10-14.';
+  const r = undercut(p, { revenue: 6000000, margin: 0.08 });
+  document.getElementById('rival').innerHTML = '<tr><th>A ' + p.today.headcount + '-person business, £6.0m revenue, 8% margin</th><th class="n"></th></tr>' + [
+    ['Your yearly operating cost advantage, if you were the AI-native one', gbp0(r.gapYear)],
+    ['How far the rival can cut its prices and still earn your profit', (r.priceCut * 100).toFixed(1) + '%'],
+    ['The rival\'s margin if it charges your prices', (r.rivalMarginAtYourPrice * 100).toFixed(1) + '%'],
+    ['People on its payroll, for the same output', r.headcountRival + ' (yours: ' + r.headcountYou + ')'],
+    ['What it costs to start it: the machines plus the roll-out', gbp0(r.startupCost)],
+  ].map(([k, v]) => '<tr><td>' + k + '</td><td class="n">' + v + '</td></tr>').join('');
+  document.getElementById('rivalnote').innerHTML = '<b>The decision is not whether the work goes AI-native — it is whether you do it, or a competitor does it to you.</b> '
+    + 'The revenue and margin here are an example; the live page\'s “For your business” view recomputes this from yours.';
+}
 
 $('hero').innerHTML = [
   [gbpM(p.today.total) + ' → ' + gbpM(p.sovereign.total), 'five-year cost: today → AI-native', 'gold'],
@@ -251,7 +298,7 @@ const ROLE = { sales: 'Sales agent', service: 'Service agent', finance: 'Finance
 const STAKES = { fraud: 1, credit: 1, intrusion: 1 };
 $('brains').innerHTML = `<tr><th>Agent</th><th>Its brain</th><th class="n">Held-out AUC</th><th>Data</th><th>Second brain needed</th></tr>` +
   Object.entries(bIndex).map(([d, m]) => `<tr><td>${esc(ROLE[m.role] || m.role)}</td><td>${esc(m.title)}</td><td class="n">${m.heldAuc.toFixed(3)}</td>
-    <td>${m.real ? 'real — UCI Online Shoppers sessions' : 'realistic-synthetic, stated rule'}</td><td>${STAKES[d] ? 'yes — money or security' : 'only when unsure'}</td></tr>`).join('') +
+    <td>${esc(m.kind === 'synthetic' ? 'synthetic (no open data exists)' : m.kind === 'published-synthetic' ? 'published synthetic — ' + (m.dataset || '') : (m.kind === 'real-testbed' ? 'real lab testbed — ' : m.kind === 'real-derived-label' ? 'real, label derived — ' : 'real — ') + (m.dataset || ''))}${m.licence && m.kind !== 'synthetic' ? ' · ' + esc(m.licence) : ''}</td><td>${STAKES[d] ? 'yes — money or security' : 'only when unsure'}</td></tr>`).join('') +
   `<tr><td>Audit agent</td><td colspan="4">grows its own independent fraud, credit and intrusion brains on its own data — the second brain that must agree</td></tr>`;
 const S = run.summary, pm = (x) => (x / 10).toFixed(1) + '%';
 $('run').innerHTML = [
@@ -266,14 +313,14 @@ $('run').innerHTML = [
   ['Hostile messages quarantined unread', S.quarantined],
   ['Books: entries · balanced', S.books.entries + ' · ' + (S.books.balanced ? 'yes' : 'NO')],
   ['Vault: entries · audits · Audit-agent co-signatures', S.vault.size + ' · ' + (S.vault.audits ? 'yes' : 'NO') + ' · ' + S.vault.cosigned],
-  ['All eight devices hold the same company', S.converged ? 'yes — digest ' + S.digest.slice(0, 16) : 'NO'],
+  ['All nine devices hold the same company', S.converged ? 'yes — digest ' + S.digest.slice(0, 16) : 'NO'],
 ].map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${esc(v)}</td></tr>`).join('');
 const say = (x) => x.act === 'hostile message' ? `a hostile customer message was <b>${esc(x.result)}</b>`
   : x.act === 'poisoned brain offered' ? `a compromised agent offered a poisoned "better" brain: <b>${x.refused} devices refused it, ${x.adopted} adopted it</b>`
     : x.act === 'overseer approved a held call' ? `the overseer chose <b>${esc(x.action)}</b> on a held ${esc(x.channel)} call, and the agent carried it out`
       : esc(x.act);
 $('runscript').innerHTML = `<b>The scripted day.</b> During the run: ${run.script.map(say).join('; ')}. Receipt <span style="font-family:var(--mono)">${esc(run.receiptHash.slice(0, 16))}</span> —
-  seed ${run.seed}, ${run.events} pieces of work. Sales runs on real data; the other seven streams are realistic-synthetic, generated from a stated rule plus seeded noise.`;
+  seed ${run.seed}, ${run.events} pieces of work. Seven of the eight jobs run on published datasets: six real (card transactions, telecom churn, credit defaults, IoT network flows, household power, web shopping sessions) and one its authors publish as synthetic (AI4I machine data); inventory runs on a synthetic stream because no open stock-out data exists. Every source and licence is on its brain card in Brains and in NOTICE.`;
 
 $('roles').innerHTML = office.retained.map((r) => `<div class="card"><b>${esc(r.role)}</b><p>${esc(r.focus)}</p></div>`).join('');
 

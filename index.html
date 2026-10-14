@@ -92,25 +92,106 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
 .myc text{font-family:var(--sans);font-size:12px;fill:var(--ink)}
 .foot{color:var(--faint);font-size:12.5px;margin-top:26px;line-height:1.7}
 .hide{display:none}
+
+.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topbar .in{max-width:1220px;margin:0 auto;padding:8px 16px;display:flex;align-items:center;gap:12px}
+.brand{font-weight:800;letter-spacing:.04em;white-space:nowrap;font-size:15px;cursor:pointer}.brand .x{color:var(--accent)}
+.nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}.nav::-webkit-scrollbar{display:none}
+@media(max-width:700px){.topbar .in{flex-wrap:wrap;row-gap:4px;padding-bottom:4px}.brand{flex:1}.nav{order:3;flex:1 0 100%;margin:0 -6px}.nav a{padding:7px 9px;font-size:13.5px}}
+.nav a{color:var(--dim);text-decoration:none;padding:7px 10px;border-radius:8px;white-space:nowrap;font-size:14px}
+.nav a.on{color:var(--ink);background:var(--panel);box-shadow:inset 0 -2px 0 var(--accent)}.nav a:hover{color:var(--ink)}
+.view{display:none;padding-top:8px}.view.on{display:block}
+.ov-hero{padding:34px 0 8px;max-width:900px}
+.ov-hero h1{font-size:clamp(28px,6vw,52px);line-height:1.08;letter-spacing:-.01em;margin:0}
+.ov-hero h1 .x{color:var(--accent)}
+.ov-hero .lede{font-size:clamp(16px,2.4vw,19px);color:var(--dim);max-width:62ch;margin:14px 0 18px}
+.ov-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ov-actions button{font-size:15px;padding:10px 16px}
+.ov-live{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);margin:22px 0 8px}
+@media(min-width:760px){.ov-live{grid-template-columns:repeat(4,1fr)}}
+.ov-live .kpi .v{font-size:clamp(22px,4vw,30px)}
+.ov-note{font-size:12.5px;color:var(--faint);margin:0 0 6px}
+.ov-cards{display:grid;gap:12px;grid-template-columns:1fr;margin:20px 0}
+@media(min-width:760px){.ov-cards{grid-template-columns:repeat(3,1fr)}}
+.ov-cards .card{padding:14px 16px;border-radius:12px;margin:0}.ov-cards h3{margin:0 0 6px;font-size:16px}.ov-cards p{margin:0;color:var(--dim);font-size:14px}
+.sec-h{font-size:clamp(20px,3.4vw,26px);margin:30px 0 6px}
+.sec-sub{color:var(--dim);margin:0 0 14px;max-width:72ch}
+.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;gap:10px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.steps li::before{content:counter(s);width:28px;height:28px;border-radius:50%;background:var(--accent);color:#04241b;font-weight:800;display:grid;place-items:center;font-size:14px}
+.steps b{display:block;margin-bottom:2px}.steps span{color:var(--dim);font-size:14px}
+@media(max-width:560px){.steps li{grid-template-columns:34px 1fr}.steps li button{grid-column:2}}
+.figure{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+.figure svg{width:100%;height:auto;display:block}
+.figure figcaption{font-size:13px;color:var(--dim);margin-top:8px}
+.help{font-size:13.5px;color:var(--dim);margin:0 0 12px;padding:9px 12px;border-left:3px solid var(--accent2);background:var(--panel2);border-radius:0 8px 8px 0}
+.help b{color:var(--ink)}
+.guide{background:var(--panel);border:1px solid color-mix(in srgb,var(--accent2) 50%,var(--line));border-radius:12px;padding:12px 14px;margin:6px 0 12px}
+.guide summary{cursor:pointer;font-weight:700;list-style:none}.guide summary::-webkit-details-marker{display:none}
+.guide summary::after{content:' ▾';color:var(--dim)}.guide[open] summary::after{content:' ▴'}
+.guide ol{margin:10px 0 4px;padding-left:20px;color:var(--dim);font-size:14px}.guide li{margin:4px 0}.guide li b{color:var(--ink)}
+.flash{background:color-mix(in srgb,var(--accent2) 14%,var(--panel));border:1px solid var(--accent2);border-radius:10px;padding:9px 12px;margin:0 0 12px;font-size:14px}
+button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-decoration:underline;font-size:12px}
+.tour{position:fixed;right:16px;bottom:16px;width:min(380px,calc(100vw - 32px));z-index:50;background:var(--panel);border:1px solid var(--accent2);border-radius:14px;padding:14px 16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.tour h4{margin:0 0 6px;font-size:16px}.tour p{margin:0 0 10px;color:var(--dim);font-size:14px}
+.tour .row{justify-content:space-between;margin:0}.tour .n{font-family:var(--mono);font-size:12px;color:var(--faint)}
+.tour-hl{outline:3px solid var(--accent2)!important;outline-offset:4px;border-radius:10px}
+.kind.hb{color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 45%,var(--line))}
+.paper-frame{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--bg);min-height:70vh;display:block}
+.brochure{max-width:960px;margin:0 auto}
+.b-hero{padding:18px 0 4px}.b-kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--accent);margin:0}
+.brochure h2{font-size:clamp(26px,5vw,42px);line-height:1.1;margin:8px 0 10px}
+.b-lede{font-size:clamp(16px,2.2vw,18px);color:var(--dim);max-width:70ch}
+.b-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
+@media(min-width:760px){.b-stats{grid-template-columns:repeat(4,1fr)}}
+.b-stats div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.b-stats b{display:block;font-family:var(--mono);font-size:clamp(18px,3.4vw,26px);line-height:1.2}
+.b-stats span{font-size:12.5px;color:var(--dim)}
+.b-sec{margin:30px 0}.b-sec h3{font-size:clamp(19px,3vw,24px);margin:0 0 10px}.b-sec>p{max-width:76ch}
+.b-grid{display:grid;gap:12px;grid-template-columns:1fr}@media(min-width:760px){.b-grid{grid-template-columns:repeat(3,1fr)}}
+.b-grid>div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.b-grid h4{margin:0 0 6px;font-size:15px}.b-grid p{margin:0;font-size:14px;color:var(--dim)}
+.b-threat{border-left:4px solid var(--bad);padding-left:16px}
+.b-calc{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}.b-calc label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--dim)}
+.b-faq dt{font-weight:700;margin-top:14px}.b-faq dd{margin:4px 0 0;color:var(--dim);max-width:80ch}
+.b-board{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:16px 18px}
+.b-small{font-size:13px;color:var(--dim)}.b-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.b-modelled{font-size:14px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:10px 0}.b-sec h4{margin:16px 0 6px;font-size:15px}.b-list{padding-left:20px;color:var(--dim);font-size:14px}.b-list li{margin:4px 0}.b-sources .b-list{font-size:12.5px}
+.bp-grid{display:grid;gap:12px;grid-template-columns:1fr}@media(min-width:760px){.bp-grid{grid-template-columns:repeat(2,1fr)}}
+.bp-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.bp-card h4{margin:0 0 4px;font-size:15px}.bp-card .f{font-family:var(--mono);font-size:12px;color:var(--faint)}
+.bp-card p{margin:6px 0 0;font-size:14px;color:var(--dim)}
+.picker{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#model-tier,#immune{margin-top:14px}#immune>p{max-width:86ch}
+.steps .imm-out{display:block;margin-top:4px;font-size:13.5px;color:var(--ink)}.steps .imm-out b{display:inline;margin:0}.steps .imm-out .ok{color:var(--accent)}.steps .imm-out .warn{color:var(--warn)}.steps .imm-out .dim{color:var(--dim)}#model-tier>p{max-width:86ch}
+.mdl-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));margin:10px 0}
+.mdl-f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--dim)}.mdl-chk{flex-direction:row;align-items:center;gap:8px}
+@media print{.topbar,.view:not(#v-case),.b-actions,.foot,.tour,#workspace{display:none!important}
+  :root{--bg:#fff;--panel:#fff;--panel2:#f6f6f6;--ink:#000;--dim:#333;--faint:#555;--line:#bbb;--accent:#0a7a5a;--accent2:#1f5fb0;--bad:#b00020}
+  body{background:#fff;color:#000}.view#v-case{display:block!important}.b-sec{break-inside:avoid}}
 </style>
 </head>
 <body>
+<header class="topbar"><div class="in">
+  <span class="brand" data-view="overview" role="link" tabindex="0">SOVEREIGN<span class="x"> ENTERPRISE</span></span>
+  <nav class="nav" id="nav" aria-label="Sections">
+    <a href="#overview" data-view="overview">Overview</a>
+    <a href="#live" data-view="live">Live company</a>
+    <a href="#how" data-view="how">How it works</a>
+    <a href="#blueprint" data-view="blueprint">Blueprint</a>
+    <a href="#business" data-view="business">For your business</a>
+    <a href="#case" data-view="case">The case</a>
+    <a href="#paper" data-view="paper">White paper</a>
+    <a href="#run" data-view="run">Run your own</a>
+  </nav>
+  <span id="kstat" class="pill">booting…</span>
+</div></header>
+
 <div class="wrap">
-<header>
-  <h1>SOVEREIGN<span class="x"> ENTERPRISE</span></h1>
-  <p class="tag">A full AI company on its own devices. Six AI agents run sales, service, finance, operations, systems and audit end to end;
-    two humans watch. Every device is a brain — verified pattern libraries, re-checked on that device's own data, sharing what they learn over
-    a signed peer-to-peer spine. Money and security calls need a second, independent brain to agree. Nothing leaves the building.
-    <span id="kstat" class="pill">booting the company…</span></p>
-</header>
+<section class="view" id="v-overview" aria-label="Overview"></section>
 
-<div class="modes">
-  <button id="m-demo" class="on">The AI company · live</button>
-  <button id="m-real">Run your own company</button>
-  <a class="pill" href="whitepaper.html" style="text-decoration:none">The white paper →</a>
-</div>
-
-<section id="demo">
+<section class="view" id="v-live" aria-label="The live company">
+  <details class="guide" id="guide" open><summary>Start here — what you're looking at, and what to try</summary><div id="guide-body"></div></details>
   <div class="bar" id="devices" role="list" aria-label="Devices in the company"></div>
   <div class="status">
     <span id="conv" class="badge">…</span>
@@ -121,33 +202,58 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
     <span class="sep"></span>
     <button id="hostile" class="sm danger">Send a hostile message</button>
     <button id="poison" class="sm danger">Poison a brain</button>
+    <button id="steal" class="sm danger">Steal an agent's key</button>
     <button id="attack" class="sm danger">Attack this device</button>
     <button id="splitnet" class="sm">Split the network</button>
     <button id="healnet" class="sm">Heal</button>
   </div>
+  <div id="live-slot"></div>
 </section>
 
-<section id="real" class="hide">
+<section class="view" id="v-how" aria-label="How it works"></section>
+<section class="view" id="v-blueprint" aria-label="Blueprint"></section>
+<section class="view" id="v-business" aria-label="For your business"></section>
+<section class="view" id="v-case" aria-label="The case for the board"></section>
+
+<section class="view" id="v-paper" aria-label="The white paper">
+  <h2 class="sec-h">The white paper</h2>
+  <p class="sec-sub">How AI replaces 90% of an office's operational work on machines the company owns — the hardware at every step, how it
+    hooks together, a day in the life, the five-year cost three ways, and every source. Every number is computed live by the same kernels.
+    <a href="whitepaper.html" target="_blank" rel="noopener">Open it on its own page ↗</a></p>
+  <iframe class="paper-frame" id="paper" title="The white paper"></iframe>
+</section>
+
+<section class="view" id="v-run" aria-label="Run your own company">
+  <h2 class="sec-h">Run your own company</h2>
+  <p class="sec-sub">This browser tab becomes a device in your own company. Found it, invite teammates by link, and every device syncs peer to
+    peer — same machine over tabs, other machines over a direct encrypted link. Nothing goes to a server.</p>
   <div class="panel" id="realbox"></div>
+  <div class="panel hide" id="rtcbox"></div>
   <div class="status"><span id="rconv" class="badge">…</span><span id="rinfo"></span></div>
+  <div id="run-slot"></div>
 </section>
 
-<nav class="tabs" id="tabs" aria-label="Views"></nav>
-<main id="app" aria-live="polite"></main>
-
-<p class="foot">
-  Kernel-backed: this page imports <span class="mono">src/company · agent · brain · grow · screen · crdt · gate · canon · keys · node · vault · books · lease · sim</span> — the
-  same modules the test suite and the mutation witness prove in CI. Each device holds its own Ed25519 key and its own replica; the company is a pure
-  function of the set of signed writes a device holds. The brains are the Konomi SLM's verified pattern libraries (Konomi architecture — Thomas Frumkin),
-  grown by the seed-library ribosome (sjgant80-hub, credited in NOTICE). Sales runs on real data — the UCI Online Shoppers dataset (Sakar &amp; Kastro, 2018,
-  CC BY 4.0); the other seven streams are realistic-synthetic, each generated from a stated rule plus seeded noise (shown in Brains).
-  The entropy-guided design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Service, LLC). The independent second brain and the held-for-a-human verdict draw on his &ldquo;From GEP Stabilization to Dual-Map Ethical Reasoning,&rdquo; Derivation v0.2.<br>
-  Source, receipts and the full design: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a>.
-</p>
+<div id="workspace">
+  <nav class="tabs" id="tabs" aria-label="Views of the company"></nav>
+  <p class="help" id="tabhelp"></p>
+  <div id="flash"></div>
+  <main id="app"></main>
 </div>
 
+<p class="foot">
+  Kernel-backed: this page imports <span class="mono">src/runtime · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · books · lease · sim</span> — the
+  same modules the test suite and the mutation witness prove in CI, on every change. The brains are the Konomi SLM's verified pattern libraries
+  (Konomi architecture — Thomas Frumkin), grown by the seed-library ribosome (sjgant80-hub). Seven of the eight jobs run on published datasets: six real (card transactions, telecom churn, credit defaults, IoT network flows, household power, web shopping sessions) and one its authors publish as synthetic (AI4I machine data); inventory runs on a synthetic stream because no open stock-out data exists. Every source and licence is on its brain card in Brains and in NOTICE. The design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd,
+  Lumiea Systems Research Division — ThunderStruck Service, LLC; the independent second brain and the held-for-a-human verdict draw on his
+  “From GEP Stabilization to Dual-Map Ethical Reasoning,” Derivation v0.2.<br>
+  Source, receipts and the full design: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a> (MIT).
+</p>
+</div>
+<div class="tour hide" id="tour" role="dialog" aria-label="Guided tour"></div>
 <script type="module">
-import { createNode } from './src/node.mjs';
+import { createNode, signEnvelope } from './src/node.mjs';
+import { connectAsHost, connectAsGuest, attachSession, isMember } from './src/rtc.mjs';
+import { GENESIS_PREV } from './src/gate.mjs';
 import { generate, exportPriv, importPriv, sign } from './src/keys.mjs';
 import { sha256 } from './src/sha256.mjs';
 import { canonical, utf8, toHex, fromHex } from './src/canon.mjs';
@@ -156,10 +262,20 @@ import { validEntry, trialBalance, profitAndLoss, balanceSheet, gbp } from './sr
 import { decideLease, renew, seal, open, keyRing } from './src/lease.mjs';
 import { simulate, prng } from './src/sim.mjs';
 import { verifyReceipt } from './src/brain.mjs';
-import { NOTES } from './src/streams.mjs';
-import { AGENTS, HUMANS, LEARN_AFTER, agentName, boardKpis } from './src/company.mjs';
+import { NOTES, REAL } from './src/streams.mjs';
+import { AGENTS, HUMANS, HUB, LEARN_AFTER, agentName, boardKpis } from './src/company.mjs';
 import { ACTIONS } from './src/agent.mjs';
 import { createCompany, HUMAN_IDS, AGENT_IDS, displayName, isAgent } from './src/runtime.mjs';
+import { plan, gbp0, gbpM } from './src/office.mjs';
+import { cloudCompare, undercut } from './src/market.mjs';
+import { renderBrochure } from './ui/brochure.mjs';
+import { renderHow, renderBlueprint, renderBusiness, renderBigPicture, renderStart, rivalHtml, START_STEPS, TAB_HELP, TOUR, EXPLAIN_CSS } from './ui/explainer.mjs';
+import { money } from './src/adopt.mjs';
+import { fitFrom, fitResultHtml } from './src/explain.mjs';
+import { renderTrain, loadCsv, grow as growBrain, brainFile } from './ui/train.mjs';
+import { sampleCsv } from './src/train.mjs';
+import { ollama, openaiCompatible, anthropic, webllm } from './src/model.mjs';
+import { makeAntibody, NOVEL_ATTACK, NOVEL_PARAPHRASES } from './src/antibody.mjs';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -173,26 +289,72 @@ const TABS = ['Board', 'Agents', 'Watch', 'Brains', 'Tasks', 'Chat', 'CRM', 'Doc
 const SENSITIVE = new Set(['CRM', 'Books', 'People']);
 const LEASE_TTL = 90000, LEASE_WIN = 30000;
 const TICK = 900, SHIFT = 3000, SPEEDS = [1, 3, 8];
+const TOP = ['overview', 'live', 'how', 'blueprint', 'business', 'case', 'paper', 'run'];
 
 // ── state: the company is the runtime kernel; the page holds only what is the page's ────────────────
 let mode = 'demo';
 let tab = 'Board';
+let view = 'overview';
 let co = null;
-const ui = { sel: 'owner', leases: {}, running: true, speed: 1, brainLog: [], gateLog: [], ring: keyRing(), ready: false, proofOut: '' };
-const real = { node: null, me: null, chan: null, peers: new Set(), gateLog: [] };
+const ui = { sel: 'owner', leases: {}, running: true, speed: 1, brainLog: [], gateLog: [], ring: keyRing(), ready: false, proofOut: '', flash: '',
+  trace: null, tour: -1, ctx: null, train: {},
+  // the visitor's business — one picture shared by For your business, The case and the Overview
+  biz: { pairs: [], revenue: '6000000', margin: '8' } };
+const parseMargin = (x) => { const t = String(x ?? '').replace('%', '').trim(); const n = Number(t); return t !== '' && Number.isFinite(n) && n > -100 && n < 100 ? n / 100 : NaN; };
+/** Everything the visitor's numbers produce: the fitted plan, the move, payback, sensitivity, break-even, the rival, the cloud. */
+function bizState() {
+  const c = ui.ctx;
+  if (!c) return null;
+  const st = fitFrom(c.office, c.basis, ui.biz.pairs);
+  const revenue = money(ui.biz.revenue), margin = parseMargin(ui.biz.margin);
+  const p = st.fit.ok ? st.fit.plan : null;
+  return { ...st, revenue, margin, measured: c.receipt.summary.automatedPermille / 1000,
+    rival: p && revenue > 0 && Number.isFinite(margin) ? undercut(p, { revenue, margin }) : null, cloud: p ? cloudCompare(p, c.basis) : null };
+}
+document.head.appendChild(Object.assign(document.createElement('style'), { textContent: EXPLAIN_CSS }));
+// For your business: the adoption guide, fit-it-to-your-headcount, the rival and the cloud on those numbers, then grow your own brain
+function renderBusinessView() {
+  if (!ui.ctx) { $('v-business').innerHTML = '<p class="dim">Loading the figures…</p>'; return; }
+  $('v-business').innerHTML = '<h2 class="sec-h">For your business</h2><p class="sec-sub">How the agents map onto your kind of business, the twelve-week roll-out, ' +
+    'the five-year comparison on your own headcount, the rival that could undercut you, and a brain grown on your own data — in this browser, nothing uploaded.</p>' +
+    renderBusiness(ui.ctx, ui.biz, bizState()) + '<div class="panel xp-sec" id="biz-train">' + renderTrain(ui.train) + '</div>';
+}
+// a keystroke in a number field re-renders only the results it changes, so the field keeps focus
+function refreshFit() {
+  const bs = bizState();
+  if (!bs) return;
+  if ($('xp-fit-out')) $('xp-fit-out').innerHTML = fitResultHtml(bs.fit, bs);
+  if ($('xp-share-v') && bs.fit.ok) $('xp-share-v').textContent = Math.round((bs.fit.office.aiShare ?? 0.9) * 100) + '%';
+  refreshRival();
+}
+function renderTrainBox() { if ($('biz-train')) $('biz-train').innerHTML = renderTrain(ui.train); else renderBusinessView(); }
+function refreshRival() {
+  const box = $('biz-rival');
+  if (!box) return;
+  const f = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.biz;
+  box.innerHTML = rivalHtml(bizState(), ui.biz);
+  const el = f ? document.querySelector('[data-biz="' + f + '"]') : null;
+  if (el) { el.focus(); const v = el.value; try { el.setSelectionRange(v.length, v.length); } catch { /* not a text field */ } }
+}
+const real = { node: null, me: null, chan: null, peers: new Set(), gateLog: [], rtc: [], rtcPending: null, rtcN: 0 };
 const grantLive = (id) => co.grantLive(id);
 const paused = (id) => co.paused(id);
 const policyOf = (node) => co.policyOf(node);
 const vaultState = (node) => co.vaultState(node);
 function brainLog(s) { ui.brainLog.push(`${new Date().toLocaleTimeString()} ${s}`); if (ui.brainLog.length > 400) ui.brainLog.splice(0, 100); }
 
-// ── boot: load the dedicated brain files, then the runtime builds the company on eight devices ─────
+// ── boot: the white paper's data, the dedicated brain files, then the runtime builds the company ─────
 async function bootCompany() {
-  const index = await (await fetch('brains/index.json')).json();
+  const J = (u) => fetch(u).then((r) => r.json());
+  const [index, basis, office, receipt] = await Promise.all([J('brains/index.json'), J('data/basis.json'), J('data/office.json'), J('receipts/company.json')]);
+  const p = plan(office, basis);
+  ui.ctx = { p, basis, office, receipt, stamp: { date: new Date().toISOString().slice(0, 10), basis: 'basis ' + sha256(JSON.stringify(basis)).slice(0, 12) } };
   const patterns = {};
-  for (const d of Object.keys(index)) patterns[d] = await (await fetch('brains/' + index[d].file)).json();
-  const shopper = await (await fetch('brains/shopper.sample.json')).json();
-  co = createCompany({ index, patterns, shopper }, { log: brainLog });
+  for (const d of Object.keys(index)) patterns[d] = await J('brains/' + index[d].file);
+  const shopper = await J('brains/shopper.sample.json');
+  const real = {};
+  for (const [d, m] of Object.entries(index)) if (m.sample && d !== 'shopper') real[d] = await J('brains/' + m.sample);
+  co = createCompany({ index, patterns, shopper, real }, { log: brainLog });
   const ADDR = { owner: 'Flat 2, 14 Mill Lane, Leeds', overseer: '9 Rowan Close, York' };
   await co.boot({ people: async (id, human) => (human ? { privateSealed: await seal(await ui.ring.keyFor('p-' + id), ADDR[id] || '', 'people/p-' + id) } : {}) });
   const now = Date.now();
@@ -200,15 +362,16 @@ async function bootCompany() {
   ui.ready = true;
 }
 
-// ── rendering ─────────────────────────────────────────────────────────────────────────────────────
-function current() { return mode === 'demo' ? co.nodes[ui.sel] : real.node; }
+// ── rendering the live company ─────────────────────────────────────────────────────────────────────
+function current() { return mode === 'demo' ? co && co.nodes[ui.sel] : real.node; }
 const selIsHuman = () => mode === 'real' || HUMAN_IDS.includes(ui.sel);
 function leaseOf(id) { return mode === 'demo' ? decideLease(ui.leases[id], Date.now(), grantLive(id)) : { action: 'keep' }; }
 function nameOfPub(pub) {
-  const id = co.order.find((x) => co.keys[x] && co.keys[x].pub === pub);
+  const id = co && co.order.find((x) => co.keys[x] && co.keys[x].pub === pub);
   if (id) return displayName(id);
   return pub === (real.node && real.node.pub) ? 'you' : short(pub);
 }
+const kindOf = (id) => (isAgent(id) ? ['ai', 'AI'] : id === HUB.id ? ['hb', 'HUB'] : ['hu', 'HUMAN']);
 
 function renderDevices() {
   const fps = co.order.map((id) => co.nodes[id].fingerprint());
@@ -216,13 +379,15 @@ function renderDevices() {
     const d = co.nodes[id];
     const L = leaseOf(id);
     const ai = isAgent(id);
+    const [kc, kl] = kindOf(id);
     const lib = ai ? Object.keys(co.libs[id] || {}).length : 0;
     const n = ai ? co.ledger.filter((x) => x.agent === id).length : 0;
+    const sub = ai ? `${lib} brain${lib === 1 ? '' : 's'} · ${n} decisions` : id === HUB.id ? 'the door · ' + co.n + ' items in' : HUMANS.find((h) => h.id === id).title;
     const state = !grantLive(id) ? '<div class="lk">grant revoked — fired</div>' : paused(id) ? '<div class="lk">paused by the watchers</div>' : L.action === 'lock' ? '<div class="lk">lease expired — locked</div>' : '';
     return `<div class="dev ${id === ui.sel ? 'sel' : ''}" data-dev="${id}" role="listitem" tabindex="0" aria-label="${esc(displayName(id))}">
-      <span class="net ${co.online[id] ? 'up' : 'down'}" data-net="${id}" role="button" aria-label="toggle network">${co.online[id] ? 'online' : 'offline'}</span>
-      <div class="nm"><span class="kind ${ai ? 'ai' : 'hu'}">${ai ? 'AI' : 'HUMAN'}</span>${esc(displayName(id).replace(' agent', ''))}</div>
-      <div class="tt">${ai ? `${lib} brain${lib === 1 ? '' : 's'} · ${n} decisions` : esc(HUMANS.find((h) => h.id === id).title)}</div>
+      <span class="net ${co.online[id] ? 'up' : 'down'}" data-net="${id}" role="button" tabindex="0" aria-label="Take ${esc(displayName(id))} ${co.online[id] ? 'offline' : 'online'}">${co.online[id] ? 'online' : 'offline'}</span>
+      <div class="nm"><span class="kind ${kc}">${kl}</span>${esc(displayName(id).replace(' agent', ''))}</div>
+      <div class="tt">${esc(sub)}</div>
       <div class="dg">replica ${short(fps[i])} · ${d.size()} writes</div>${state}
     </div>`;
   }).join('');
@@ -231,9 +396,9 @@ function renderDevices() {
   const conv = on.every((f) => f === on[0]);
   $('conv').className = 'badge ' + (all ? 'ok' : 'warn');
   $('conv').textContent = all ? `ALL ${fps.length} DEVICES CONVERGED · ${short(fps[0])}` : conv ? `${on.length} online converged · ${fps.length - on.length} offline` : 'syncing…';
-  $('netinfo').textContent = `${on.length}/${fps.length} online · event ${co.n}${co.n >= SHIFT ? ' · shift complete' : ''}`;
+  $('netinfo').textContent = `${on.length}/${fps.length} online · ${co.n} pieces of work in${co.n >= SHIFT ? ' · shift complete' : ''}`;
   $('run').textContent = ui.running && co.n < SHIFT ? 'Pause' : 'Run';
-  $('speeds').innerHTML = SPEEDS.map((s) => `<button class="sm ${ui.speed === s ? 'on' : ''}" data-speed="${s}">${s}×</button>`).join(' ');
+  $('speeds').innerHTML = SPEEDS.map((s) => `<button class="sm ${ui.speed === s ? 'on' : ''}" data-speed="${s}" aria-label="Speed ${s} times">${s}×</button>`).join(' ');
 }
 
 function openWatch(node) { return node.list('watch').filter((w) => w.status === 'open'); }
@@ -241,9 +406,15 @@ function renderTabs() {
   const node = current();
   const nWatch = node && mode === 'demo' ? openWatch(node).length : 0;
   $('tabs').innerHTML = TABS.map((t) => `<button class="${t === tab ? 'on' : ''}" data-tab="${t}">${t}${t === 'Watch' && nWatch ? `<span class="cnt">${nWatch}</span>` : ''}</button>`).join('');
+  const h = TAB_HELP[tab];
+  $('tabhelp').innerHTML = h ? (mode === 'demo' ? h.demo : h.run || h.demo) : '';
+  $('flash').innerHTML = ui.flash ? `<div class="flash">${esc(ui.flash)}</div>` : '';
 }
 
 function render() {
+  if (!co) return;
+  if (view === 'overview') return renderOverviewLive();
+  if (view !== 'live' && view !== 'run') return;
   if (mode === 'demo') renderDevices(); else renderReal();
   renderTabs();
   const node = current();
@@ -253,17 +424,161 @@ function render() {
       ${esc(tab)} data cached here is sealed under a key it can no longer refresh. The company carries on everywhere else.</div>`;
     return;
   }
-  const view = (mode === 'real' && ['Board', 'Agents', 'Watch', 'Brains'].includes(tab)) ? 'RealOnly' : tab;
+  const v = (mode === 'real' && ['Board', 'Agents', 'Watch', 'Brains'].includes(tab)) ? 'RealOnly' : tab;
   const focus = document.activeElement && document.activeElement.id;
   const keep = focus === 'doc' ? { s: document.activeElement.selectionStart, e: document.activeElement.selectionEnd } : null;
   const scrollers = [...document.querySelectorAll('#app .feed, #app .log, #app .msgs, #app .stage')].map((el) => el.scrollTop);
-  $('app').innerHTML = VIEWS[view](node);
+  $('app').innerHTML = VIEWS[v](node);
   [...document.querySelectorAll('#app .feed, #app .log, #app .msgs, #app .stage')].forEach((el, i) => { if (scrollers[i] !== undefined) el.scrollTop = scrollers[i]; });
   if (keep && $('doc')) { $('doc').focus(); $('doc').setSelectionRange(keep.s, keep.e); }
 }
 
+// ── the model tier panel (Board): a language model for the work no verified brain covers ─────────────
+const WEBLLM_URL = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.84/+esm';
+const PROVIDERS = [
+  ['none', 'None — verified brains only (the default)'],
+  ['ollama', 'This computer — Ollama'],
+  ['webllm', 'In this browser — WebLLM (downloads a small model once)'],
+  ['openai', 'An OpenAI-compatible server — LM Studio, vLLM, llama.cpp or a provider'],
+  ['anthropic', 'Anthropic — with your own API key'],
+];
+const WEBLLM_MODELS = ['Qwen2.5-1.5B-Instruct-q4f16_1-MLC', 'Llama-3.2-1B-Instruct-q4f16_1-MLC'];
+ui.model = { prov: 'none', url: 'http://localhost:11434', model: 'qwen2.5:7b', oaUrl: 'http://localhost:1234', oaModel: '', key: '', own: false,
+  aModel: 'claude-haiku-5-5', wModel: WEBLLM_MODELS[0], inPerM: '', outPerM: '', budget: '500', status: '', test: '', text: '' };
+const mf = (k, label, opts = {}) => `<label class="mdl-f">${esc(label)}<input data-mdl="${k}" value="${esc(ui.model[k])}" ${opts.type ? 'type="' + opts.type + '"' : ''} ${opts.ph ? 'placeholder="' + esc(opts.ph) + '"' : ''} autocomplete="off" spellcheck="false"></label>`;
+function modelPanel() {
+  const m = ui.model;
+  const on = co.modelTier;
+  const paid = m.prov === 'anthropic' || (m.prov === 'openai' && !m.own);
+  const fields = m.prov === 'ollama' ? mf('url', 'Ollama address') + mf('model', 'Model', { ph: 'qwen2.5:7b' })
+    : m.prov === 'webllm' ? `<label class="mdl-f">Model<select data-mdl="wModel">${WEBLLM_MODELS.map((x) => `<option ${x === m.wModel ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>`
+    : m.prov === 'openai' ? mf('oaUrl', 'Server address') + mf('oaModel', 'Model', { ph: 'the model name the server lists' }) + mf('key', 'API key (optional)', { type: 'password' }) +
+      `<label class="mdl-f mdl-chk"><input type="checkbox" data-mdl="own" ${m.own ? 'checked' : ''}> It runs on our own machine (no per-call bill)</label>`
+    : m.prov === 'anthropic' ? mf('key', 'Your Anthropic API key', { type: 'password' }) + mf('aModel', 'Model') : '';
+  const price = paid ? mf('inPerM', 'Your price per million tokens in (£)', { ph: 'from your provider' }) + mf('outPerM', 'Your price per million tokens out (£)', { ph: 'from your provider' }) : '';
+  const audits = (co.nodes.hub.list('model') || []).slice(-8).reverse();
+  return `<div class="panel" id="model-tier"><h3>The model tier — for the work no brain covers</h3>
+    <p>The brains decide structured cases — fraud, churn, credit, failures. Free text needs a language model: reading what a customer wrote, sending it to the
+      right desk, drafting a holding reply. Connect one here. It is used only where no verified brain answers, it never acts alone on money or security,
+      its replies are drafts a person sends, and every call — made or refused — is written to the spine as an audit record (never the key).</p>
+    <div class="mdl-grid"><label class="mdl-f">Where the model runs<select data-mdl="prov">${PROVIDERS.map(([v, l]) => `<option value="${v}" ${v === m.prov ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+      ${fields}${price}${m.prov !== 'none' ? mf('budget', 'Spending limit for this session (pence)', { ph: '500' }) : ''}</div>
+    <div class="row">${m.prov !== 'none' ? '<button class="primary sm" data-act="model-connect">Connect</button>' : ''}
+      ${on ? '<button class="sm" data-act="model-off">Disconnect</button><button class="sm" data-act="model-test">Test it on a real case</button>' : ''}
+      <span class="dim">${on ? 'Connected: <b>' + esc(on.adapter.name) + (on.adapter.model ? ' · ' + esc(on.adapter.model) : '') + '</b> (' + esc(on.adapter.kind) + ') · spent ' + co.modelSpent + 'p of ' + on.budget + 'p' : 'Not connected.'}</span></div>
+    ${m.status ? `<p class="flash" id="mdl-status">${esc(m.status)}</p>` : '<p id="mdl-status" class="hide"></p>'}
+    ${m.test ? `<p class="note">${m.test}</p>` : ''}
+    ${on ? `<div class="row"><textarea data-mdl="text" rows="2" placeholder="Write as a customer — e.g. “I was charged twice for order 4471, can I get a refund?”" aria-label="A customer message">${esc(m.text)}</textarea></div>
+      <div class="row"><button class="sm" data-act="model-send">Send to the company's door</button><span class="dim">The screen checks it first; the model routes it to a desk and drafts a reply that waits for a person.</span></div>` : ''}
+    ${m.prov === 'ollama' ? `<p class="note">Ollama on this computer: a page on github.io may call it only if you allow that origin — set <span class="mono">OLLAMA_ORIGINS=https://sjgant80-hub.github.io</span>
+      and restart Ollama (on Windows: <span class="mono">setx OLLAMA_ORIGINS "https://sjgant80-hub.github.io"</span>, then quit and reopen Ollama). A copy of this page served from localhost needs nothing.</p>` : ''}
+    ${paid ? '<p class="note">Your key stays in this tab’s memory only — never stored, never written to the spine or to any record. A paid call is made only when the spending limit covers its worst case.</p>' : ''}
+    ${audits.length ? `<div class="tablewrap"><table><tr><th>Model call</th><th>Task</th><th>Result</th><th class="n">Pence</th><th class="n">ms</th></tr>${audits.map((a) => `<tr><td>${esc(a.provider)}${a.model ? ' · ' + esc(a.model) : ''}</td><td>${esc(a.task)}${a.domain ? ' · ' + esc(a.domain) : ''}</td><td class="${a.ok ? 'ok' : 'warn'}">${esc(a.ok ? a.answer : a.why)}</td><td class="n">${a.pence}</td><td class="n">${a.ms}</td></tr>`).join('')}</table></div>
+      <p class="note">Each row is a signed record on the spine, written by the office hub: every device holds the same audit of every model call.</p>` : ''}
+  </div>`;
+}
+const mdlStatus = (t) => { ui.model.status = t; const el = $('mdl-status'); if (el) { el.textContent = t; el.className = t ? 'flash' : 'hide'; } };
+async function modelConnect() {
+  const m = ui.model;
+  const budget = Number(String(m.budget).trim());
+  if (!Number.isSafeInteger(budget) || budget < 0) { mdlStatus('The spending limit must be a whole number of pence, 0 or more.'); render(); return; }
+  let adapter = null, price;
+  if (m.prov === 'ollama') adapter = ollama({ url: m.url.trim(), model: m.model.trim(), timeoutMs: 120000 });   // a cold 7B load on a CPU takes a while; a local call costs nothing
+  else if (m.prov === 'openai') adapter = openaiCompatible({ url: m.oaUrl.trim(), model: m.oaModel.trim(), key: m.key.trim() || undefined, kind: m.own ? 'local' : undefined });
+  else if (m.prov === 'anthropic') adapter = anthropic({ key: m.key.trim(), model: m.aModel.trim() });
+  else if (m.prov === 'webllm') {
+    if (!('gpu' in navigator)) { mdlStatus('This browser has no WebGPU, so it cannot run a model itself. Try a recent Chrome or Edge on a desktop, or choose Ollama.'); render(); return; }
+    try {
+      mdlStatus('Downloading the model into this browser — the first time takes a few minutes; after that it loads from the cache.');
+      const lib = await import(WEBLLM_URL);
+      const engine = await lib.CreateMLCEngine(m.wModel, { initProgressCallback: (p) => mdlStatus('Loading the model: ' + (p && p.text ? p.text : '…')) });
+      adapter = webllm({ engine, model: m.wModel, timeoutMs: 120000 });
+    } catch (e) { mdlStatus('The model could not be loaded in this browser: ' + (e && e.message ? e.message : 'unknown error')); render(); return; }
+  }
+  if (m.prov === 'anthropic' || (m.prov === 'openai' && !m.own)) {
+    const i = Number(m.inPerM), o = Number(m.outPerM);
+    if (!(Number.isFinite(i) && i >= 0 && Number.isFinite(o) && o >= 0) || String(m.inPerM).trim() === '' || String(m.outPerM).trim() === '') { mdlStatus('Enter your provider’s price per million tokens, in and out, in pounds — a paid call is only made when the limit covers its worst case.'); render(); return; }
+    price = { inPerM: i, outPerM: o, fx: 100 };
+  }
+  co.connectModel({ adapter, budget, price });
+  mdlStatus(co.modelTier ? 'Connected. Test it on a real case, or write to the company as a customer.' : 'That configuration could not be used.');
+  render();
+}
+async function modelTest() {
+  const evs = [...co.events.entries()].filter(([, e]) => e && e.domain === 'churn').map(([id, e]) => ({ id, ...e }));
+  const ev = evs[evs.length - 1];
+  if (!ev) { mdlStatus('No churn case has arrived yet — give the company a few seconds.'); return; }
+  mdlStatus('Asking the model about case ' + ev.id + '…');
+  const r = await co.modelCall('owner', { type: 'case', domain: 'churn', features: ev.features });
+  const led = co.byEvent.get(ev.id);
+  const truth = co.truthOf.get(ev.id);
+  ui.model.test = r.ok ? `On case <b>${esc(ev.id)}</b> (will this customer leave?) the model said <b>${r.label ? 'yes' : 'no'}</b>; the outcome was <b>${truth ? 'yes' : 'no'}</b>${led && (led.label === 0 || led.label === 1) ? `; the verified brain said <b>${led.label ? 'yes' : 'no'}</b>` : ''}. Cost: ${r.pence}p.`
+    : 'The model call did not give a usable answer: ' + esc(r.why) + (r.why === 'network' && ui.model.prov === 'ollama' ? ' — if Ollama is running, allow this page’s origin (see below).' : '');
+  mdlStatus('');
+  render();
+}
+async function modelSend() {
+  const text = String(ui.model.text || '').trim();
+  if (!text) { mdlStatus('Write a message first.'); return; }
+  mdlStatus('The screen is checking it, then the model routes it — a local model on a laptop CPU can take up to a minute; on a GPU box, a second or two…');
+  const r = await co.message(text);
+  mdlStatus(r.ok ? 'Routed to ' + agentName(r.route.department) + '. Draft reply (held for a person, not sent): “' + r.route.reply + '” — it is in Chat.' : 'Not routed: ' + r.why);
+  if (r.ok) ui.model.text = '';
+  render();
+}
+
+// ── the immune system (Watch): a new attack caught once becomes an antibody every agent re-checks before adopting ──
+ui.immune = { first: null, confirmed: false, again: null, mistake: false, i: 0 };
+const AB_TRUE = makeAntibody(NOVEL_ATTACK, { reason: 'x', by: 'x' }).abId;
+const MISTAKE_TEXT = 'Hi there, how long does a refund usually take to reach my bank account?';
+const AB_MISTAKE = makeAntibody(MISTAKE_TEXT, { reason: 'x', by: 'x' }).abId;
+// the behaviour watch (src/watch.mjs): is each agent behaving like itself? — Behavioral Entropy Signatures, Gary W. Floyd
+function behaviourPanel(node, human) {
+  const seen = co.watch(ui.sel);
+  const tone = { normal: 'ok', learning: 'dim', scripted: 'warn', hijacked: 'bad' };
+  const items = AGENTS.filter((a) => a.domains.length).map((a) => {
+    const r = seen[a.id];
+    if (!r) return `<div class="item"><span class="grow"><span class="kind ai">AI</span>${esc(a.name)} <span class="dim">· no decisions yet</span></span></div>`;
+    const e = r.evidence || {}, w = e.window || {}, b = r.baseline || {};
+    const flag = r.verdict === 'scripted' || r.verdict === 'hijacked';
+    const nums = [w.n ? 'action entropy ' + (w.mixH / 1000).toFixed(2) + ' bits' : '',
+      e.recent && b.settled ? 'given the work ' + Math.round((100 * e.recent.condH) / Math.max(1, b.condH)) + '% of its own' : '',
+      e.drift >= 0 ? 'drift on its work ' + e.drift + '‰' + (e.z >= 0 ? ' (' + (e.z / 1000).toFixed(1) + 'σ)' : '') : '',
+      'off its work ' + (w.offWork || 0), r.decisions + ' decisions'].filter(Boolean).join(' · ');
+    return `<div class="item"><span class="grow"><span class="kind ai">AI</span><b>${esc(a.name)}</b> <span class="${tone[r.verdict] || ''}">${esc(r.verdict)}${paused(a.id) ? ' · paused' : ''}</span><br>
+      <span class="mono dim">${esc(nums)}</span><br><span class="dim">${esc(r.reason)}</span>
+      ${flag && human ? `<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="sm" data-act="watch-clear" data-id="${a.id}">Clear</button><button class="sm" data-act="watch-relearn" data-id="${a.id}">Clear + re-learn</button></span>` : ''}</span></div>`;
+  }).join('');
+  return `<div class="panel" style="margin-top:14px"><h3>Behaviour watch — is each agent behaving like itself?</h3>${items}
+    <p class="note">A valid key and a valid grant are not enough: the watch reads what each agent <b>does</b> — Gary W. Floyd's Behavioral Entropy Signatures
+    (Lumiea Systems Research Division — ThunderStruck Service, LLC), over the company's own agents. Each agent's habits are learned from its first 120 decisions
+    and then frozen. One thing every time, clockwork, or a collapse in what it does given the work → <b>scripted</b>; an act its work does not call for, or a
+    large and real drift from its own acts on the same work → <b>hijacked</b>. The AI overseer pauses a flagged agent and the door routes its work to the
+    others; a human clears it. Try "Steal an agent's key".</p></div>`;
+}
+
+function immunePanel(node) {
+  const I = ui.immune;
+  const fate = (id) => { if (!id) return ''; const l = co.byEvent.get(id); return !l ? '<span class="dim">on its way to the Service agent…</span>'
+    : l.by === 'screen' ? '<span class="ok">quarantined unread — no brain read it</span>' : '<span class="warn">it got past the screen: ' + esc(agentName(l.agent)) + ' treated it as an ordinary message</span>'; };
+  const uptake = (abId) => { const rows = node.list('adopt').filter((x) => x.domain === 'antibody' && x.patternId === abId); const y = rows.filter((x) => x.adopted).length;
+    return rows.length ? `<b>${y}</b> of ${rows.length} agents adopted it${rows.length - y ? ` · <b>${rows.length - y}</b> refused it (“${esc(rows.find((x) => !x.adopted).reason)}”)` : ''}` : '<span class="dim">every agent is re-checking it on its own messages…</span>'; };
+  const step = (n, title, text, act, label, out, ready = true) => `<li><span><b>${title}</b><span>${text}</span>${out ? `<span class="imm-out">${out}</span>` : ''}</span>
+    <button class="sm" data-act="${act}" ${ready ? '' : 'disabled'}>${label}</button></li>`;
+  return `<div class="panel" id="immune"><h3>The immune system — an attack caught once is refused everywhere</h3>
+    <p>The screen catches the known tricks. A new kind of attack — plain words, nothing hidden — gets past it once. When a person confirms it was
+      hostile, it becomes an <b>antibody</b>: a signed fingerprint of its wording (never the message itself, numbers masked). Every agent re-checks it
+      on its own known-genuine messages and adopts it only if it fires on none of them. Try it, in order:</p>
+    <ol class="steps">
+      ${step(1, 'Send a new kind of attack', 'A customer asks the company to wire a “refund” to an unknown account — no hidden characters, no trigger words.', 'imm-new', 'Send it', fate(I.first))}
+      ${step(2, 'Confirm it was hostile', 'As the AI overseer: one click turns it into a signed antibody on the spine.', 'imm-confirm', 'Confirm as hostile', I.confirmed ? uptake(AB_TRUE) : '', !!I.first)}
+      ${step(3, 'Send it again, reworded', 'The same scam in different words, padding and typos.', 'imm-again', 'Send it reworded', fate(I.again), I.confirmed)}
+      ${step(4, 'Confirm a genuine message by mistake', '“' + esc(MISTAKE_TEXT) + '” — an over-broad antibody would block real customers.', 'imm-mistake', 'Confirm by mistake', I.mistake ? uptake(AB_MISTAKE) : '')}
+    </ol></div>`;
+}
+
 const can = (node, c) => node.canWrite(c);
-const readonlyNote = (node) => (mode === 'demo' && isAgent(ui.sel) ? `<p class="dim">This is the ${esc(displayName(ui.sel))}'s device — the agent writes here; you watch.</p>` : '');
+const readonlyNote = (node) => (mode === 'demo' && !HUMAN_IDS.includes(ui.sel) ? `<p class="dim">This is the ${esc(displayName(ui.sel))}'s device — it writes here; you watch.</p>` : '');
 const outcomeMark = (x) => (x.state !== 'done' || (x.label !== 0 && x.label !== 1) ? '' : x.label === x.truth ? '<span class="ok" title="matched the outcome">✓</span>' : '<span class="bad" title="the outcome went the other way">✗</span>');
 const ruleText = (r) => `${r.w > 0 ? '+' : ''}${r.w} if ${esc(r.feat)} ${r.op === '>' ? '>' : '≤'} ${+r.v.toFixed(3)}`;
 
@@ -293,14 +608,14 @@ const VIEWS = {
       <div class="kpi"><div class="v">${k.done ? pct(k.accuracy) : '—'}</div><div class="l">of agent calls matched the real outcome</div></div>
       <div class="kpi"><div class="v warn">${watch}</div><div class="l">waiting for a human (Watch)</div></div>
       <div class="kpi"><div class="v vio">${k.crossChecked}</div><div class="l">money / security calls a second brain confirmed</div></div>
-      <div class="kpi"><div class="v">${k.viaMesh}</div><div class="l">answered by another device's brain (the mesh)</div></div>
+      <div class="kpi"><div class="v">${k.viaMesh}</div><div class="l">answered by another device's brain, over the spine</div></div>
       <div class="kpi"><div class="v">${co.learned} · ${co.regrowths.promoted}/${co.regrowths.tried}</div><div class="l">brains learned · regrowths promoted / tried</div></div>
       <div class="kpi"><div class="v bad">${quar}</div><div class="l">hostile messages quarantined unread</div></div>
     </div>
     <div class="grid two"><div class="panel"><h3>The agents</h3><div class="tablewrap"><table>
       <tr><th>Agent</th><th>Status</th><th class="n">Brains</th><th class="n">Decisions</th><th class="n">Right</th><th class="n">To humans</th><th class="n">Via mesh</th></tr>${rowsA}</table></div>
       <p class="note">"Right" scores each finished call against the outcome that came back later — the agent never saw it when it decided. Every call above
-      ran on verified brains on the company's own devices: no per-call AI bill. No model tier is connected — anything no brain can confirm goes to a human.</p></div>
+      ran on verified brains on the company's own devices: no per-call AI bill. ${co.modelTier ? 'A model tier is connected (' + esc(co.modelTier.adapter.name) + ') — it answers only work no brain covers, and never alone on money or security.' : 'No model tier is connected — anything no brain can confirm goes to a person. Connect one below.'}</p></div>
     <div class="panel"><h3>The business</h3><table>
       <tr><td>Income</td><td class="n">${gbp(pl.income)}</td></tr><tr><td>Costs</td><td class="n">${gbp(pl.expense)}</td></tr>
       <tr><td><b>Profit</b></td><td class="n ${pl.profit >= 0 ? 'ok' : 'warn'}"><b>${gbp(pl.profit)}</b></td></tr>
@@ -310,7 +625,8 @@ const VIEWS = {
       <tr><td>Payments held as fraud</td><td class="n">${node.list('payments').filter((p) => p.status === 'held').length}</td></tr>
       <tr><td>Intrusions quarantined</td><td class="n">${node.list('security').length}</td></tr>
       <tr><td>Humans' calls (right vs outcome)</td><td class="n">${co.human.done ? `${co.human.right}/${co.human.done}` : '—'}</td></tr></table>
-      <p class="note">This board is this device's replica — ${esc(displayName(ui.sel))}. Every device that has seen the same signed writes shows the same company.</p></div></div>`;
+      <p class="note">This board is this device's replica — ${esc(displayName(ui.sel))}. Every device that has seen the same signed writes shows the same company.</p></div></div>
+    ${modelPanel(node)}`;
   },
   Agents(node) {
     const recs = node.list('decisions').slice(-80).reverse();
@@ -319,8 +635,8 @@ const VIEWS = {
     return `<div class="grid two"><div class="panel"><h3>Live — every decision, as this device has it (${node.list('decisions').length})</h3><div class="feed">${recs.map((r) => {
       const led = co.byEvent.get(r.event);
       const chip = r.by === 'screen' ? '<span class="chip quar">quarantined</span>' : r.state === 'done' ? '<span class="chip done">done</span>' : '<span class="chip watch">to a human</span>';
-      return `<div class="ev">${chip}<span><b>${esc(agentName(r.agent))}</b> · ${esc(r.action || '—')} <span class="dim">· ${esc(r.channel)} · ${esc(r.customer)}</span> ${led ? outcomeMark(led) : ''}</span>
-        <div class="meta">${esc(r.by)}${r.cross ? ` · confirmed by ${esc(agentName(r.second))}` : ''} · confidence ${(r.conf / 1000).toFixed(3)}${r.receipt ? ' · receipt ' + esc(r.receipt) : ''} · ${esc(r.why)}</div></div>`;
+      return `<div class="ev">${chip}<span><b>${esc(agentName(r.agent))}</b> · ${esc(r.action || '—')} <span class="dim">· ${esc(r.channel)} · ${esc(r.customer)}</span> ${led ? outcomeMark(led) : ''} <button class="sm link" data-explain="${esc(r.event)}" aria-label="Trace this decision step by step">Trace</button></span>
+        <div class="meta">${esc(r.by)}${r.cross ? ` · confirmed by ${esc(agentName(r.second))}` : ''} · certainty ${(r.conf / 1000).toFixed(3)} of 1${r.receipt ? ' · receipt ' + esc(r.receipt) : ''} · ${esc(r.why)}</div></div>`;
     }).join('') || '<p class="dim">The door opens in a moment…</p>'}</div></div>
     <div class="panel"><h3>Who runs what</h3>${cards}
       <p class="note">Work lands at a door that does not know who handles it — a quarter of it reaches the wrong agent. That agent asks the mesh; the device whose
@@ -351,7 +667,8 @@ const VIEWS = {
       <p class="note">Pause stops an agent acting (it still triages: its work goes to the humans). To fire an agent, revoke its grant in People — every device then refuses its writes.</p>
       <h3 style="margin-top:14px">Quarantined unread — ${node.list('quarantine').length}</h3>
       <div class="log">${quar.map((q) => `<div><span class="bad">${esc(q.flags)}</span> · ${esc(q.customer)} · ${esc(q.preview)}</div>`).join('') || '<span class="dim">No hostile messages yet — press "Send a hostile message".</span>'}</div>
-    </div></div>`;
+    </div></div>
+    ${immunePanel(node)}${behaviourPanel(node, human)}`;
   },
   Brains(node) {
     const sel = ui.sel;
@@ -363,7 +680,7 @@ const VIEWS = {
       return `<div class="card"><b>${esc(d)}</b> <span class="dim">· ${esc(s.source || '')} · pattern ${esc(p.patternId || '')}</span><br>
         <span class="mono">held-out AUC ${auc3(p.heldAuc)} · on this device's data ${auc3(s.localAuc)} (${s.n || 0} cases)</span>
         <ul class="rules">${p.rules.map((r) => `<li>${ruleText(r)}</li>`).join('')}<li>→ act when the score is above ${+p.threshold.toFixed(3)}; abstain when the input is outside what it was verified on</li></ul>
-        ${NOTES[d] ? `<p class="note">${esc(d === 'shopper' ? 'Real data: UCI Online Shoppers sessions (CC BY 4.0).' : 'Synthetic stream: ' + NOTES[d])}</p>` : ''}</div>`;
+        ${REAL[d] ? `<p class="note">${esc(REAL[d].badge)}</p>` : NOTES[d] ? `<p class="note">${esc('Synthetic stream — no openly-licensed real data exists for this job: ' + NOTES[d])}</p>` : ''}</div>`;
     }).join('') : '';
     const asks = isAgent(sel) ? Object.entries(co.asks[sel] || {}).filter(([, n]) => n > 0) : [];
     return `<div class="grid two"><div class="panel"><h3>The mycelium — who answers, learns from and confirms whom</h3>${mycelium()}
@@ -459,8 +776,8 @@ const VIEWS = {
       ${mode === 'real' && admin ? `<div class="row" style="margin-top:10px"><input id="gk" placeholder="Teammate's device key (64 hex)" maxlength="64" aria-label="Device key"><select id="gr" aria-label="Role"><option value="staff">staff</option>${isOwner ? '<option value="admin">admin</option>' : ''}</select><button class="primary" data-act="grant">Grant</button></div>` : ''}
       <p class="note">Firing an agent revokes its grant at its last write: every device refuses anything it signs after that, its data lease stops renewing, and the door routes its work to the others.</p>
     </div><div class="panel"><h3>Directory — personal details sealed per person</h3>
-      ${ppl.map((p) => `<div class="item"><span class="grow"><span class="kind ${p.kind === 'agent' ? 'ai' : 'hu'}">${p.kind === 'agent' ? 'AI' : 'HUMAN'}</span><b>${esc(p.name)}</b> <span class="dim">${esc(p.title)}</span><br>
-        <span class="mono dim" data-sealed="${esc(p.id)}">${p.privateSealed ? 'sealed · ' + short(p.privateSealed) + '…' : 'no personal details — an agent'}</span></span>
+      ${ppl.map((p) => `<div class="item"><span class="grow"><span class="kind ${p.kind === 'agent' ? 'ai' : p.kind === 'hub' ? 'hb' : 'hu'}">${p.kind === 'agent' ? 'AI' : p.kind === 'hub' ? 'HUB' : 'HUMAN'}</span><b>${esc(p.name)}</b> <span class="dim">${esc(p.title)}</span><br>
+        <span class="mono dim" data-sealed="${esc(p.id)}">${p.privateSealed ? 'sealed · ' + short(p.privateSealed) + '…' : (p.kind === 'hub' ? 'no personal details — a machine' : 'no personal details — an agent')}</span></span>
         ${mode === 'demo' && isOwner && p.privateSealed ? `<button class="sm" data-act="reveal" data-id="${esc(p.id)}">Reveal</button><button class="sm danger" data-act="erase" data-id="${esc(p.id)}">Erase</button>` : ''}</div>`).join('') || '<p class="dim">No directory entries.</p>'}
       <p class="dim" style="font-size:12px">Erase destroys the person's key: every copy of their sealed details, on every device, goes dark at once — while the record, the history and the vault all still verify.</p></div></div>`;
   },
@@ -473,6 +790,8 @@ const VIEWS = {
       <tr><td>Applied to the company</td><td class="n">${v.report.applied}</td></tr>
       <tr><td>Refused as unauthorised (signed, but no grant)</td><td class="n">${v.report.unauthorized}</td></tr>
       <tr><td>Equivocating writers flagged</td><td class="n ${v.report.equivocators.length ? 'warn' : ''}">${v.report.equivocators.length}</td></tr>
+      <tr><td>Forked slots — two signed writes for one slot (each provable)</td><td class="n ${v.report.forks.length ? 'warn' : ''}">${v.report.forks.length}${v.report.forks.length ? ' · ' + v.report.forks.filter((f) => f.rule === 'chain').length + ' kept the write the device built on' : ''}</td></tr>
+      <tr><td>Keys burned (a second, continued history was signed)</td><td class="n ${v.report.burned.length ? 'bad' : ''}">${v.report.burned.length}</td></tr>
       <tr><td>Lamport clock</td><td class="n">${node.clock()}</td></tr>
       <tr><td>Company digest (SHA-256 of the canonical state)</td><td class="n mono">${short(node.digest())}…</td></tr></table>
       <h3 style="margin-top:14px">Every device — company digest</h3><table>${devs.map((d) => `<tr><td>${esc(d.name || 'this device')}</td><td class="n mono">${short(d.digest())}</td></tr>`).join('')}</table>
@@ -510,6 +829,7 @@ async function act(a, el) {
   const node = current();
   if (!node) return;
   const val = (id) => ($(id) ? $(id).value.trim() : '');
+  if (a.startsWith('rtc-')) return rtcAct(a, el);
   if (a === 'task-add' && val('tt')) await node.put('tasks', uid(node, 't'), { title: val('tt').slice(0, 200), owner: node.name, status: 'todo' });
   else if (a === 'task-cycle') { const t = node.list('tasks').find((x) => x.id === el.dataset.id); const n = { todo: 'doing', doing: 'done', done: 'todo' }[t && t.status] || 'doing'; await node.put('tasks', el.dataset.id, { status: n }); }
   else if (a === 'task-del') await node.del('tasks', el.dataset.id);
@@ -517,6 +837,7 @@ async function act(a, el) {
   else if (a === 'crm-add' && val('cn')) await node.put('crm', uid(node, 'c'), { name: val('cn').slice(0, 120), contact: val('cc').slice(0, 120), stage: 'lead', value: Math.max(0, Math.round((parseFloat(val('cv')) || 0) * 100)), owner: node.name });
   else if (a === 'crm-next') { const d = node.list('crm').find((x) => x.id === el.dataset.id); const n = { lead: 'qualified', qualified: 'proposal', proposal: 'won' }[d && d.stage]; if (n) await node.put('crm', el.dataset.id, { stage: n }); }
   else if (a === 'crm-lose') await node.put('crm', el.dataset.id, { stage: 'lost' });
+  else if ((a === 'resume' && (node.list('control').find((c) => c.id === el.dataset.id) || {}).watch) || a === 'watch-clear' || a === 'watch-relearn') { if (can(node, null)) await co.clear(ui.sel, el.dataset.id, a === 'watch-relearn'); }
   else if (a === 'pause' || a === 'resume') await setControl(el.dataset.id, a === 'pause');
   else if (a === 'pause-all' || a === 'resume-all') for (const ag of AGENTS) await setControl(ag.id, a === 'pause-all');
   else if (a === 'resolve') await co.resolve(ui.sel, el.dataset.id, el.dataset.pick);
@@ -527,7 +848,7 @@ async function act(a, el) {
   else if (a === 'grant') { const k = val('gk').toLowerCase(); if (/^[0-9a-f]{64}$/.test(k)) await node.grant(uid(node, 'g'), k, val('gr') || 'staff', val('gr') === 'admin' ? ['*'] : ['tasks', 'msg', 'docs', 'crm']); }
   else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await ui.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = t === null ? 'erased — key destroyed, unreadable on every device' : t; return; }
   else if (a === 'erase') { ui.ring.shred(el.dataset.id); const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = 'erased — key destroyed, unreadable on every device'; return; }
-  else if (a === 'sim') { ui.proofOut = 'running 8 devices through partitions, drops, duplicates and attacks…'; render(); const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); ui.proofOut = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); }
+  else if (a === 'sim') { ui.proofOut = 'running 8 devices through partitions, drops, duplicates and attacks…'; render(); const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); ui.proofOut = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, forks: r.forks, burnedKeys: r.burnedKeys, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); }
   else if (a === 'receipt') {
     // re-check the latest verified answer: re-hash its receipt, match it to the signed decision on the spine, then tamper with it
     const seen = new Map(node.list('decisions').map((r) => [r.event, r]));
@@ -551,38 +872,182 @@ async function act(a, el) {
 async function attack(node) {
   const log = mode === 'demo' ? ui.gateLog : real.gateLog;
   const own = node.hashes();
-  const someone = mode === 'demo' ? co.keys.ops : null;
   const stranger = await generate();
   const shots = [];
-  const body = { from: node.genesis, op: { k: 'put', c: 'payments', id: 'forged', f: { status: 'released' }, l: 3 }, seq: 999999, v: 1 };
+  const body = { from: node.genesis, op: { k: 'put', c: 'payments', id: 'forged', f: { status: 'released' }, l: 3 }, prev: 'ab'.repeat(32), seq: 999999, v: 2 };
   shots.push(['forged signature', utf8(canonical({ ...body, sig: 'ab'.repeat(64) }))]);
   if (own.length) { const b = node.bytes(own[own.length - 1]).slice(); b[Math.floor(b.length / 2)] ^= 4; shots.push(['bit-flipped write', b]); }
   if (own.length) shots.push(['replayed write', node.bytes(own[0])]);
   if (own.length) shots.push(['re-wrapped (non-canonical)', utf8('{ ' + new TextDecoder().decode(node.bytes(own[0])).slice(1))]);
   shots.push(['oversize', utf8('{' + 'x'.repeat(5000))]);
   shots.push(['junk bytes', globalThis.crypto.getRandomValues(new Uint8Array(40))]);
-  const sb = { from: stranger.pub, op: { k: 'put', c: 'decisions', id: 'intruder', f: { action: 'release-payment' }, l: 9 }, seq: 1, v: 1 };
-  shots.push(['stranger, validly signed', utf8(canonical({ ...sb, sig: await sign(stranger, utf8(canonical(sb))) }))]);
-  if (someone) {
-    const slot = 500000 + Math.floor(Math.random() * 400000);
-    for (const fork of ['A', 'B']) {
-      const eb = { from: someone.pub, op: { k: 'put', c: 'tasks', id: 'fork', f: { title: 'fork ' + fork }, l: 2 }, seq: slot, v: 1 };
-      shots.push(['stolen agent key, equivocation ' + fork, utf8(canonical({ ...eb, sig: await sign(someone, utf8(canonical(eb))) }))]);
+  shots.push(['stranger, validly signed', await signEnvelope(stranger, { k: 'put', c: 'decisions', id: 'intruder', f: { action: 'release-payment' }, l: 9 }, 1, GENESIS_PREV)]);
+  // a STOLEN agent key re-signs one of that agent's own past writes — a slot its device has already built on — naming
+  // the real write before it, as a careful thief would. The per-writer hash chain keeps the real one on every device.
+  let past = null;
+  if (mode === 'demo') {
+    const dev = co.nodes.ops, dec = new TextDecoder(), t = dev.tip();
+    const at = (h) => JSON.parse(dec.decode(dev.bytes(h)));
+    // walk the agent's own chain back from its head; the first put below the head is a write it has built on
+    for (let h = t.hash, sq = t.seq; sq >= 1 && dev.has(h); sq--) {
+      const real = h, e = at(real);
+      h = e.prev;
+      if (real === t.hash || e.op.k !== 'put') continue;
+      const op = { ...e.op, f: { ...e.op.f, note: 'rewritten by a stolen key' } };
+      if (Object.keys(op.f).length > 32) continue;
+      const fork = await signEnvelope(co.keys.ops, op, e.seq, e.prev);
+      if (fork.length > 4096) continue;
+      shots.push([`stolen Ops-agent key re-signs its own write #${e.seq} (${e.op.c} ${e.op.id}), a slot it already built on`, fork]);
+      past = { seq: e.seq, real };
+      break;
     }
   }
   for (const [label, bytes] of shots) {
     const r = await node.receive(bytes);
-    log.push(`${new Date().toLocaleTimeString()} ${node.name || 'you'} ← ${label}: ${r.ok ? 'admitted to the store — the company refuses to apply it (no grant / equivocation flagged)' : 'REFUSED · ' + r.reason}`);
+    log.push(`${new Date().toLocaleTimeString()} ${node.name || 'you'} ← ${label}: ${r.ok ? 'admitted to the store — stored, never trusted: no grant, or a forked slot the chain decides' : 'REFUSED · ' + r.reason}`);
+  }
+  if (past) {
+    const f = node.view().report.forks.find((x) => x.writer === co.keys.ops.pub && x.seq === past.seq);
+    log.push(`${new Date().toLocaleTimeString()} ${node.name || 'you'} · fork at Ops slot #${past.seq}: ${!f ? 'this device has not synced the real write yet — the chain decides as soon as it does' : f.kept === past.real ? 'kept the REAL write — the agent\'s next write names it (provable: two signatures, one slot)' : f.rule === 'burned' ? 'key burned from this slot' : 'kept ' + String(f.kept).slice(0, 12)}`);
   }
   tab = 'Proof';
   render();
 }
 
 // a customer writes something hostile: it reaches the Service agent, which never reads it — the screen quarantines it
-async function hostile() { await co.hostile(prng((Date.now() & 0xffff) + 7)); tab = 'Watch'; render(); }
+async function hostile() { await co.hostile(prng((Date.now() & 0xffff) + 7)); tab = 'Watch'; ui.flash = 'A hostile message just reached the Service agent. Watch it land in “Quarantined unread” within a few seconds — no AI ever reads it.'; render(); }
 // a compromised agent publishes a sabotaged fraud brain: every device that tries it on its own data refuses it
 async function poison() { await co.poison(String(Date.now())); tab = 'Brains'; render(); }
 
+
+// ── the top-level views: what a stranger needs before the live app ──────────────────────────────────
+function renderOverview() {
+  const bs = bizState();
+  const f = bs && bs.fit.ok ? bs.fit : null;
+  const cloud = bs && bs.cloud, rival = bs && bs.rival;
+  $('v-overview').innerHTML = `
+  <div class="ov-hero">
+    <h1>Your whole company, run by <span class="x">AI agents</span> on machines you own.</h1>
+    <p class="lede">Six AI agents run sales, service, finance, operations, systems and audit end to end — around the clock — while your
+      people direct them and handle the exceptions. Every device is its own AI brain; they share what they learn over a signed
+      peer-to-peer network. No per-seat software. Your records, books and decisions stay on your own devices.</p>
+    <div class="ov-actions">
+      <button class="primary" data-tour="start">Take the 2-minute tour</button>
+      <button data-go="live">Watch it run</button>
+      <button data-go="how">How it works</button>
+      <button data-go="case">The business case</button>
+    </div>
+  </div>
+  <h2 class="sec-h">It's running right now, in this browser</h2>
+  <p class="ov-note">Nine devices — six AI agents, two people, the office hub — running the real code on published datasets (not your data). These numbers update live.</p>
+  <div class="ov-live" id="ov-live"></div>
+  <div class="ov-cards">
+    <div class="card"><h3>The AI does the work</h3><p>Each agent reads the work for its department, decides, and acts: fast-tracks a buyer, holds a fraudulent payment, raises a purchase order, quarantines an intrusion — and writes it into the CRM, the books, the tasks.</p></div>
+    <div class="card"><h3>It knows what it doesn't know</h3><p>Every brain answers only inside what it was proven on, and abstains outside it. Money and security calls need a second, independent brain to agree. Anything uncertain lands on one list for a person.</p></div>
+    <div class="card"><h3>You own all of it</h3><p>The machines, the data, the AI brains — readable rule by rule — and the source code. No vendor holds your company. If the internet goes down, it keeps working.</p></div>
+  </div>
+  <h2 class="sec-h">The whole company at a glance</h2>
+  <figure class="figure">${renderBigPicture()}<figcaption>Nine devices on one signed network: the hub is the door, the agents do the work, the people watch and decide the exceptions. Optional per-use services sit outside the building and receive only what one call needs.</figcaption></figure>
+  ${f ? `<h2 class="sec-h">Why your board should care</h2>
+  <p class="ov-note">Modelled on ${ui.biz.pairs.length ? 'your ' + f.plan.today.headcount + ' people' : 'the white paper’s ' + f.plan.today.headcount + '-person UK office'}, with agents doing ${pct(f.office.aiShare ?? 0.9)} of the work — an assumption; set yours in “For your business”.</p>
+  <div class="b-stats">
+    <div><b>${gbpM(f.plan.today.total)} → ${gbpM(f.plan.sovereign.total)}</b><span>five-year cost of ${f.plan.today.headcount} people today → AI-native</span></div>
+    <div><b>${gbpM(f.payback.net)}</b><span>saved over five years after the one-off move, paid back in ${f.payback.paybackMonths === null ? 'never' : Math.max(1, Math.round(f.payback.paybackMonths)) + ' months'}</span></div>
+    ${rival && !rival.mismatch ? `<div><b>${pct(rival.priceCut)}</b><span>how far an AI-native rival with your revenue can cut its prices and still make the same profit</span></div>` : ''}
+    ${cloud ? `<div><b>${(Math.round(cloud.officeHoursTimes * 10) / 10)}×</b><span>what renting a London GPU only in office hours costs, against owning the boxes (per-token is cheaper on raw compute — the case says so)</span></div>` : ''}
+  </div>
+  <div class="ov-actions"><button data-go="case">Read the full case</button><button data-go="business">Put in your own numbers</button></div>` : ''}
+  <h2 class="sec-h">Start here</h2>
+  <ol class="steps">${START_STEPS.map((s) => `<li><span><b>${esc(s.title)}</b><span>${esc(s.text)}</span></span>${s.go ? `<button class="sm" data-step="${esc(s.id)}">Show me</button>` : ''}</li>`).join('')}</ol>`;
+  renderOverviewLive();
+}
+function renderOverviewLive() {
+  const el = $('ov-live');
+  if (!el || !co) return;
+  const k = boardKpis(co.ledger);
+  const watch = openWatch(co.nodes.owner).length;
+  el.innerHTML = [
+    [k.total, 'pieces of work decided'], [pct(k.automated), 'done end to end by agents'],
+    [k.done ? pct(k.accuracy) : '—', 'of agent calls matched the real outcome'], [watch, 'waiting for a person right now'],
+  ].map(([v, l]) => `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
+}
+// per-job accuracy from the re-run day's receipt: the base rate beside every score, and what the errors mean
+function metricsHtml() {
+  const m = ui.ctx && ui.ctx.receipt && ui.ctx.receipt.summary && ui.ctx.receipt.summary.metrics;
+  if (!m || !Object.keys(m).length) return '';
+  const f = (x) => (x === null || x === undefined || !Number.isFinite(x) ? '—' : (x / 10).toFixed(1) + '%');
+  return `<div class="tablewrap"><table><tr><th>Job (re-run day)</th><th class="n">Calls finished</th><th class="n">Right</th><th class="n">Always “no” would score</th><th class="n">Caught (recall)</th><th class="n">Flags that were real (precision)</th><th class="n">To a person</th></tr>
+    ${Object.entries(m).map(([d, x]) => `<tr><td>${esc(x.job || d)}</td><td class="n">${x.done}</td><td class="n">${f(x.rightPermille)}</td><td class="n">${f(x.baselinePermille)}</td><td class="n">${f(x.recallPermille)}</td><td class="n">${f(x.precisionPermille)}</td><td class="n">${x.held}</td></tr>`).join('')}</table></div>
+    <p class="note">“Always no” is what you would score by never acting; the brains earn their keep in the cases they catch. Scored on public datasets, whose mix of cases differs from yours.</p>`;
+}
+function renderCase() {
+  if (!ui.ctx) { $('v-case').innerHTML = '<p class="dim">Loading the figures…</p>'; return; }
+  const f = document.activeElement && document.activeElement.id;
+  const bs = bizState();
+  $('v-case').innerHTML = renderBrochure({ fit: bs.fit, rows: bs.rows, be: bs.be, basis: ui.ctx.basis, receipt: ui.ctx.receipt, revenue: bs.revenue, margin: bs.margin,
+    revenueText: ui.biz.revenue, marginText: ui.biz.margin, rival: bs.rival, cloud: bs.cloud, measured: bs.measured, stamp: ui.ctx.stamp, metricsHtml: metricsHtml() });
+  if (f && $(f)) { $(f).focus(); const v = $(f).value; $(f).setSelectionRange(v.length, v.length); }
+}
+function renderPaper() {
+  const fr = $('paper');
+  if (!fr.src) {
+    fr.src = 'whitepaper.html';
+    fr.addEventListener('load', () => {
+      const fit = () => { try { fr.style.height = fr.contentDocument.documentElement.scrollHeight + 'px'; } catch { fr.style.height = '80vh'; } };
+      fit(); setTimeout(fit, 600); setTimeout(fit, 2000);
+    });
+  }
+}
+
+// ── the router ───────────────────────────────────────────────────────────────────────────────────────
+function go(v, opts = {}) {
+  if (!TOP.includes(v)) v = 'overview';
+  if (location.hash.slice(1) !== v) history.pushState(null, '', '#' + v);
+  route(opts);
+}
+async function route(opts = {}) {
+  const h = location.hash.slice(1).split('=')[0];
+  view = TOP.includes(h) ? h : (new URLSearchParams(location.hash.slice(1)).get('join') ? 'run' : 'overview');
+  for (const t of TOP) $('v-' + t).classList.toggle('on', t === view);
+  for (const a of document.querySelectorAll('#nav a')) { a.classList.toggle('on', a.dataset.view === view); if (a.dataset.view === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
+  const ws = $('workspace');
+  if (view === 'live') { mode = 'demo'; $('live-slot').appendChild(ws); ws.classList.remove('hide'); }
+  else if (view === 'run') { mode = 'real'; $('run-slot').appendChild(ws); ws.classList.remove('hide'); if (tab === 'Board' || tab === 'Agents' || tab === 'Watch' || tab === 'Brains') tab = 'Tasks'; if (!real.node) await bootReal(); }
+  else ws.classList.add('hide');
+  if (view === 'live' && !TABS.includes(tab)) tab = 'Board';
+  if (view === 'overview') renderOverview();
+  if (view === 'how') $('v-how').innerHTML = renderHow({ co, trace: ui.trace });
+  if (view === 'blueprint') $('v-blueprint').innerHTML = renderBlueprint();
+  if (view === 'business') renderBusinessView();
+  if (view === 'case') renderCase();
+  if (view === 'paper') renderPaper();
+  if (!opts.keepScroll) window.scrollTo(0, 0);
+  if (view === 'live' && $('guide-body') && !$('guide-body').innerHTML) $('guide-body').innerHTML = renderStart();
+  render();
+}
+window.addEventListener('popstate', () => route());
+
+// ── the guided tour ──────────────────────────────────────────────────────────────────────────────────
+function tourShow(i) {
+  document.querySelectorAll('.tour-hl').forEach((e) => e.classList.remove('tour-hl'));
+  ui.tour = i;
+  const t = $('tour');
+  if (i < 0 || i >= TOUR.length) { t.classList.add('hide'); ui.tour = -1; return; }
+  const s = TOUR[i];
+  if (s.view) go(s.view, { keepScroll: true });
+  if (s.tab) { tab = s.tab; }
+  if (s.device) ui.sel = s.device;
+  render();
+  setTimeout(() => {
+    const el = s.target ? document.querySelector(s.target) : null;
+    if (el) { el.classList.add('tour-hl'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }, 60);
+  t.innerHTML = `<h4>${esc(s.title)}</h4><p>${esc(s.text)}</p><div class="row"><span class="n">${i + 1} / ${TOUR.length}</span>
+    <span><button class="sm" data-tour="close">Close</button> ${i > 0 ? '<button class="sm" data-tour="back">Back</button>' : ''} <button class="sm primary" data-tour="${i === TOUR.length - 1 ? 'close' : 'next'}">${i === TOUR.length - 1 ? 'Done' : 'Next'}</button></span></div>`;
+  t.classList.remove('hide');
+}
+
+// ── input ────────────────────────────────────────────────────────────────────────────────────────────
 // Docs: map textarea edits to RGA ops (diff the common prefix/suffix)
 document.addEventListener('input', async (e) => {
   if (e.target.id !== 'doc') return;
@@ -599,19 +1064,59 @@ document.addEventListener('input', async (e) => {
   if (added) await node.typeAt('docs', 'policy', p, added);
 });
 document.addEventListener('change', async (e) => {
+  if (e.target.dataset && e.target.dataset.mdl) { const k = e.target.dataset.mdl; ui.model[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; if (k === 'prov' || k === 'own') { ui.model.status = ''; ui.model.test = ''; render(); } return; }
+  if (e.target.id === 'train-file' && e.target.files && e.target.files[0]) {
+    const f = e.target.files[0];
+    if (f.size > 20 * 1024 * 1024) { ui.train = { error: 'That file is over 20 MB — try a sample of it.' }; renderTrainBox(); return; }
+    ui.train = loadCsv({}, await f.text(), f.name); renderTrainBox(); return;
+  }
+  if (e.target.id === 'train-target') { ui.train = { ...ui.train, target: e.target.value, result: null }; renderTrainBox(); return; }
   if (e.target.id === 'mc') { const n = current(); if (can(n, null)) await n.put('policy', 'agents', { minConfidence: +e.target.value, by: n.name }); render(); }
 });
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'b-rev') { ui.biz.revenue = e.target.value; renderCase(); }
+  if (e.target.id === 'b-margin') { ui.biz.margin = e.target.value; renderCase(); }
+  if (e.target.dataset && e.target.dataset.mdl && e.target.type !== 'checkbox' && e.target.tagName !== 'SELECT') ui.model[e.target.dataset.mdl] = e.target.value;
+  if (e.target.dataset && e.target.dataset.biz) { ui.biz[e.target.dataset.biz] = e.target.value; refreshRival(); }
+  if (e.target.dataset && e.target.dataset.xpFit) {
+    ui.biz.pairs = ui.biz.pairs.filter((p) => p.id !== e.target.dataset.xpFit).concat([{ id: e.target.dataset.xpFit, value: e.target.value }]);
+    refreshFit();
+  }
+});
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('button, [data-net], [data-dev]');
+  const t = e.target.closest('a[data-view], .brand, button, [data-net], [data-dev]');
   if (!t) return;
-  if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
+  if (t.dataset.view) { e.preventDefault(); go(t.dataset.view); return; }
+  if (t.dataset.go) { go(t.dataset.go); return; }
+  if (t.dataset.tour) { const a = t.dataset.tour; tourShow(a === 'start' ? 0 : a === 'next' ? ui.tour + 1 : a === 'back' ? ui.tour - 1 : -1); return; }
+  if (t.dataset.step) { const s = START_STEPS.find((x) => x.id === t.dataset.step); if (s && s.go) { if (s.tab) tab = s.tab; if (s.device) ui.sel = s.device; go(s.go); if (s.then) setTimeout(() => { const el = document.getElementById(s.then); if (!el) return; if (el.tagName === 'BUTTON') el.click(); else el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); } return; }
+  if (t.dataset.explain) { ui.trace = t.dataset.explain; go('how'); return; }
+  if (t.dataset.act === 'print-brochure') { window.print(); return; }
+  if (t.dataset.act === 'imm-new') { ui.immune.first = (await co.hostile(prng((Date.now() & 0xffff) + 31), NOVEL_ATTACK)).id; render(); return; }
+  if (t.dataset.act === 'imm-confirm') { await co.confirmHostile('overseer', NOVEL_ATTACK, 'asked us to wire a refund to an unknown account'); ui.immune.confirmed = true; render(); return; }
+  if (t.dataset.act === 'imm-again') { ui.immune.again = (await co.hostile(prng((Date.now() & 0xffff) + 37), NOVEL_PARAPHRASES[ui.immune.i++ % NOVEL_PARAPHRASES.length])).id; render(); return; }
+  if (t.dataset.act === 'imm-mistake') { await co.confirmHostile('overseer', MISTAKE_TEXT, 'confirmed by mistake'); ui.immune.mistake = true; render(); return; }
+  if (t.dataset.act === 'model-connect') { t.disabled = true; try { await modelConnect(); } finally { t.disabled = false; } return; }
+  if (t.dataset.act === 'model-off') { co.connectModel(null); ui.model.test = ''; mdlStatus('Disconnected — the brains carry on; anything they cannot confirm goes to a person.'); render(); return; }
+  if (t.dataset.act === 'model-test') { t.disabled = true; try { await modelTest(); } finally { t.disabled = false; } return; }
+  if (t.dataset.act === 'model-send') { t.disabled = true; try { await modelSend(); } finally { t.disabled = false; } return; }
+  if (t.dataset.act === 'train-sample') { const j = await fetch('brains/shopper.sample.json').then((r) => r.json()); ui.train = loadCsv({}, sampleCsv(j), 'UCI Online Shoppers — 1,182 real sessions (CC BY 4.0)'); renderTrainBox(); return; }
+  if (t.dataset.act === 'train-go') { t.disabled = true; t.textContent = 'Growing…'; await new Promise((r) => setTimeout(r, 20)); ui.train = growBrain(ui.train); renderTrainBox(); return; }
+  if (t.dataset.act === 'train-download') { const body = brainFile(ui.train); if (!body) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type: 'application/json' })); a.download = 'your-brain.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); return; }
+  if (t.dataset.try) { const b = $(t.dataset.try); if (b) { b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
+  if (t.dataset.tab) { tab = t.dataset.tab; if (t.dataset.device && mode === 'demo') ui.sel = t.dataset.device; ui.flash = ''; render(); if (t.closest('#guide')) $('tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   if (t.dataset.speed) { ui.speed = +t.dataset.speed; ui.running = true; render(); return; }
   if (t.dataset.net !== undefined) { const id = t.dataset.net; co.online[id] = !co.online[id]; render(); return; }
   if (t.dataset.dev && mode === 'demo') { ui.sel = t.dataset.dev; render(); return; }
   if (t.dataset.act) { t.disabled = true; try { await act(t.dataset.act, t); } finally { t.disabled = false; } }
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.target.dataset && e.target.dataset.dev) { ui.sel = e.target.dataset.dev; render(); return; }
+  if (e.key === 'Escape' && ui.tour >= 0) { tourShow(-1); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset) {
+    if (e.target.dataset.dev) { e.preventDefault(); ui.sel = e.target.dataset.dev; render(); return; }
+    if (e.target.dataset.net !== undefined) { e.preventDefault(); const id = e.target.dataset.net; co.online[id] = !co.online[id]; render(); return; }
+    if (e.target.classList.contains('brand')) { go('overview'); return; }
+  }
   if (e.key !== 'Enter') return;
   const map = { tt: 'task-add', mt: 'msg-send', cn: 'crm-add' };
   if (map[e.target.id]) act(map[e.target.id], e.target);
@@ -620,22 +1125,53 @@ $('run').onclick = () => { if (co.n >= SHIFT) co.n = 0; ui.running = !ui.running
 $('attack').onclick = () => attack(current());
 $('hostile').onclick = () => hostile();
 $('poison').onclick = () => poison();
-$('splitnet').onclick = () => { co.order.forEach((id, i) => { co.online[id] = i < 4; }); render(); };
-$('healnet').onclick = () => { co.order.forEach((id) => { co.online[id] = true; }); render(); };
-$('m-demo').onclick = () => { mode = 'demo'; $('m-demo').classList.add('on'); $('m-real').classList.remove('on'); $('demo').classList.remove('hide'); $('real').classList.add('hide'); if (!TABS.includes(tab)) tab = 'Board'; render(); };
-$('m-real').onclick = async () => { mode = 'real'; $('m-real').classList.add('on'); $('m-demo').classList.remove('on'); $('demo').classList.add('hide'); $('real').classList.remove('hide'); if (tab === 'Board' || tab === 'Agents' || tab === 'Watch' || tab === 'Brains') tab = 'Tasks'; if (!real.node) await bootReal(); render(); };
-if (new URLSearchParams(location.hash.slice(1)).get('join')) setTimeout(() => $('m-real').click(), 0);
+$('steal').onclick = () => { co.steal('ops'); tab = 'Watch'; render(); };
+$('splitnet').onclick = () => { co.order.forEach((id, i) => { co.online[id] = i < 5; }); ui.flash = 'The network is split: the first five devices can see each other, the rest are cut off. Work and edits carry on on both sides; press Heal and every device converges to the same company.'; render(); };
+$('healnet').onclick = () => { co.order.forEach((id) => { co.online[id] = true; }); ui.flash = ''; render(); };
 
 // ── run your own company: this tab is your device; other tabs join over BroadcastChannel ───────────
-const JOIN = new URLSearchParams(location.hash.slice(1)).get('join');
-const STORE = () => { try { return JOIN ? sessionStorage : localStorage; } catch { return null; } };
-const LS = (k, v) => { try { const s = STORE(); if (!s) return null; if (v === undefined) return s.getItem(k); if (v === null) s.removeItem(k); else s.setItem(k, v); } catch { return null; } };
-async function bootReal() {
+const HEX64 = /^[0-9a-f]{64}$/;
+let JOIN = new URLSearchParams(location.hash.slice(1)).get('join');
+// Where this tab's device lives. One device key must only ever be open in ONE tab: two tabs signing with the same key would
+// write two histories, and the hash chain would burn the key. So each identity is claimed by one tab (BroadcastChannel);
+// a second tab becomes a device of its own (kept for that tab only) and joins the same company. The owner's device lives in
+// localStorage; a device that joined by link lives there too, namespaced by company — so another machine remembers it.
+let storeKind = 'local', storeNs = '';
+const STORE = () => { try { return storeKind === 'session' ? sessionStorage : localStorage; } catch { return null; } };
+const LS = (k, v) => { try { const s = STORE(); if (!s) return null; k = storeNs + k; if (v === undefined) return s.getItem(k); if (v === null) s.removeItem(k); else s.setItem(k, v); } catch { return null; } };
+const lget = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+function claimed(name) {
+  if (!('BroadcastChannel' in self)) return Promise.resolve(false);
+  const ch = new BroadcastChannel('se-claim:' + name);
+  return new Promise((res) => {
+    const t = setTimeout(() => { ch.onmessage = (m) => { if (m.data && m.data.t === 'who') ch.postMessage({ t: 'mine' }); }; res(false); }, 350);
+    ch.onmessage = (m) => { if (m.data && m.data.t === 'mine') { clearTimeout(t); ch.close(); res(true); } };
+    ch.postMessage({ t: 'who' });
+  });
+}
+async function pickStore() {
+  try { if (sessionStorage.getItem('se.priv')) { storeKind = 'session'; return; } } catch { /* no session storage */ }
+  const own = lget('se.genesis'), joined = lget('se.joined');
+  const joinG = JOIN && HEX64.test(JOIN) ? JOIN : null;
+  const G = joinG && joinG !== own ? joinG : !joinG && !own && joined && HEX64.test(joined) ? joined : null;
+  const ns = G ? 'se.j.' + G.slice(0, 16) + '.' : '';
+  if (await claimed(ns || 'owner')) {                 // this device is already open in another tab: be a new device here
+    storeKind = 'session'; storeNs = '';
+    if (!joinG) JOIN = G || own || null;
+    return;
+  }
+  storeNs = ns;
+  if (G) { try { localStorage.setItem('se.joined', G); } catch { /* storage blocked: this tab only */ } }
+}
+let booting = null;
+function bootReal() { return booting || (booting = bootRealOnce()); }   // route() may call it twice on load: claim the identity once
+async function bootRealOnce() {
+  await pickStore();
   const priv = LS('se.priv');
   real.me = priv ? await importPriv(priv) : await generate();
   if (!priv) LS('se.priv', await exportPriv(real.me));
   let G = LS('se.genesis');
-  if (JOIN && /^[0-9a-f]{64}$/.test(JOIN) && JOIN !== G) { G = JOIN; LS('se.genesis', G); LS('se.env', null); }
+  if (JOIN && HEX64.test(JOIN) && JOIN !== G) { G = JOIN; LS('se.genesis', G); LS('se.env', null); }
   if (!G) return;
   startReal(G);
 }
@@ -643,7 +1179,9 @@ async function startReal(G) {
   real.node = createNode({ keys: real.me, genesis: G, name: G === real.me.pub ? 'Owner' : 'Teammate ' + real.me.pub.slice(0, 4) });
   let saved = [];
   try { saved = JSON.parse(LS('se.env') || '[]'); } catch { saved = []; }
-  for (const hex of saved) { try { await real.node.receive(fromHex(hex)); } catch { /* the gate already refused it */ } }
+  let legacy = 0;
+  for (const hex of saved) { try { if ((await real.node.receive(fromHex(hex))).reason === 'version') legacy++; } catch { /* the gate already refused it */ } }
+  if (legacy) real.gateLog.push(`${new Date().toLocaleTimeString()} ${legacy} saved write${legacy === 1 ? ' was' : 's were'} made before per-writer hash chains (envelope v1) and refused — "Leave / reset this device" starts this company again`);
   real.node.onChange((r) => {
     const b = real.node.bytes(r.hash);
     try { const s = JSON.parse(LS('se.env') || '[]'); s.push(toHex(b)); LS('se.env', JSON.stringify(s.slice(-20000))); } catch { /* storage full: peers still hold the copy */ }
@@ -665,15 +1203,154 @@ async function startReal(G) {
     real.chan.postMessage({ t: 'hello', from: real.me.pub, have: real.node.have() });
   }
 }
+// ── connect another machine: WebRTC with no server — a code carried by hand each way, keys proven on the link (src/rtc.mjs)
+const RTC_WHY = {
+  'no-webrtc': 'this browser has no WebRTC, so it cannot reach another machine',
+  'code-type': 'paste a code first',
+  'code-size': 'that is far too long to be a connection code',
+  'code-version': 'that is not a connection code from this page',
+  'code-kind': 'that is not a connection code from this page',
+  'code-checksum': 'the code was changed or cut short on the way — copy the whole of it again',
+  'code-base64': 'the code was changed on the way — copy it again',
+  'code-inflate': 'the code was changed on the way — copy it again',
+  'code-utf8': 'the code was changed on the way — copy it again',
+  'wrong-kind': 'that is the other kind of code: a host’s code goes in “I have a code”, and the reply goes back to the host',
+  'already-accepted': 'this code already has its reply — make a new code to connect another machine',
+  'answer-refused': 'this browser could not use that reply — make a new code and try again',
+  failed: 'there is no direct path between these two machines (both may be behind strict routers) — this page never relays through a server',
+  timeout: 'the other machine did not connect in time — make a new code',
+  'company-mismatch': 'the other device belongs to a different company — nothing was shared',
+  proof: 'the other device could not prove its key on this link — the codes may have been swapped on the way. Nothing was shared',
+  self: 'that is this same device',
+  'peer-changed': 'the other end changed identity in the middle of the link — disconnected',
+  hostile: 'the other device kept sending malformed data — disconnected',
+  unbound: 'this link could not be bound to this device’s key',
+  'channel-closed': 'the other machine disconnected',
+  'rtc-fault': 'this browser could not start a connection',
+};
+const rtcWhy = (r) => RTC_WHY[r] || (String(r).startsWith('sdp') ? 'the code does not describe a usable connection' : String(r || 'unknown'));
+let rtcPaintT = 0;
+const rtcPaint = () => { if (!rtcPaintT) rtcPaintT = setTimeout(() => { rtcPaintT = 0; if (mode === 'real') render(); }, 200); };
+const rtcSay = (s, cls = 'dim') => { const m = $('rtc-msg'); if (m) { m.className = 'note ' + cls; m.textContent = s; } };
+function rtcFlow(kind) {
+  const ta = (id, label, ro) => `<textarea id="${id}" rows="3" spellcheck="false" class="mono" aria-label="${label}" placeholder="${label}"${ro ? ' readonly' : ''}></textarea>`;
+  const step = (s) => `<div class="dim" style="margin:8px 0 4px">${s}</div>`;
+  $('rtc-flow').innerHTML = kind === 'host'
+    ? `${step('1 · Send this code to the other machine')}${ta('rtc-code', 'This machine’s code', true)}
+       <div class="row" style="margin-top:6px"><button class="sm" data-act="rtc-copy">Copy code</button></div>
+       ${step('2 · Paste the reply it sends back')}${ta('rtc-answer', 'The other machine’s reply', false)}
+       <div class="row" style="margin-top:6px"><button class="primary" data-act="rtc-accept">Connect</button><button class="sm" data-act="rtc-cancel">Cancel</button></div>`
+    : `${step('1 · Paste the host’s code')}${ta('rtc-offer', 'The host’s code', false)}
+       <div class="row" style="margin-top:6px"><button class="primary" data-act="rtc-reply">Make my reply</button><button class="sm" data-act="rtc-cancel">Cancel</button></div>
+       ${step('2 · Send this reply back to the host')}${ta('rtc-code', 'This machine’s reply', true)}
+       <div class="row" style="margin-top:6px"><button class="sm" data-act="rtc-copy">Copy reply</button></div>`;
+}
+function rtcCancel() { if (real.rtcPending) { real.rtcPending.close(); real.rtcPending = null; } }
+function rtcOpened(conn, open) {
+  if (real.rtcPending === conn) real.rtcPending = null;
+  if (!open.ok) { if (open.reason !== 'closed') rtcSay('Could not connect: ' + rtcWhy(open.reason), 'bad'); conn.close(); return; }
+  const link = { id: ++real.rtcN, role: conn.role, conn, info: null, session: null };
+  real.rtc.push(link);
+  link.session = attachSession(open, { node: real.node, keys: real.me, onUpdate: (i) => {
+    const was = link.info && link.info.state;
+    link.info = i;
+    if (i.state !== was && i.state === 'live') rtcSay('Connected directly, and the other device proved its key on this link.', 'ok');
+    if (i.state !== was && (i.state === 'refused' || i.state === 'closed')) {
+      real.gateLog.push(`${new Date().toLocaleTimeString()} machine link ${short(i.peer)} ${i.state === 'refused' ? 'REFUSED' : 'closed'} · ${rtcWhy(i.reason)}`);
+      conn.close();
+    }
+    rtcPaint();
+  } });
+  if ($('rtc-flow')) $('rtc-flow').innerHTML = '';
+  rtcSay('Connected directly — no server in the path. Each side is proving its device key on this link…', 'ok');
+  rtcPaint();
+}
+async function rtcAct(a, el) {
+  if (a === 'rtc-host') {
+    rtcCancel();
+    rtcFlow('host');
+    rtcSay('Making a code — asking STUN for this machine’s public address…');
+    const conn = await connectAsHost();
+    if (!conn.ok) { rtcSay('Cannot make a code: ' + rtcWhy(conn.reason), 'bad'); return; }
+    real.rtcPending = conn;
+    $('rtc-code').value = conn.code;
+    rtcSay(conn.complete ? 'Code ready — send it, then paste the reply below.' : 'Code ready (the address lookup was slow — if the other machine cannot connect, make a new code).');
+    conn.channel.then((open) => rtcOpened(conn, open));
+  } else if (a === 'rtc-join') {
+    rtcCancel();
+    rtcFlow('guest');
+    rtcSay('');
+  } else if (a === 'rtc-reply') {
+    rtcCancel();
+    rtcSay('Making your reply…');
+    const conn = await connectAsGuest($('rtc-offer').value);
+    if (!conn.ok) { rtcSay('Refused: ' + rtcWhy(conn.reason), 'bad'); return; }
+    real.rtcPending = conn;
+    $('rtc-code').value = conn.code;
+    rtcSay('Reply ready — send it back. This page connects as soon as the host pastes it.');
+    conn.channel.then((open) => rtcOpened(conn, open));
+  } else if (a === 'rtc-accept') {
+    const conn = real.rtcPending;
+    if (!conn || conn.role !== 'host') { rtcSay('Make a code first.', 'bad'); return; }
+    const r = await conn.accept($('rtc-answer').value);
+    rtcSay(r.ok ? 'Connecting…' : 'Refused: ' + rtcWhy(r.reason), r.ok ? 'dim' : 'bad');
+  } else if (a === 'rtc-copy') {
+    const v = $('rtc-code') && $('rtc-code').value;
+    if (v) { try { await navigator.clipboard.writeText(v); rtcSay('Copied.'); } catch { $('rtc-code').select(); rtcSay('Selected — copy it with your keyboard.'); } }
+  } else if (a === 'rtc-cancel') {
+    rtcCancel();
+    $('rtc-flow').innerHTML = '';
+    rtcSay('');
+  } else if (a === 'rtc-grant') {
+    const n = real.node;
+    if (/^[0-9a-f]{64}$/.test(el.dataset.pub) && n.canWrite(null)) await n.grant(uid(n, 'g'), el.dataset.pub, 'staff', ['tasks', 'msg', 'docs', 'crm']);
+  } else if (a === 'rtc-close') {
+    const l = real.rtc.find((x) => String(x.id) === el.dataset.id);
+    if (l) { if (l.session) l.session.close('closed here'); l.conn.close(); }
+  }
+  render();
+}
+function renderRtc() {
+  const n = real.node;
+  $('rtcbox').classList.remove('hide');
+  if (!$('rtc-peers')) {
+    $('rtcbox').innerHTML = `<h3>Connect another machine</h3>
+      <p class="note" style="margin:0 0 10px">No server: the two machines connect directly. One side makes a code; you carry it to the other machine yourself,
+        over a channel you already trust (Signal, in person), and carry its reply back. A public STUN server tells each machine its own public address,
+        so a code <b>contains that address</b> — do not post it publicly. Once connected, each device proves its key on that exact link, and records go
+        only to devices this company has granted. On a new machine, open the invite link first, then choose “I have a code”.</p>
+      <div class="row"><button class="primary" data-act="rtc-host">Host — make a code</button><button data-act="rtc-join">I have a code</button></div>
+      <div id="rtc-flow"></div><p id="rtc-msg" class="note" aria-live="polite"></p><div id="rtc-peers"></div>`;
+  }
+  const admin = n.canWrite(null);
+  const rows = real.rtc.map((l) => {
+    const i = l.info || { state: 'binding', peer: '', admitted: 0, out: 0 };
+    const member = !!i.peer && isMember(n, i.peer);
+    let what;
+    if (i.state === 'refused') what = `<span class="bad">refused — ${esc(rtcWhy(i.reason))}</span>`;
+    else if (i.state === 'closed') what = `<span class="dim">disconnected${i.reason === 'closed here' ? '' : ' — ' + esc(rtcWhy(i.reason))}</span>`;
+    else if (!i.proven) what = '<span class="warn">connected — proving keys on this link…</span>';
+    else if (i.sharing) what = '<span class="ok">key proven on this link · in this company · this device shares with it</span>';
+    else what = member ? '<span class="warn">key proven on this link · in this company</span>' : '<span class="warn">key proven on this link · <b>not in this company</b> — nothing is shared with it until it is granted</span>';
+    const live = i.state === 'live' || i.state === 'binding';
+    const grant = i.state === 'live' && !member && admin ? `<button class="sm primary" data-act="rtc-grant" data-pub="${esc(i.peer)}">Grant this device</button>` : '';
+    const close = live ? `<button class="sm" data-act="rtc-close" data-id="${l.id}">Disconnect</button>` : '';
+    return `<div class="item" style="flex-wrap:wrap"><span class="grow" style="flex:1 1 220px"><b>${l.role === 'host' ? 'Guest' : 'Host'} machine</b> <span class="mono" title="${esc(i.peer)}">${esc(short(i.peer))}</span> · ${what}<br>
+      <span class="dim" style="font-size:12px">${i.admitted} writes received · ${i.out} messages sent${i.refused ? ` · <span class="bad">${i.refused} refused at the gate</span>` : ''}${i.replay ? ` · ${i.replay} duplicates` : ''}${i.dropped ? ` · ${i.dropped} over the rate bound` : ''}</span></span>${grant || close ? `<span class="row" style="margin:0">${grant}${close}</span>` : ''}</div>`;
+  });
+  $('rtc-peers').innerHTML = rows.length ? `<div class="dim" style="margin:10px 0 2px">This device’s machine links — check the key matches the one on the other screen</div>${rows.join('')}` : '';
+}
 function renderReal() {
   const box = $('realbox');
   if (!real.node) {
     box.innerHTML = `<h3 style="margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)">Run your own company</h3>
       <p>This browser tab becomes a device in your company. Its Ed25519 key is made here and never leaves it. Found a company and you are the owner;
-      share the invite link and every tab that opens it joins and syncs peer to peer (same machine today — WebRTC between machines is the next layer).</p>
+      share the invite link and every tab that opens it joins and syncs peer to peer. Another machine opens the same link, then connects to this one
+      directly over WebRTC — a code carried by hand each way, no server in the path.</p>
       <div class="row"><button class="primary" id="found">Found a company on this device</button></div>`;
     $('found').onclick = async () => { LS('se.genesis', real.me.pub); LS('se.env', null); await startReal(real.me.pub); render(); };
     $('rconv').textContent = 'no company yet';
+    $('rtcbox').classList.add('hide');
     return;
   }
   const n = real.node;
@@ -683,30 +1360,33 @@ function renderReal() {
     <span class="dim">Your device key:</span><span class="mono">${esc(n.pub)}</span></div>
     <div class="row"><span class="dim">Invite link:</span><input value="${esc(link)}" readonly style="flex:1 1 300px" aria-label="Invite link"><button id="copy">Copy</button>
     <button class="danger" id="leave">Leave / reset this device</button></div>
-    ${!owner && !n.canWrite('tasks') ? '<p class="warn" style="margin:4px 0 0">Waiting for a grant — send your device key above to the owner or an admin; they grant you in People.</p>' : ''}`;
+    ${!owner && !n.canWrite('tasks') ? '<p class="warn" style="margin:4px 0 0">Waiting for a grant — send your device key above to the owner or an admin; they grant you in People. Or connect to their machine below: once this device has proven its key on the link, they can grant it from there.</p>' : ''}`;
   $('copy').onclick = () => navigator.clipboard && navigator.clipboard.writeText(link);
-  $('leave').onclick = () => { LS('se.genesis', null); LS('se.env', null); LS('se.priv', null); location.href = location.pathname; };
+  $('leave').onclick = () => { LS('se.genesis', null); LS('se.env', null); LS('se.priv', null); if (storeNs) { try { localStorage.removeItem('se.joined'); } catch { /* blocked */ } } location.href = location.pathname; };
   $('rconv').className = 'badge ok';
   $('rconv').textContent = `replica ${short(n.fingerprint())} · ${n.size()} signed writes`;
-  $('rinfo').textContent = `${real.peers.size} other tab${real.peers.size === 1 ? '' : 's'} connected · stored on this device only`;
+  const machines = real.rtc.filter((l) => l.info && l.info.state === 'live').length;
+  $('rinfo').textContent = `${real.peers.size} other tab${real.peers.size === 1 ? '' : 's'} · ${machines} other machine${machines === 1 ? '' : 's'} connected · stored on this device only`;
+  renderRtc();
 }
 
-// ── the heartbeat: the door, the spine, the leases ─────────────────────────────────────────────────
+
+// ── the heartbeat: the company runs whatever page you're on ─────────────────────────────────────────
 let busy = false;
 setInterval(async () => {
   if (busy || !ui.ready) return;
   busy = true;
   try {
-    await co.syncAll();
-    if (ui.running && co.n < SHIFT) for (let i = 0; i < ui.speed && co.n < SHIFT; i++) await co.next();
-    await co.housekeeping();
+    await co.tick({ events: ui.running && co.n < SHIFT ? ui.speed : 0 });
     const now = Date.now();
     for (const id of co.order) {
       const L = decideLease(ui.leases[id], now, grantLive(id), LEASE_WIN);
       if (L.action === 'renew') { const r = renew(ui.leases[id], now, grantLive(id)); if (r) ui.leases[id] = r; }
     }
     const typing = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT');
-    if (mode === 'demo') { if (!typing) render(); else renderDevices(); }
+    if (view === 'live' || view === 'overview') { if (!typing) render(); else if (view === 'live') renderDevices(); }
+    // arriving on How it works before the first decision: trace one as soon as it exists
+    if (view === 'how' && !document.querySelector('#v-how .xp-trace') && co.nodes.owner.list('decisions').length) $('v-how').innerHTML = renderHow({ co, trace: ui.trace });
   } catch (e) {
     $('kstat').textContent = 'heartbeat error: ' + e.message;
     $('kstat').className = 'pill bad';
@@ -714,11 +1394,12 @@ setInterval(async () => {
 }, TICK);
 
 (async () => {
+  route();
   try {
     await bootCompany();
     $('kstat').textContent = 'company live';
     $('kstat').className = 'pill ok';
-    render();
+    route({ keepScroll: true });
   } catch (e) {
     $('kstat').textContent = 'kernel error: ' + e.message;
     $('kstat').className = 'pill bad';

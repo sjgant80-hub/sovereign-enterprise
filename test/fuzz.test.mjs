@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { inspect, validOp } from '../src/gate.mjs';
 import { materialize, dedupe, rows, sequence, text, liveTags, lwwBeats, collections, emptyState } from '../src/crdt.mjs';
 import { prng } from '../src/sim.mjs';
-import { validPattern, membership, scoreInput, route, answer, verifyReceipt, verifyOn, adopt, fromRecord, meshRoute } from '../src/brain.mjs';
+import { validPattern, membership, scoreInput, route, answer, verifyReceipt, verifyOn, adopt, fromRecord } from '../src/brain.mjs';
 import { decide, needsSecond, actionFor, canSpend, scorecard } from '../src/agent.mjs';
 import { screen, revealTags } from '../src/screen.mjs';
-import { pickEvent, agentStep, effects, splitEffects, poEntry, shouldLearn, challenge, boardKpis } from '../src/company.mjs';
+import { pickEvent, openStep, closeStep, afterMesh, effects, splitEffects, invoiceEntry, payEntry, jobMetrics, shouldLearn, challenge, boardKpis } from '../src/company.mjs';
 import { growPattern, toDataset } from '../src/grow.mjs';
 
 // The kernels are total: hostile input is refused or ignored, never a throw.
@@ -56,7 +56,6 @@ test('the AI layer is total: brains, agents and the screen never throw on junk',
       assert.doesNotThrow(() => answer(j, k));
       assert.doesNotThrow(() => verifyOn(j, k));
       assert.doesNotThrow(() => adopt(j, k));
-      assert.doesNotThrow(() => meshRoute(j, k));
       assert.doesNotThrow(() => decide(j, k));
       assert.doesNotThrow(() => needsSecond(j, k));
       assert.doesNotThrow(() => canSpend(j, k, j));
@@ -71,9 +70,14 @@ test('the AI layer is total: brains, agents and the screen never throw on junk',
     assert.equal(fromRecord(j), null);
     assert.doesNotThrow(() => actionFor(j, j));
     assert.doesNotThrow(() => scorecard(j));
-    assert.doesNotThrow(() => agentStep(j));
-    assert.equal(agentStep({ agentId: 'x', event: j, library: j, peers: j }).decision.state, 'watch');
-    assert.doesNotThrow(() => poEntry(j));
+    assert.doesNotThrow(() => openStep(j));
+    assert.doesNotThrow(() => closeStep(j));
+    assert.doesNotThrow(() => afterMesh(j));
+    assert.doesNotThrow(() => openStep({ agentId: 'x', event: j, library: j }));
+    assert.equal(closeStep({ agentId: 'x', event: j }).decision.state, 'watch');
+    assert.doesNotThrow(() => invoiceEntry(j));
+    assert.doesNotThrow(() => payEntry(j));
+    assert.doesNotThrow(() => jobMetrics(j));
     assert.doesNotThrow(() => boardKpis(j));
     assert.doesNotThrow(() => boardKpis([j]));
     assert.doesNotThrow(() => challenge(j, 'fraud', j, j, j, 1));

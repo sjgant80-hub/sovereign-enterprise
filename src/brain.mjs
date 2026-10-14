@@ -5,13 +5,15 @@
 // library or ABSTAINS; it never guesses. The brains form one distributed intelligence over the spine — the mycelium:
 //   · a pattern travels as a signed record (toRecord / fromRecord), like a nutrient through the hyphae;
 //   · a node ADOPTS a pattern only after re-verifying it on its OWN local data (adopt) — never on the publisher's word;
-//   · a node that abstains asks the mesh (meshRoute): the peer whose library covers the input answers, with a receipt.
+//   · a node that abstains asks the mesh — a signed ask on the spine; the peer whose library covers it replies (mesh.mjs).
 // The answer path (route → gate → verified pattern → receipt) is the Konomi SLM's, ported faithfully and credited:
 // sjgant80-hub/konomi-slm, the Konomi architecture by Thomas Frumkin.
 import { sha256 } from './sha256.mjs';
 
 export const GATE_AUC = 0.6;     // a pattern is fit to answer only if its held-out AUC clears this
 export const ROUTE_MIN = 0.35;   // below this membership the input is out of distribution → ABSTAIN
+export const HIGH_STAKES_GATE = 0.65;       // adopting a brain for money or security work needs more than the plain gate
+export const REGRESSION_TOLERANCE = 0.01;   // a replacement may score this much below the brain it replaces, no more
 
 const DOMAIN = /^[a-z][a-z0-9_-]{0,31}$/;
 const DIST_KEYS = ['min', 'q1', 'med', 'q3', 'max'];
@@ -99,8 +101,13 @@ export function answer(library, input) {
   const label = score > p.threshold ? 1 : 0;
   const confidence = round6(Math.min(1, Math.abs(score - p.threshold) / (p.spread || 1)));
   const core = { model: 'konomi-slm/1', domain: p.domain, patternId: p.patternId || '', heldAuc: p.heldAuc, gateAuc: GATE_AUC,
-    routeScore: best.routeScore, score, threshold: p.threshold, label, verdict: 'VERIFIED' };
+    input: inputHash(p, input), routeScore: best.routeScore, score, threshold: p.threshold, label, verdict: 'VERIFIED' };
   return { verdict: 'VERIFIED', domain: p.domain, label, confidence, routeScore: best.routeScore, receipt: { ...core, receiptHash: sha256(JSON.stringify(core)) } };
+}
+
+/** The case a receipt speaks for: a hash of exactly the values the pattern read, in its own feature order. Total. */
+export function inputHash(p, input) {
+  try { return sha256(JSON.stringify(p.features.map((f) => [f, input[f] ?? null]))).slice(0, 16); } catch { return ''; }
 }
 
 /** Re-hash a receipt; any changed field breaks it. Total. */
@@ -138,12 +145,18 @@ function verifyIn(p, rows) {
   return { auc: round6(auc(scores, y)), acc: round6(hit / rows.length), n: rows.length };
 }
 
-/** The mycelium rule: adopt a received pattern only if it re-verifies on THIS node's own data. */
-export function adopt(p, localRows, gate = GATE_AUC) {
+/** The mycelium rule: adopt a received pattern only if it re-verifies on THIS node's own data — and, when the node
+ *  already holds a brain for that job, only if it does at least as well as that brain on the same cases (to within
+ *  REGRESSION_TOLERANCE). A subtly poisoned brain that still clears the gate cannot replace a better one. */
+export function adopt(p, localRows, gate = GATE_AUC, current = null) {
   if (!validPattern(p)) return { adopt: false, localAuc: 0, n: 0, reason: 'malformed pattern' };
   const v = verifyOn(p, localRows);
   if (v.n < 50) return { adopt: false, localAuc: v.auc, n: v.n, reason: 'not enough local data to verify' };
   if (v.auc < gate) return { adopt: false, localAuc: v.auc, n: v.n, reason: 'did not re-verify here (AUC ' + v.auc + ' < ' + gate + ')' };
+  if (validPattern(current)) {
+    const c = verifyOn(current, localRows).auc;
+    if (v.auc < c - REGRESSION_TOLERANCE) return { adopt: false, localAuc: v.auc, n: v.n, currentAuc: c, reason: 'worse than the brain it would replace on ' + v.n + ' of this device’s own cases (AUC ' + v.auc + ' < ' + c + ')' };
+  }
   return { adopt: true, localAuc: v.auc, n: v.n, reason: 're-verified on ' + v.n + ' local cases (AUC ' + v.auc + ')' };
 }
 
@@ -177,43 +190,4 @@ export function fromRecord(rec) {
       heldAuc: Number(rec.heldAuc), heldAcc: Number(rec.heldAcc), held: rec.held, patternId: rec.patternId };
     return validPattern(p) ? p : null;
   } catch { return null; }
-}
-
-/**
- * A SECOND, INDEPENDENT opinion on the same domain: another node's verified answer from a DIFFERENT pattern.
- * A copy of the first pattern would always agree — that is not a check — so a matching patternId is refused, and the
- * nodes named in `exclude` (the one deciding, the one that answered) cannot confirm themselves. → { node, answer } or null
- */
-export function secondOpinion(peers, input, first, exclude) {
-  try {
-    if (!first || first.verdict !== 'VERIFIED' || !first.receipt || !first.receipt.patternId) return null;
-    const skip = new Set((Array.isArray(exclude) ? exclude : [exclude]).map(String));
-    let best = null;
-    for (const peer of Array.isArray(peers) ? peers : []) {
-      try {
-        if (!peer || skip.has(String(peer.node)) || !peer.library) continue;
-        const p = peer.library[first.domain];
-        const a = answer({ [first.domain]: p }, input);
-        if (a.verdict !== 'VERIFIED' || a.receipt.patternId === first.receipt.patternId) continue;
-        const node = String(peer.node);
-        if (!best || a.routeScore > best.answer.routeScore || (a.routeScore === best.answer.routeScore && node < best.node)) best = { node, answer: a };
-      } catch { /* a hostile peer is skipped */ }
-    }
-    return best;
-  } catch { return null; }
-}
-
-/** An abstaining node asks the mesh: the peer whose library answers with the strongest verified route. */
-export function meshRoute(peers, input, exclude) {
-  let best = null;
-  for (const peer of Array.isArray(peers) ? peers : []) {
-    try {
-      if (!peer || peer.node === exclude) continue;
-      const a = answer(peer.library, input);
-      if (a.verdict !== 'VERIFIED') continue;
-      const node = String(peer.node);
-      if (!best || a.routeScore > best.answer.routeScore || (a.routeScore === best.answer.routeScore && node < best.node)) best = { node, answer: a };
-    } catch { /* a hostile peer is skipped */ }
-  }
-  return best;
 }

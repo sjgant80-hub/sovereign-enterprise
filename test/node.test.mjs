@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createNode, pull, SKEW } from '../src/node.mjs';
-import { fromSeed, sign, generate, exportPriv, importPriv } from '../src/keys.mjs';
-import { sha256Bytes } from '../src/sha256.mjs';
-import { canonical, utf8 } from '../src/canon.mjs';
+import { createNode, pull, signEnvelope, SKEW } from '../src/node.mjs';
+import { fromSeed, generate, exportPriv, importPriv } from '../src/keys.mjs';
+import { sha256Bytes, sha256 } from '../src/sha256.mjs';
+import { GENESIS_PREV } from '../src/gate.mjs';
+import { prng } from '../src/sim.mjs';
 
 const keysFor = async (n) => { const k = []; for (let i = 0; i < n; i++) k.push(await fromSeed(sha256Bytes('node-test/' + i))); return k; };
 
@@ -86,7 +87,7 @@ test('the cached role tree always equals a from-scratch replay — through grant
   // ann equivocates: a grant and a put signed for ONE (writer, seq) slot. dedupe keeps the lowest hash — so the put can
   // displace the grant, and a device that cached the tree with the grant in it must notice the collision.
   const scratch = createNode({ keys: k[3], genesis: k[0].pub });
-  const env = async (op, s) => { const body = { from: k[1].pub, op: { ...op, l: 900 }, seq: s, v: 1 }; const bytes = utf8(canonical({ ...body, sig: await sign(k[1], utf8(canonical(body))) })); return { bytes, hash: (await scratch.receive(bytes)).hash }; };
+  const env = async (op, s) => { const bytes = await signEnvelope(k[1], { ...op, l: 900 }, s, 'e'.repeat(64)); return { bytes, hash: (await scratch.receive(bytes)).hash }; };
   const slot = 50;
   const A = await env({ k: 'grant', id: 'g-eq', to: k[3].pub, role: 'staff', cols: ['crm'] }, slot);
   let B = null;
@@ -122,8 +123,7 @@ test('the incrementally-folded company equals a full rebuild, after every single
   await ann.del('tasks', 't1');
   await bob.put('crm', 'c', { n: 1 });                                        // refused by bob's own device: never signed
   const stranger = await fromSeed(sha256Bytes('stranger'));
-  const sb = { from: stranger.pub, op: { k: 'put', c: 'tasks', id: 'x', f: { title: 'free money' }, l: 5 }, seq: 1, v: 1 };
-  await watcher.receive(utf8(canonical({ ...sb, sig: await sign(stranger, utf8(canonical(sb))) })));   // signed, no grant
+  await watcher.receive(await signEnvelope(stranger, { k: 'put', c: 'tasks', id: 'x', f: { title: 'free money' }, l: 5 }, 1, GENESIS_PREV));   // signed, no grant
   watcher.view(); await check();
   assert.equal(watcher.view().report.unauthorized, 1);
   await feed(bob); await feed(ann);
@@ -147,8 +147,7 @@ test('a fresh device fed the same bytes rebuilds the identical company (persiste
 
 test('a hostile clock can move a device forward by at most SKEW per envelope', async () => {
   const { k, ann } = await company();
-  const body = { from: k[0].pub, op: { k: 'put', c: 'tasks', id: 'far', f: { title: 'x' }, l: 2 ** 47 }, seq: 50, v: 1 };
-  const bytes = utf8(canonical({ ...body, sig: await sign(k[0], utf8(canonical(body))) }));
+  const bytes = await signEnvelope(k[0], { k: 'put', c: 'tasks', id: 'far', f: { title: 'x' }, l: 2 ** 47 }, 50, 'e'.repeat(64));
   const before = ann.clock();
   assert.equal((await ann.receive(bytes)).ok, true);
   assert.equal(ann.clock(), before + SKEW);
@@ -171,4 +170,201 @@ test('identity persists: export → import gives the same public key', async () 
   const back = await importPriv(await exportPriv(k));
   assert.equal(back.pub, k.pub);
   assert.match(k.pub, /^[0-9a-f]{64}$/);
+});
+
+// ───────────────────────── per-writer hash chains, end to end (real Ed25519) ─────────────────────────
+const dec = new TextDecoder();
+const envOf = (n, h) => JSON.parse(dec.decode(n.bytes(h)));
+/** The envelopes a node holds from one writer, by seq (a fork shows up as two at one seq). */
+const byWriter = (n, pub) => n.hashes().map((h) => ({ h, e: envOf(n, h) })).filter((x) => x.e.from === pub).sort((a, b) => a.e.seq - b.e.seq);
+/** A thief holding `keys` signs op at (seq, prev) — ground until its hash is lower than `beat`, so lowest-hash alone would pick it. */
+async function forgeLower(keys, seq, prev, beat, f = (v) => ({ k: 'put', c: 'tasks', id: 'pay', f: { status: 'released', v }, l: 3 })) {
+  for (let v = 0; v < 200; v++) { const b = await signEnvelope(keys, f(v), seq, prev); if (sha256(b) < beat) return b; }
+  throw new Error('no lower hash found');
+}
+const shuffle = (xs, rnd) => { const a = xs.slice(); for (let j = a.length - 1; j > 0; j--) { const k = Math.floor(rnd() * (j + 1)); [a[j], a[k]] = [a[k], a[j]]; } return a; };
+const everything = (...ns) => { const m = new Map(); for (const n of ns) for (const h of n.hashes()) m.set(h, n.bytes(h)); return [...m.values()]; };
+
+test('every write names the one before it: a device signs one contiguous chain from the genesis prev', async () => {
+  const { k, ann } = await company();
+  assert.deepEqual(ann.tip(), { seq: 1, hash: byWriter(ann, k[1].pub)[0].h });     // ann's grant of bob
+  for (let i = 0; i < 6; i++) await ann.put('tasks', 't' + i, { title: 'x' + i });
+  const mine = byWriter(ann, k[1].pub);
+  assert.equal(mine.length, 7);
+  mine.forEach((x, i) => {
+    assert.equal(x.e.seq, i + 1);
+    assert.equal(x.e.v, 2);
+    assert.equal(x.e.prev, i ? mine[i - 1].h : GENESIS_PREV);
+  });
+  assert.deepEqual(ann.tip(), { seq: 7, hash: mine[6].h });
+  const fresh = createNode({ keys: k[3], genesis: k[0].pub });
+  assert.deepEqual(fresh.tip(), { seq: 0, hash: GENESIS_PREV });
+});
+
+test('writes fired at once are signed one at a time — a device never forks its own chain', async () => {
+  const { k, bob } = await company();
+  const rs = await Promise.all(Array.from({ length: 16 }, (_, i) => bob.put('tasks', 'c' + i, { title: 'n' + i })));
+  assert.ok(rs.every((r) => r.ok));
+  const mine = byWriter(bob, k[2].pub);
+  assert.deepEqual(mine.map((x) => x.e.seq), Array.from({ length: 16 }, (_, i) => i + 1));
+  mine.forEach((x, i) => assert.equal(x.e.prev, i ? mine[i - 1].h : GENESIS_PREV));
+  assert.deepEqual(bob.view().report.equivocators, []);
+  assert.equal(bob.list('tasks').length, 16);
+});
+
+test('a device replaying its own stored envelopes — in any order — resumes on its own chain head', async () => {
+  const c = await company();
+  const { k, owner, ann } = c;
+  let bob = c.bob;
+  for (let i = 0; i < 4; i++) await bob.put('tasks', 'b' + i, { title: 'x' });
+  const rnd = prng(5);
+  for (let i = 0; i < 4; i++) {
+    const all = everything(owner, ann, bob);
+    const twin = createNode({ keys: k[2], genesis: k[0].pub });
+    for (const b of i ? shuffle(all, rnd) : all.slice().reverse()) await twin.receive(b);
+    assert.deepEqual(twin.tip(), bob.tip());
+    const r = await twin.put('tasks', 'after', { title: 'y' });
+    assert.equal(r.env.seq, bob.tip().seq + 1);
+    assert.equal(r.env.prev, bob.tip().hash);
+    await bob.receive(r.bytes);
+    assert.deepEqual(bob.view().report.forks, [], 'resuming never forks');
+    const back = createNode({ keys: k[2], genesis: k[0].pub });
+    for (const b of everything(bob)) await back.receive(b);
+    bob = back;                                                                 // the next twin resumes after this write
+  }
+});
+
+test('a write the gate refuses leaves no gap: seq, clock and chain head move only when it is admitted', async () => {
+  const { ann } = await company();
+  const before = ann.tip();
+  const clock = ann.clock();
+  const big = { a: 'x'.repeat(2000), b: 'y'.repeat(2000), c: 'z'.repeat(2000) };        // > MAX_BYTES once signed
+  const r = await ann.put('tasks', 'huge', big);
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'size');
+  assert.deepEqual(ann.tip(), before);
+  assert.equal(ann.clock(), clock);
+  const ok = await ann.put('tasks', 'small', { title: 'fits' });
+  assert.equal(ok.env.seq, before.seq + 1);
+  assert.equal(ok.env.prev, before.hash);
+  assert.equal(ok.env.op.l, clock + 1);
+});
+
+test('STOLEN KEY: a thief re-signs a slot the device already built on — every device keeps the real write, whatever the delivery order, and proves the fork', async () => {
+  const { k, owner, ann, bob } = await company();
+  await bob.put('tasks', 'pre', { title: 'before' });
+  await bob.put('tasks', 'pay', { status: 'held' });                            // the slot the thief wants
+  for (let i = 0; i < 5; i++) await bob.put('tasks', 'n' + i, { title: 'built on it ' + i });
+  const mine = byWriter(bob, k[2].pub);
+  const real = mine.find((x) => x.e.op.id === 'pay');
+  const forged = await forgeLower(k[2], real.e.seq, real.e.prev, real.h);      // prev = the real k-1; lower hash than the real k
+  const all = [...everything(owner, ann, bob), forged];
+  const rnd = prng(17);
+  const digests = new Set();
+  for (let i = 0; i < 12; i++) {
+    const d = createNode({ keys: k[3], genesis: k[0].pub });
+    for (const b of shuffle(all, rnd)) await d.receive(b);
+    assert.equal(d.list('tasks').find((t) => t.id === 'pay').status, 'held', 'order ' + i);
+    const f = d.view().report.forks;
+    assert.deepEqual(f, [{ writer: k[2].pub, seq: real.e.seq, rule: 'chain', kept: real.h, hashes: [real.h, sha256(forged)].sort(), next: [mine.find((x) => x.e.seq === real.e.seq + 1).h] }]);
+    assert.deepEqual(d.view().report.equivocators, [k[2].pub]);
+    digests.add(d.digest());
+    if (i === 0) {
+      const proofs = await d.forkProofs();
+      assert.equal(proofs.length, 1);
+      assert.equal(proofs[0].proven, true);
+      assert.equal(proofs[0].links[0].parent, real.h);
+    }
+  }
+  assert.equal(digests.size, 1, 'one company on every device');
+  // the real device hears of the forgery and carries on — on its OWN chain, never the thief's
+  await bob.receive(forged);
+  const r = await bob.put('tasks', 'later', { title: 'still me' });
+  assert.equal(r.ok, true);
+  assert.equal(r.env.prev, mine[mine.length - 1].h);
+  assert.equal(bob.list('tasks').find((t) => t.id === 'pay').status, 'held');
+});
+
+test('BURN: a thief who forges a CONTINUED history burns the key — every device cuts it there; the device stops signing', async () => {
+  const { k, owner, ann, bob } = await company();
+  for (let i = 0; i < 5; i++) await bob.put('tasks', 'w' + i, { title: 'real ' + i });
+  const mine = byWriter(bob, k[2].pub);
+  const at = mine[2];                                                            // bob's seq 3
+  const f1 = await signEnvelope(k[2], { k: 'put', c: 'tasks', id: 'w2', f: { title: 'rewritten' }, l: 50 }, at.e.seq, at.e.prev);
+  const f2 = await signEnvelope(k[2], { k: 'put', c: 'tasks', id: 'w3', f: { title: 'rewritten' }, l: 51 }, at.e.seq + 1, sha256(f1));
+  const watcher = createNode({ keys: k[3], genesis: k[0].pub });
+  for (const b of shuffle([...everything(owner, ann, bob), f1, f2], prng(3))) await watcher.receive(b);
+  assert.deepEqual(watcher.view().report.burned, [{ writer: k[2].pub, from: at.e.seq }]);
+  assert.deepEqual(watcher.list('tasks').map((t) => t.id), ['w0', 'w1']);       // before the cut stands; nobody's version after it
+  assert.equal(watcher.list('tasks').some((t) => t.title === 'rewritten'), false);
+  const proofs = await watcher.forkProofs();
+  const burned = proofs.find((p) => p.rule === 'burned');
+  assert.equal(burned.proven, true);
+  assert.equal(burned.links.length, 2);
+  assert.equal(watcher.forkedAt(), null);                                        // the watcher's own key is fine
+  // the device itself learns its key is burned: it refuses to sign anything more
+  assert.equal(bob.canWrite('tasks'), true);
+  await bob.receive(f1);
+  await bob.receive(f2);
+  assert.equal(bob.canWrite('tasks'), false);                                    // asked of the role tree alone (no view built yet)
+  assert.equal(bob.forkedAt(), at.e.seq);
+  assert.equal(bob.canWrite('tasks'), false);                                    // and of the materialised view
+  const r = await bob.put('tasks', 'w9', { title: 'x' });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'key-forked');
+  assert.equal((await ann.put('crm', 'c1', { n: 1 })).ok, true);                // nobody else is touched
+});
+
+test('the incremental fold equals a full rebuild when a chain FLIPS a slot\'s winner and when a key BURNS — after every single envelope', async () => {
+  const { k, owner, ann, bob } = await company();
+  for (let i = 0; i < 3; i++) await bob.put('tasks', 'w' + i, { title: 'real ' + i });
+  const tipEnv = byWriter(bob, k[2].pub).pop();
+  const forged = await forgeLower(k[2], tipEnv.e.seq, tipEnv.e.prev, tipEnv.h, (v) => ({ k: 'grant', id: 'g-thief' + v, to: k[3].pub, role: 'staff', cols: ['crm'], l: 40 }));
+  const watcher = createNode({ keys: k[3], genesis: k[0].pub });
+  const check = async (label) => {
+    watcher.view();
+    const fresh = createNode({ keys: k[3], genesis: k[0].pub });
+    await fresh.take(watcher.give(watcher.have()));
+    assert.equal(watcher.digest(), fresh.digest(), label);
+    assert.deepEqual(watcher.view().report, fresh.view().report, label);
+    for (const c of ['tasks', 'crm', null]) assert.equal(watcher.canWrite(c), fresh.canWrite(c), label + ' ' + c);
+  };
+  for (const b of everything(owner, ann, bob)) { await watcher.receive(b); await check('base'); }
+  await watcher.receive(forged);
+  await check('tip fork');
+  // a fork at the tip goes to the lowest hash — the thief's grant (bob is staff, so it cannot grant: unauthorised either way)
+  assert.equal(watcher.view().report.forks[0].kept, sha256(forged));
+  assert.equal(watcher.list('tasks').some((t) => t.id === 'w2'), false);
+  // the real device writes on top of its own tip: the winner flips on a FRESH slot's arrival — the cache must notice
+  const next = await bob.put('tasks', 'w3', { title: 'real 3' });
+  await watcher.receive(next.bytes);
+  await check('chain decides');
+  assert.equal(watcher.view().report.forks[0].rule, 'chain');
+  assert.equal(watcher.list('tasks').some((t) => t.id === 'w2'), true);
+  // the thief continues its forgery: the key burns — again on a fresh slot's arrival
+  const cont = await signEnvelope(k[2], { k: 'put', c: 'tasks', id: 'w9', f: { title: 'thief' }, l: 60 }, tipEnv.e.seq + 1, sha256(forged));
+  await watcher.receive(cont);
+  await check('burned');
+  assert.deepEqual(watcher.view().report.burned, [{ writer: k[2].pub, from: tipEnv.e.seq }]);
+  // and a burned key's later writes on fresh slots fold in as unauthorised, exactly as a rebuild counts them
+  const late = await signEnvelope(k[2], { k: 'put', c: 'tasks', id: 'w10', f: { title: 'late' }, l: 70 }, tipEnv.e.seq + 5, 'e'.repeat(64));
+  await watcher.receive(late);
+  await check('late write from a burned key');
+});
+
+test('a thief envelope for the very slot the device is signing — landing first — never becomes the device\'s chain head', async () => {
+  const { k, bob } = await company();
+  await bob.put('tasks', 'a', { title: 'one' });
+  const t = bob.tip();
+  const thief = await signEnvelope(k[2], { k: 'put', c: 'tasks', id: 'a', f: { title: 'thief' }, l: 30 }, t.seq + 1, t.hash);
+  const mine = bob.put('tasks', 'b', { title: 'two' });          // signing starts now, naming the real head
+  const stolen = await bob.receive(thief);                        // the thief's copy of that slot arrives mid-signature
+  const r = await mine;
+  assert.equal(stolen.ok, true);
+  assert.equal(r.ok, true);
+  assert.equal(r.env.seq, t.seq + 1);
+  assert.deepEqual(bob.tip(), { seq: t.seq + 1, hash: r.hash });  // what the device signed is its head
+  const next = await bob.put('tasks', 'c', { title: 'three' });
+  assert.equal(next.env.prev, r.hash);
+  assert.equal(bob.view().report.forks[0].kept, r.hash);          // and so its slot is the one the chain keeps
 });

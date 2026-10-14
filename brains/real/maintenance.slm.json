@@ -1,0 +1,169 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "maintenance",
+ "title": "Machine failure",
+ "role": "ops",
+ "real": false,
+ "note": "PUBLISHED-SYNTHETIC data (not real) — failure=1. AI4I 2020 Predictive Maintenance Dataset — DOI 10.24432/C5HS5C, CC BY 4.0: NOT real measurements — its authors publish it as a SYNTHETIC dataset that reflects real predictive-maintenance data, because real data is hard to obtain and publish (10,000 simulated milling operations). Held-out = by operation order (UDI), case mix 10.00% positive (population 3.39%); grown only on the training split.",
+ "features": [
+  "productQuality",
+  "airTempK",
+  "processTempK",
+  "rpm",
+  "torqueNm",
+  "toolWearMin",
+  "tempGapK",
+  "powerW",
+  "strainMinNm"
+ ],
+ "rules": [
+  {
+   "feat": "rpm",
+   "op": ">",
+   "v": 1385,
+   "w": -1
+  },
+  {
+   "feat": "torqueNm",
+   "op": ">",
+   "v": 30.9,
+   "w": -0.25
+  },
+  {
+   "feat": "torqueNm",
+   "op": ">",
+   "v": 23.6,
+   "w": -0.25
+  },
+  {
+   "feat": "powerW",
+   "op": ">",
+   "v": 6681.120377,
+   "w": 0.5
+  },
+  {
+   "feat": "toolWearMin",
+   "op": ">",
+   "v": 181,
+   "w": 0.25
+  }
+ ],
+ "base": 0.097636,
+ "threshold": 0,
+ "spread": 1.75,
+ "dist": {
+  "productQuality": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 1,
+   "max": 2
+  },
+  "airTempK": {
+   "min": 295.3,
+   "q1": 298.7,
+   "med": 300.8,
+   "q3": 302.2,
+   "max": 304.5
+  },
+  "processTempK": {
+   "min": 305.7,
+   "q1": 308.9,
+   "med": 310.2,
+   "q3": 311.1,
+   "max": 313.7
+  },
+  "rpm": {
+   "min": 1168,
+   "q1": 1409,
+   "med": 1499,
+   "q3": 1614,
+   "max": 2886
+  },
+  "torqueNm": {
+   "min": 3.8,
+   "q1": 33.1,
+   "med": 40.4,
+   "q3": 47.8,
+   "max": 74.5
+  },
+  "toolWearMin": {
+   "min": 0,
+   "q1": 53,
+   "med": 111,
+   "q3": 166,
+   "max": 253
+  },
+  "tempGapK": {
+   "min": 7.6,
+   "q1": 9,
+   "med": 9.5,
+   "q3": 10,
+   "max": 12
+  },
+  "powerW": {
+   "min": 1148.44061,
+   "q1": 5533.726964,
+   "med": 6287.080882,
+   "q3": 7122.618864,
+   "max": 10112.074658
+  },
+  "strainMinNm": {
+   "min": 0,
+   "q1": 2040,
+   "med": 4080.3,
+   "q3": 6402,
+   "max": 16497
+  }
+ },
+ "heldAuc": 0.8587,
+ "heldAcc": 0.92623,
+ "held": 610,
+ "train": 2780,
+ "patternId": "35f3463412d2f761",
+ "seed": "◊ seed.v1 maintenance 2 g:24.4.16 db7394c529ea",
+ "verified": true,
+ "lineage": "Grown by tools/build-real-brains.mjs with src/grow.mjs growPattern — the seed-library ribosome (sjgant80-hub/seed-library, vendored) — on the training split only, graded once on the held-out split. Pattern shape and answer path: the Konomi SLM (sjgant80-hub/konomi-slm). Konomi architecture: Thomas Frumkin.",
+ "kind": "published-synthetic",
+ "licence": "CC BY 4.0",
+ "provenance": {
+  "dataset": "AI4I 2020 Predictive Maintenance Dataset",
+  "citation": "AI4I 2020 Predictive Maintenance Dataset [Dataset]. UCI Machine Learning Repository, 2020. https://doi.org/10.24432/C5HS5C — introduced in S. Matzka, \"Explainable Artificial Intelligence for Predictive Maintenance Applications\", 2020 Third International Conference on Artificial Intelligence for Industries (AI4I), DOI 10.1109/AI4I49448.2020.00023",
+  "url": "https://archive.ics.uci.edu/dataset/601/ai4i+2020+predictive+maintenance+dataset",
+  "doi": "10.24432/C5HS5C",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "notice": null,
+  "label": "failure=1: the operation ended in a machine failure (the published \"Machine failure\" flag: any of tool wear, heat dissipation, power, overstrain or random failure)",
+  "split": "by operation order (UDI) — operations 1–7,000 are the training split, 7,001–10,000 the held-out split",
+  "caseMix": 0.1,
+  "rawSha256": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e",
+  "rawFile": "maintenance/ai4i2020.csv",
+  "publishedRows": 10000,
+  "duplicatesRemoved": 0,
+  "usableRows": 10000,
+  "usablePositives": 339,
+  "populationBase": 0.0339,
+  "trainSplitRows": 7000,
+  "heldSplitRows": 3000,
+  "trainRows": 2780,
+  "trainPositives": 278,
+  "heldRows": 610,
+  "heldPositives": 61,
+  "heldPopulationAuc": 0.857342,
+  "heldPopulationRows": 3000,
+  "grow": {
+   "seedsTried": 4,
+   "chosenSeed": 2,
+   "innerHeldAuc": 0.851938,
+   "innerHeld": 834,
+   "innerTrain": 1946,
+   "innerVerified": true
+  },
+  "sampleRows": 610,
+  "samplePositives": 61,
+  "sampleAuc": 0.8587,
+  "sampleAcc": 0.92623,
+  "sampleAnswered": 610
+ }
+}

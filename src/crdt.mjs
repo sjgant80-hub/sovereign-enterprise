@@ -10,8 +10,12 @@
 //   text     — RGA (each character a child of the one it was typed after; siblings newest-first).
 //   authority— the role tree: the owner (genesis key) makes admins; admins make staff with collection scopes.
 //              Revocation is a SEQUENCE CUT on the grantee (ops after the cut stop counting) — no clock trust.
-//   equivocation — two different envelopes for one (writer, seq): the lowest hash is kept on every node and the
-//              writer is flagged. Deterministic, so it cannot split the company either.
+//   chains   — every envelope names prev, the hash of its writer's envelope at seq-1 (gate.mjs). Two different
+//              envelopes for one (writer, seq) = equivocation: the writer is ALWAYS flagged and the fork reported with
+//              its proof. The slot goes to the envelope the writer's own later envelope CONTINUED (a stolen key can't
+//              rewrite history the real device built on); a fork at the tip goes to the lowest hash; a fork where both
+//              branches were continued BURNS the key from that slot (nobody's version of it counts). Deterministic,
+//              so it cannot split the company either.
 // Pure, total, deterministic. Every map is null-prototype.
 import { canonical } from './canon.mjs';
 
@@ -30,35 +34,89 @@ export function lwwBeats(a, b) {
   return a[2] > b[2];
 }
 
-/** One envelope per (writer, seq). A second, different envelope = equivocation: keep the lowest hash, flag the writer. */
+/**
+ * One envelope per (writer, seq), resolved by the writer's own HASH CHAIN. Two different envelopes for one slot =
+ * equivocation: the writer is ALWAYS flagged, and the fork is reported — { writer, seq, rule, kept, hashes, next } —
+ * where hashes are every candidate's (sorted) and next are the writer's envelopes at seq+1 that name one of them as
+ * prev: the bytes behind those hashes are the proof (gate.mjs proveFork / proveLink). The slot resolves by rule:
+ *   chain       — exactly ONE candidate is continued (named as prev by the writer's envelope at seq+1): the chain the
+ *                 writer actually built on keeps it, so a key stolen later cannot rewrite a slot the device built on;
+ *   lowest-hash — no candidate is continued (a fork at the tip): the lowest hash, as before;
+ *   burned      — two or more are continued: the key provably signed two histories. Nothing at the slot is kept and
+ *                 the KEY is cut from that slot on (burned: writer → slot; authority() refuses its writes there and
+ *                 after). A thief can burn a stolen key — never get its own version of the device's history applied.
+ * Only a link to a candidate of the SAME writer at EXACTLY seq-1 continues anything: a prev that points nowhere (not
+ * held yet, or never), to another writer, or to another slot is ignored — the envelope still stands on its own slot,
+ * so a gap in delivery never erases a writer's history. Order-independent (a function of the SET), total: junk items
+ * are dropped, and a fault returns an empty result flagged { fault: true }.
+ */
 export function dedupe(items) {
-  const slot = new Map();
-  const eq = new Set();
+  try {
+    return resolve(items);
+  } catch {
+    return { ops: [], equivocators: [], dropped: 0, forks: [], burned: new Map(), fault: true };
+  }
+}
+function resolve(items) {
+  const slots = new Map();         // 'writer:seq' -> the distinct envelopes held for that slot
   let dropped = 0;
   for (const it of Array.isArray(items) ? items : []) {
     try {
       if (!it || typeof it.hash !== 'string' || !it.env || !it.env.op) { dropped++; continue; }
       const key = it.env.from + ':' + it.env.seq;
-      const cur = slot.get(key);
-      if (cur === undefined) slot.set(key, it);
-      else if (cur.hash !== it.hash) {
-        eq.add(it.env.from);
-        if (it.hash < cur.hash) slot.set(key, it);
-      }
+      const list = slots.get(key);
+      if (list === undefined) slots.set(key, [it]);
+      else if (!list.some((x) => x.hash === it.hash)) list.push(it);
     } catch { dropped++; }
   }
-  const ops = [...slot.values()].sort((a, b) =>
-    a.env.op.l - b.env.op.l || cmp(a.env.from, b.env.from) || a.env.seq - b.env.seq);
-  return { ops, equivocators: [...eq].sort(), dropped };
+  const ops = [];
+  const eq = new Set();
+  const forks = [];
+  const burned = new Map();
+  for (const list of slots.values()) {
+    if (list.length === 1) { ops.push(list[0]); continue; }
+    list.sort((a, b) => cmp(a.hash, b.hash));
+    const { from, seq } = list[0].env;
+    eq.add(from);
+    const kids = (slots.get(from + ':' + (seq + 1)) || []).filter((k) => list.some((c) => c.hash === k.env.prev));
+    const cont = list.filter((c) => kids.some((k) => k.env.prev === c.hash));
+    let kept = cont.length ? cont[0] : list[0];
+    let rule = cont.length ? 'chain' : 'lowest-hash';
+    if (cont.length > 1) {
+      rule = 'burned';
+      kept = null;
+      const b = burned.get(from);
+      burned.set(from, b === undefined ? seq : Math.min(b, seq));
+    } else ops.push(kept);
+    forks.push({ writer: from, seq, rule, kept: kept && kept.hash, hashes: list.map((x) => x.hash), next: kids.map((k) => k.hash).sort() });
+  }
+  ops.sort((a, b) => a.env.op.l - b.env.op.l || cmp(a.env.from, b.env.from) || a.env.seq - b.env.seq);
+  forks.sort((a, b) => cmp(a.writer, b.writer) || a.seq - b.seq);
+  return { ops, equivocators: [...eq].sort(), dropped, forks, burned };
 }
 
-/** The role tree, evaluated over the whole (sorted) op set — deterministic, order-independent. */
-export function authority(ops, genesis) {
+const DENY_ALL = () => ({ isAdmin: () => false, can: () => false, roster: [], admins: 0, staff: 0 });
+
+/**
+ * The role tree, evaluated over the whole (sorted) op set — deterministic, order-independent. `burned` (writer → slot,
+ * from dedupe) is a sequence cut on a KEY: nothing that key signs at or after its burned slot grants, revokes or writes.
+ * Total: a junk op set yields a deny-all tree.
+ */
+export function authority(ops, genesis, burned) {
+  try {
+    return roleTree(ops, genesis, burned);
+  } catch {
+    return DENY_ALL();
+  }
+}
+function roleTree(ops, genesis, burned) {
+  const keyCut = burned instanceof Map ? burned : new Map();
+  const keyLive = (who, seq) => { const b = keyCut.get(who); return b === undefined || seq < b; };
   const admins = new Map();
   const cut = new Map();
   const setCut = (id, c) => { const k = cut.get(id); cut.set(id, k === undefined ? c : Math.min(k, c)); };
   for (const { env } of ops) {
-    if (env.from !== genesis) continue;
+    if (env.from !== genesis || !keyLive(env.from, env.seq)) continue;
     const op = env.op;
     if (op.k === 'grant' && op.role === 'admin' && !admins.has(op.id)) admins.set(op.id, { to: op.to, l: op.l });
     else if (op.k === 'revoke') setCut(op.id, op.cut);
@@ -69,6 +127,7 @@ export function authority(ops, genesis) {
     return k === undefined || seq <= k;
   };
   const isAdmin = (who, l, seq) => {
+    if (!keyLive(who, seq)) return false;
     if (who === genesis) return true;
     for (const [gid, g] of admins) if (g.to === who && live(gid, g, l, seq)) return true;
     return false;
@@ -85,6 +144,7 @@ export function authority(ops, genesis) {
     }
   }
   const can = (who, c, l, seq) => {
+    if (!keyLive(who, seq)) return false;
     if (isAdmin(who, l, seq)) return true;
     for (const [gid, g] of staff) {
       if (g.to === who && (g.cols.includes('*') || g.cols.includes(c)) && live(gid, g, l, seq)) return true;
@@ -128,14 +188,22 @@ export function apply(state, env) {
   }
 }
 
-/** The company, materialised from a set of admitted envelopes. → { state, report, roster }. Never throws. */
+/**
+ * The company, materialised from a set of admitted envelopes. → { state, report, roster, auth }. Never throws.
+ * report.forks — every equivocated slot with its proof hashes (see dedupe); report.burned — [{ writer, from }], keys
+ * that signed two continued histories, cut from that slot on.
+ */
 export function materialize(items, genesis) {
-  const report = { applied: 0, unauthorized: 0, equivocators: [], dropped: 0, admins: 0, staff: 0 };
+  const report = { applied: 0, unauthorized: 0, equivocators: [], forks: [], burned: [], dropped: 0, admins: 0, staff: 0 };
   try {
-    const { ops, equivocators, dropped } = dedupe(items);
-    report.equivocators = equivocators;
-    report.dropped = dropped;
-    const auth = authority(ops, genesis);
+    const d = dedupe(items);
+    if (d.fault) throw new Error('dedupe fault');
+    const ops = d.ops;
+    report.equivocators = d.equivocators;
+    report.forks = d.forks;
+    report.burned = [...d.burned].map(([writer, from]) => ({ writer, from })).sort((a, b) => cmp(a.writer, b.writer));
+    report.dropped = d.dropped;
+    const auth = authority(ops, genesis, d.burned);
     report.admins = auth.admins;
     report.staff = auth.staff;
     const state = emptyState();
@@ -149,7 +217,7 @@ export function materialize(items, genesis) {
     return { state, report, roster: auth.roster, auth };
   } catch {
     report.fault = true;
-    return { state: emptyState(), report, roster: [], auth: { can: () => false, isAdmin: () => false } };
+    return { state: emptyState(), report, roster: [], auth: DENY_ALL() };
   }
 }
 

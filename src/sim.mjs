@@ -2,15 +2,19 @@
 //
 // A seeded fleet of employee nodes runs the real spine (real Ed25519, real gate, real materialiser) through a
 // hostile network: random partitions, dropped and duplicated gossip, and a live attacker sending forged
-// signatures, bit-flipped envelopes, replays, non-canonical re-wraps, oversize junk, unauthorised writes, and an
-// insider who EQUIVOCATES (two different validly-signed envelopes for one sequence number). Then it heals the
-// network and checks that every node holds byte-identical company state — equal to the state materialised from
-// the union of everything anyone admitted. Seeded keys + deterministic Ed25519 => the receipt is byte-reproducible.
-import { createNode, pull } from './node.mjs';
-import { fromSeed, sign } from './keys.mjs';
-import { sha256Bytes } from './sha256.mjs';
+// signatures, bit-flipped envelopes, replays, non-canonical re-wraps, oversize junk, unauthorised writes, a STOLEN
+// insider key that EQUIVOCATES (re-signs one of the insider's own past slots — a slot the real device already built
+// on — with different content), and a thief who forges a whole CONTINUED fork of another device's history. Then it
+// heals the network and checks that every node holds byte-identical company state — equal to the state materialised
+// from the union of everything anyone admitted — and that every fork the real device had built past kept the REAL
+// write (the per-writer hash chain), while the continued fork burned the stolen key. Seeded keys + deterministic
+// Ed25519 => the receipt is byte-reproducible.
+import { createNode, pull, signEnvelope } from './node.mjs';
+import { fromSeed } from './keys.mjs';
+import { sha256Bytes, sha256 } from './sha256.mjs';
 import { canonical, utf8, toHex } from './canon.mjs';
 import { materialize } from './crdt.mjs';
+import { GENESIS_PREV } from './gate.mjs';
 
 /** mulberry32 — a tiny seeded PRNG. */
 export function prng(seed) {
@@ -45,10 +49,26 @@ async function randomOp(node, rnd, ids) {
   return node.eraseAt('docs', 'd0', Math.floor(rnd() * len), 1);
 }
 
-async function signed(keys, op, seq) {
-  const body = { from: keys.pub, op, seq, v: 1 };
-  const sig = await sign(keys, utf8(canonical(body)));
-  return utf8(canonical({ ...body, sig }));
+const dec = new TextDecoder();
+const DANGLING = 'e'.repeat(64);                         // a prev that names nothing anyone holds
+const prevFor = (seq) => (seq === 1 ? GENESIS_PREV : DANGLING);
+
+/** A device's own chain as it built it, walked back from its head through prev: seq -> hash. */
+function chainOf(node) {
+  const out = new Map();
+  let { seq, hash } = node.tip();
+  while (seq >= 1 && node.has(hash)) { out.set(seq, hash); hash = JSON.parse(dec.decode(node.bytes(hash))).prev; seq--; }
+  return out;
+}
+
+/** A thief holding `victim`'s key re-signs past slot k of the victim's own chain (prev = the real k-1, as a careful
+ *  thief would). With `continued`, it also signs k+1 on top of its forgery — a second, continued history. */
+async function forgePast(victim, keys, k, op, continued) {
+  const chain = chainOf(victim);
+  const prev = k === 1 ? GENESIS_PREV : chain.get(k - 1);
+  const fork = await signEnvelope(keys, op, k, prev);
+  if (!continued) return [fork];
+  return [fork, await signEnvelope(keys, { ...op, id: op.id + '-next', l: op.l + 1 }, k + 1, sha256(fork))];
 }
 
 async function attack(nodes, keys, evil, insider, rnd, stats) {
@@ -59,7 +79,7 @@ async function attack(nodes, keys, evil, insider, rnd, stats) {
   let label = '';
   if (kind === 0) {
     label = 'forged-signature';
-    const body = { from: keys[insider].pub, op: { k: 'put', c: 'tasks', id: 'forged', f: { title: 'pwned' }, l: 3 }, seq: 900000 + stats.attacks, v: 1 };
+    const body = { from: keys[insider].pub, op: { k: 'put', c: 'tasks', id: 'forged', f: { title: 'pwned' }, l: 3 }, prev: DANGLING, seq: 900000 + stats.attacks, v: 2 };
     bytes = utf8(canonical({ ...body, sig: 'ab'.repeat(64) }));
   } else if (kind === 1 && own.length) {
     label = 'bit-flip';
@@ -77,10 +97,14 @@ async function attack(nodes, keys, evil, insider, rnd, stats) {
     bytes = utf8('{' + 'x'.repeat(5000));
   } else if (kind === 5) {
     label = 'unauthorised-write';
-    bytes = await signed(evil, { k: 'put', c: 'crm', id: 'e' + stats.attacks, f: { name: 'fake lead' }, l: 7 }, stats.attacks + 1);
+    bytes = await signEnvelope(evil, { k: 'put', c: 'crm', id: 'e' + stats.attacks, f: { name: 'fake lead' }, l: 7 }, stats.attacks + 1, prevFor(stats.attacks + 1));
   } else if (kind === 6) {
+    // the stolen insider key re-signs a slot the insider has already used (the insider writes before any attack)
     label = 'equivocation';
-    bytes = await signed(keys[insider], { k: 'put', c: 'tasks', id: 'eq', f: { title: 'fork-' + stats.attacks }, l: 2 }, 1);
+    const top = nodes[insider].tip().seq;
+    const k = 1 + Math.floor(rnd() * top);
+    [bytes] = await forgePast(nodes[insider], keys[insider], k, { k: 'put', c: 'tasks', id: 'eq', f: { title: 'fork-' + stats.attacks }, l: 2 }, false);
+    stats.forged.add(sha256(bytes));
   } else {
     label = 'junk';
     bytes = new Uint8Array(1 + Math.floor(rnd() * 64)).map(() => Math.floor(rnd() * 256));
@@ -93,16 +117,20 @@ async function attack(nodes, keys, evil, insider, rnd, stats) {
 
 /**
  * Run the company through a hostile network. → a receipt object (canonical-encodable).
- * cfg: { seed, nodes, rounds, opsPerRound, partitionFrom, partitionTo, drop‰, dup‰, fanout, attacks } (rates in permille — integers, so the receipt is canonical)
+ * cfg: { seed, nodes, rounds, opsPerRound, partitionFrom, partitionTo, drop‰, dup‰, fanout, attacks, burnAt }
+ * (rates in permille — integers, so the receipt is canonical; burnAt = the round a thief forges a continued fork of
+ * another device's history, -1 for never; by default four fifths of the way through)
  */
 export async function simulate(cfg = {}) {
   const c = { seed: 1, nodes: 16, rounds: 30, opsPerRound: 6, partitionFrom: 8, partitionTo: 20, drop: 200, dup: 150, fanout: 2, attacks: 3, ...cfg };
+  if (!Number.isSafeInteger(c.burnAt)) c.burnAt = Math.floor((c.rounds * 4) / 5);
   const rnd = prng(c.seed);
   const keys = [];
   for (let i = 0; i <= c.nodes; i++) keys.push(await fromSeed(sha256Bytes('sovereign-enterprise/sim/' + c.seed + '/' + i)));
   const genesis = keys[0].pub;
   const evil = keys[c.nodes];
   const insider = Math.min(2, c.nodes - 1);
+  const victim = Math.min(3, c.nodes - 1);              // whose key a second thief forks with a continued history
   const nodes = [];
   for (let i = 0; i < c.nodes; i++) nodes.push(createNode({ keys: keys[i], genesis, name: 'n' + i }));
 
@@ -110,8 +138,28 @@ export async function simulate(cfg = {}) {
   await nodes[0].grant('admin-1', keys[1].pub, 'admin', ['*']);
   await pull(nodes[1], nodes[0]);
   for (let i = 2; i < c.nodes; i++) await nodes[1].grant('staff-' + i, keys[i].pub, 'staff', ['*']);
+  // the insider and the victim have each written before any thief acts — every stolen-key fork is of a REAL slot
+  for (const i of new Set([insider, victim])) {
+    if (i < 2) continue;
+    await pull(nodes[i], nodes[1]);
+    await nodes[i].put('tasks', 'kickoff-' + i, { title: 'kickoff', done: false });
+  }
 
-  const stats = { emitted: 0, dropped: 0, duplicated: 0, partitionRounds: 0, attacks: 0, attack: {} };
+  const stats = { emitted: 0, dropped: 0, duplicated: 0, partitionRounds: 0, attacks: 0, attack: {}, forged: new Set() };
+  const burnRun = async () => {
+    const top = nodes[victim].tip().seq;
+    if (victim === insider || victim < 2 || top < 2) return;
+    // a slot the victim has already built on, forged AND continued: the key is burned from there, everywhere
+    const k = 1 + Math.floor(rnd() * (top - 1));
+    const shots = await forgePast(nodes[victim], keys[victim], k, { k: 'put', c: 'tasks', id: 'rewrite', f: { title: 'history, rewritten' }, l: 2 }, true);
+    const target = nodes[Math.floor(rnd() * c.nodes)];
+    for (const b of shots) {
+      stats.forged.add(sha256(b));
+      const r = await target.receive(b);
+      const key = 'continued-fork' + (r.ok ? ':admitted' : ':' + r.reason);
+      stats.attack[key] = (stats.attack[key] || 0) + 1;
+    }
+  };
   const side = new Array(c.nodes).fill(0);
   const ids = new Set();
   for (let round = 0; round < c.rounds; round++) {
@@ -123,6 +171,7 @@ export async function simulate(cfg = {}) {
       if (r && r.ok) stats.emitted++;
     }
     for (let k = 0; k < c.attacks; k++) await attack(nodes, keys, evil, insider, rnd, stats);
+    if (round === c.burnAt) await burnRun();
     for (let i = 0; i < c.nodes; i++) {
       for (let f = 0; f < c.fanout; f++) {
         const j = Math.floor(rnd() * c.nodes);
@@ -151,13 +200,19 @@ export async function simulate(cfg = {}) {
   const union = new Map();
   for (const n of nodes) for (const h of n.hashes()) if (!union.has(h)) union.set(h, n.bytes(h));
   const ref = nodes[0].view();
-  const dec = new TextDecoder();
   const refAll = materialize([...union.entries()].map(([hash, b]) => ({ hash, env: JSON.parse(dec.decode(b)) })), genesis);
   const refDigest = toHex(sha256Bytes(utf8(canonical(refAll.state))));
   const count = (col) => Object.keys(ref.state.cols[col] || {}).length;
+  const forks = { chain: 0, chainKeptReal: 0, lowestHash: 0, lowestHashKeptReal: 0, burned: 0 };
+  for (const f of ref.report.forks) {
+    const real = f.kept !== null && !stats.forged.has(f.kept);
+    if (f.rule === 'chain') { forks.chain++; if (real) forks.chainKeptReal++; }
+    else if (f.rule === 'lowest-hash') { forks.lowestHash++; if (real) forks.lowestHashKeptReal++; }
+    else forks.burned++;
+  }
   return {
     kind: 'sovereign-enterprise-sim',
-    v: 1,
+    v: 2,
     config: c,
     envelopes: union.size,
     emitted: stats.emitted,
@@ -168,6 +223,8 @@ export async function simulate(cfg = {}) {
     attackOutcomes: Object.fromEntries(Object.entries(stats.attack).sort()),
     unauthorised: ref.report.unauthorized,
     equivocators: ref.report.equivocators.length,
+    forks,
+    burnedKeys: ref.report.burned.length,
     applied: ref.report.applied,
     records: { tasks: count('tasks'), crm: count('crm'), msg: count('msg') },
     docChars: nodes[0].text('docs', 'd0').length,

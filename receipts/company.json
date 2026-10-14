@@ -1,5 +1,5 @@
 {
- "model": "sovereign-enterprise/company-run/1",
+ "model": "sovereign-enterprise/company-run/2",
  "seed": 20261014,
  "date": "2026-10-14",
  "events": 480,
@@ -38,22 +38,24 @@
  "summary": {
   "events": 480,
   "decisions": 480,
-  "automatedPermille": 777,
-  "rightPermille": 767,
-  "correct": 286,
-  "done": 373,
-  "toHumans": 107,
+  "automatedPermille": 821,
+  "rightPermille": 911,
+  "correct": 359,
+  "done": 394,
+  "toHumans": 86,
   "quarantined": 7,
-  "crossChecked": 120,
-  "viaMesh": 63,
+  "crossChecked": 142,
+  "viaMesh": 66,
+  "asks": 287,
+  "replies": 1334,
   "learned": 15,
   "regrowthsTried": 3,
   "regrowthsPromoted": 1,
   "perAgent": {
    "sales": {
-    "done": 99,
-    "correct": 82,
-    "watched": 15,
+    "done": 106,
+    "correct": 97,
+    "watched": 9,
     "brains": [
      "churn",
      "fraud",
@@ -63,9 +65,9 @@
     ]
    },
    "service": {
-    "done": 52,
-    "correct": 39,
-    "watched": 28,
+    "done": 56,
+    "correct": 53,
+    "watched": 24,
     "brains": [
      "churn",
      "fraud",
@@ -74,9 +76,9 @@
     ]
    },
    "finance": {
-    "done": 74,
-    "correct": 50,
-    "watched": 32,
+    "done": 85,
+    "correct": 77,
+    "watched": 21,
     "brains": [
      "churn",
      "credit",
@@ -87,9 +89,9 @@
     ]
    },
    "ops": {
-    "done": 108,
-    "correct": 88,
-    "watched": 16,
+    "done": 101,
+    "correct": 87,
+    "watched": 23,
     "brains": [
      "energy",
      "fraud",
@@ -98,9 +100,9 @@
     ]
    },
    "systems": {
-    "done": 40,
-    "correct": 27,
-    "watched": 16,
+    "done": 46,
+    "correct": 45,
+    "watched": 9,
     "brains": [
      "churn",
      "fraud",
@@ -109,24 +111,100 @@
     ]
    }
   },
+  "metrics": {
+   "shopper": {
+    "job": "Buyers (sales)",
+    "done": 87,
+    "held": 6,
+    "rightPermille": 862,
+    "baselinePermille": 805,
+    "recallPermille": 353,
+    "precisionPermille": 857
+   },
+   "churn": {
+    "job": "Customers about to leave",
+    "done": 56,
+    "held": 23,
+    "rightPermille": 982,
+    "baselinePermille": 929,
+    "recallPermille": 750,
+    "precisionPermille": 1000
+   },
+   "fraud": {
+    "job": "Card fraud",
+    "done": 70,
+    "held": 14,
+    "rightPermille": 986,
+    "baselinePermille": 886,
+    "recallPermille": 875,
+    "precisionPermille": 1000
+   },
+   "credit": {
+    "job": "Credit risk",
+    "done": 20,
+    "held": 5,
+    "rightPermille": 850,
+    "baselinePermille": 750,
+    "recallPermille": 400,
+    "precisionPermille": 1000
+   },
+   "inventory": {
+    "job": "Stock-outs",
+    "done": 59,
+    "held": 10,
+    "rightPermille": 797,
+    "baselinePermille": 525,
+    "recallPermille": 786,
+    "precisionPermille": 786
+   },
+   "maintenance": {
+    "job": "Machine failures",
+    "done": 31,
+    "held": 10,
+    "rightPermille": 903,
+    "baselinePermille": 935,
+    "recallPermille": 500,
+    "precisionPermille": 333
+   },
+   "intrusion": {
+    "job": "Intrusions",
+    "done": 52,
+    "held": 12,
+    "rightPermille": 981,
+    "baselinePermille": 769,
+    "recallPermille": 917,
+    "precisionPermille": 1000
+   },
+   "energy": {
+    "job": "Power overloads",
+    "done": 19,
+    "held": 6,
+    "rightPermille": 895,
+    "baselinePermille": 737,
+    "recallPermille": 600,
+    "precisionPermille": 1000
+   }
+  },
   "books": {
-   "entries": 88,
-   "income": 278130,
-   "expense": 3235934,
-   "profit": -2957804,
-   "balanced": true
+   "entries": 120,
+   "income": 584761,
+   "expense": 350856,
+   "profit": 233905,
+   "balanced": true,
+   "stock": 4885078,
+   "openOrders": 0
   },
   "vault": {
-   "size": 88,
+   "size": 120,
    "audits": true,
-   "root": "284f8e6cf870d188a9b5dcd14975aa01826c91d29e2130ffe7e19e42a3a2b092",
-   "cosigned": 8
+   "root": "7c4eb6a88d380056e4a61775a294ccad959d36dae239315468164945e409f491",
+   "cosigned": 11
   },
-  "writes": 1442,
-  "digest": "ab46606909dd8def3dd025f7dbb5da3cf13c93b59415f23d2675d402342216e1",
+  "writes": 4089,
+  "digest": "3aa453767f681f4856602175841f2b16cc6cd26b0c1984d51d3086a28d65d498",
   "converged": true
  },
- "systemsDecisionsTotal": 56,
+ "systemsDecisionsTotal": 55,
  "growthLog": 27,
- "receiptHash": "fd6929f38331e1690c008d0f4e5e4430fe50e0ddb36ad7588be50a43c7e57d6f"
+ "receiptHash": "ca24ed6ad8a12a3877da0359ce76f1d7dd733fa243daf7543cc6db0fc159e7a4"
 }

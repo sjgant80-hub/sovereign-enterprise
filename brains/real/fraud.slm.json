@@ -1,0 +1,219 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "fraud",
+ "title": "Card fraud",
+ "role": "finance",
+ "real": true,
+ "note": "REAL data — fraud=1. Credit Card Fraud Detection (ULB Machine Learning Group / Worldline) — ODbL 1.0 (database) / DbCL 1.0 (contents): real card transactions by European cardholders over two days in September 2013; for confidentiality the original fields were released only as PCA components V1–V28 (plus Time and Amount). Held-out = by time, case mix 10.00% positive (population 0.17%); grown only on the training split. Contains information from the Credit Card Fraud Detection database (ULB Machine Learning Group / Worldline), which is made available here under the Open Database License (ODbL) v1.0.",
+ "features": [
+  "amount",
+  "V1",
+  "V2",
+  "V3",
+  "V4",
+  "V5",
+  "V6",
+  "V7",
+  "V9",
+  "V10",
+  "V11",
+  "V12",
+  "V14",
+  "V16",
+  "V17",
+  "V18"
+ ],
+ "rules": [
+  {
+   "feat": "V3",
+   "op": ">",
+   "v": 0.748905,
+   "w": -1
+  },
+  {
+   "feat": "V14",
+   "op": "<=",
+   "v": -0.838428,
+   "w": 0.5
+  },
+  {
+   "feat": "V4",
+   "op": ">",
+   "v": 1.152671,
+   "w": 2
+  },
+  {
+   "feat": "V16",
+   "op": ">",
+   "v": -0.959881,
+   "w": -0.25
+  }
+ ],
+ "base": 0.100703,
+ "threshold": 2,
+ "spread": 3.75,
+ "dist": {
+  "amount": {
+   "min": 0,
+   "q1": 5.04,
+   "med": 23.8,
+   "q3": 82.76,
+   "max": 2960.47
+  },
+  "V1": {
+   "min": -30.55238,
+   "q1": -1.192845,
+   "med": -0.304991,
+   "q3": 1.193899,
+   "max": 2.373022
+  },
+  "V2": {
+   "min": -12.293557,
+   "q1": -0.477049,
+   "med": 0.175778,
+   "q3": 0.951178,
+   "max": 22.057729
+  },
+  "V3": {
+   "min": -31.103685,
+   "q1": -0.707467,
+   "med": 0.366872,
+   "q3": 1.156158,
+   "max": 3.572968
+  },
+  "V4": {
+   "min": -4.560938,
+   "q1": -0.714147,
+   "med": 0.27095,
+   "q3": 1.152671,
+   "max": 12.114672
+  },
+  "V5": {
+   "min": -22.105532,
+   "q1": -0.871783,
+   "med": -0.255217,
+   "q3": 0.42925,
+   "max": 11.406257
+  },
+  "V6": {
+   "min": -7.908606,
+   "q1": -0.797886,
+   "med": -0.287215,
+   "q3": 0.391192,
+   "max": 6.474115
+  },
+  "V7": {
+   "min": -43.557242,
+   "q1": -0.740773,
+   "med": -0.077142,
+   "q3": 0.462341,
+   "max": 10.787739
+  },
+  "V9": {
+   "min": -13.320155,
+   "q1": -0.839761,
+   "med": -0.130398,
+   "q3": 0.59474,
+   "max": 5.072639
+  },
+  "V10": {
+   "min": -24.588262,
+   "q1": -0.666583,
+   "med": -0.16122,
+   "q3": 0.349486,
+   "max": 9.154607
+  },
+  "V11": {
+   "min": -3.881222,
+   "q1": -0.544481,
+   "med": 0.197513,
+   "q3": 1.124059,
+   "max": 11.22847
+  },
+  "V12": {
+   "min": -18.683715,
+   "q1": -0.753987,
+   "med": 0.021898,
+   "q3": 0.546772,
+   "max": 2.768578
+  },
+  "V14": {
+   "min": -18.049998,
+   "q1": -0.548147,
+   "med": 0.004143,
+   "q3": 0.476843,
+   "max": 4.874064
+  },
+  "V16": {
+   "min": -14.129855,
+   "q1": -0.684916,
+   "med": -0.023908,
+   "q3": 0.496112,
+   "max": 3.781893
+  },
+  "V17": {
+   "min": -24.019099,
+   "q1": -0.556205,
+   "med": -0.087836,
+   "q3": 0.378261,
+   "max": 6.739384
+  },
+  "V18": {
+   "min": -9.335193,
+   "q1": -0.633599,
+   "med": -0.104082,
+   "q3": 0.412542,
+   "max": 3.102399
+  }
+ },
+ "heldAuc": 0.958638,
+ "heldAcc": 0.973832,
+ "held": 1070,
+ "train": 3660,
+ "patternId": "0a3677dc5ee17cb8",
+ "seed": "◊ seed.v1 fraud 2 g:24.4.16 c646c06e37f5",
+ "verified": true,
+ "lineage": "Grown by tools/build-real-brains.mjs with src/grow.mjs growPattern — the seed-library ribosome (sjgant80-hub/seed-library, vendored) — on the training split only, graded once on the held-out split. Pattern shape and answer path: the Konomi SLM (sjgant80-hub/konomi-slm). Konomi architecture: Thomas Frumkin.",
+ "kind": "real",
+ "licence": "ODbL 1.0 (database) / DbCL 1.0 (contents)",
+ "provenance": {
+  "dataset": "Credit Card Fraud Detection (ULB Machine Learning Group / Worldline)",
+  "citation": "Andrea Dal Pozzolo, Olivier Caelen, Reid A. Johnson and Gianluca Bontempi, \"Calibrating Probability with Undersampling for Unbalanced Classification\", IEEE Symposium on Computational Intelligence and Data Mining (CIDM), 2015 — data collected in a research collaboration of Worldline and the Machine Learning Group of ULB; published on Kaggle (mlg-ulb/creditcardfraud) under \"Database: Open Database, Contents: Database Contents\"; copy taken from OpenML data set 1597 (md5 178bcf9bb1f31a3dfe12d0e577884add)",
+  "url": "https://www.openml.org/d/1597",
+  "doi": "",
+  "licence": "ODbL 1.0 (database) / DbCL 1.0 (contents)",
+  "licenceUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "notice": "Contains information from the Credit Card Fraud Detection database (ULB Machine Learning Group / Worldline), which is made available here under the Open Database License (ODbL) v1.0.",
+  "label": "fraud=1: the transaction was labelled fraudulent",
+  "split": "by time — the first 70% of transactions (after de-duplication) are the training split, the last 30% the held-out split",
+  "caseMix": 0.1,
+  "rawSha256": "fdaf12730dc1fc426f318b71349f24f5c5fd00aa1152940be7e7509ae3d89d2a",
+  "rawFile": "fraud/creditcard.arff",
+  "publishedRows": 284807,
+  "duplicatesRemoved": 1081,
+  "usableRows": 283726,
+  "usablePositives": 473,
+  "populationBase": 0.001667,
+  "trainSplitRows": 198608,
+  "heldSplitRows": 85118,
+  "trainRows": 3660,
+  "trainPositives": 366,
+  "heldRows": 1070,
+  "heldPositives": 107,
+  "heldPopulationAuc": 0.956789,
+  "heldPopulationRows": 85118,
+  "grow": {
+   "seedsTried": 4,
+   "chosenSeed": 2,
+   "innerHeldAuc": 0.973452,
+   "innerHeld": 1098,
+   "innerTrain": 2562,
+   "innerVerified": true
+  },
+  "sampleRows": 1070,
+  "samplePositives": 107,
+  "sampleAuc": 0.958638,
+  "sampleAcc": 0.973832,
+  "sampleAnswered": 1070
+ }
+}

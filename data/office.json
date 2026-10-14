@@ -13,20 +13,121 @@
   "setupDays": 60,
   "dayRate": 800,
   "departments": [
-    { "id": "service", "name": "Customer service", "today": 10, "seats": ["crm"], "work": "Inbound email, chat and phone; orders, returns, complaints, refunds." },
-    { "id": "sales", "name": "Sales and business development", "today": 8, "seats": ["crm"], "work": "Lead qualification, outreach, proposals, follow-ups, pipeline upkeep." },
-    { "id": "marketing", "name": "Marketing", "today": 5, "seats": ["crm"], "work": "Campaigns, content, the website, reporting." },
-    { "id": "finance", "name": "Finance and accounts", "today": 5, "seats": ["finance"], "work": "Invoicing, payables, reconciliation, credit control, VAT, month-end." },
-    { "id": "people", "name": "HR and administration", "today": 6, "seats": ["hr"], "work": "Recruitment admin, onboarding, records, rotas, policies, office admin." },
-    { "id": "ops", "name": "Operations and delivery", "today": 8, "seats": [], "work": "Scheduling, suppliers, logistics, project tracking, quality checks." },
-    { "id": "it", "name": "IT and systems", "today": 3, "seats": [], "work": "Devices, access, tier-1 support, the systems themselves." }
+    {
+      "id": "service",
+      "name": "Customer service",
+      "today": 10,
+      "seats": [
+        "crm"
+      ],
+      "work": "Inbound email, chat and phone; orders, returns, complaints, refunds."
+    },
+    {
+      "id": "sales",
+      "name": "Sales and business development",
+      "today": 8,
+      "seats": [
+        "crm"
+      ],
+      "work": "Lead qualification, outreach, proposals, follow-ups, pipeline upkeep."
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing",
+      "today": 5,
+      "seats": [
+        "crm"
+      ],
+      "work": "Campaigns, content, the website, reporting."
+    },
+    {
+      "id": "finance",
+      "name": "Finance and accounts",
+      "today": 5,
+      "seats": [
+        "finance"
+      ],
+      "work": "Invoicing, payables, reconciliation, credit control, VAT, month-end."
+    },
+    {
+      "id": "people",
+      "name": "HR and administration",
+      "today": 6,
+      "seats": [
+        "hr"
+      ],
+      "work": "Recruitment admin, onboarding, records, rotas, policies, office admin."
+    },
+    {
+      "id": "ops",
+      "name": "Operations and delivery",
+      "today": 8,
+      "seats": [],
+      "work": "Scheduling, suppliers, logistics, project tracking, quality checks."
+    },
+    {
+      "id": "it",
+      "name": "IT and systems",
+      "today": 3,
+      "seats": [],
+      "work": "Devices, access, tier-1 support, the systems themselves."
+    }
   ],
-  "leadership": { "today": 5, "seats": ["crm"] },
+  "leadership": {
+    "today": 5,
+    "seats": [
+      "crm"
+    ]
+  },
   "retained": [
-    { "role": "Managing director", "covers": [], "focus": "Direction, the biggest relationships, the final sign-off. Holds the company's genesis key.", "oversight": 0.5 },
-    { "role": "Revenue lead (AI-native)", "covers": ["service", "sales", "marketing"], "focus": "Runs the service, sales and marketing agents; takes every escalation; closes the deals the AI qualifies.", "oversight": 1 },
-    { "role": "Finance and people lead (AI-native)", "covers": ["finance", "people"], "focus": "Signs the books (the vault's witness), approves pay and spend, handles every people decision.", "oversight": 1 },
-    { "role": "Operations lead (AI-native)", "covers": ["ops"], "focus": "Owns delivery; handles supplier and customer exceptions the agents raise.", "oversight": 1 },
-    { "role": "Systems and AI lead (AI-native)", "covers": ["it"], "focus": "Runs the mesh, the AI boxes and the hub; tunes the agents; the capable verifier for AI output.", "oversight": 1 }
-  ]
+    {
+      "role": "Managing director",
+      "covers": [],
+      "focus": "Direction, the biggest relationships, the final sign-off. Holds the company's genesis key.",
+      "oversight": 0.5
+    },
+    {
+      "role": "Revenue lead (AI-native)",
+      "covers": [
+        "service",
+        "sales",
+        "marketing"
+      ],
+      "focus": "Runs the service, sales and marketing agents; takes every escalation; closes the deals the AI qualifies.",
+      "oversight": 1
+    },
+    {
+      "role": "Finance and people lead (AI-native)",
+      "covers": [
+        "finance",
+        "people"
+      ],
+      "focus": "Signs the books (the vault's witness), approves pay and spend, handles every people decision.",
+      "oversight": 1
+    },
+    {
+      "role": "Operations lead (AI-native)",
+      "covers": [
+        "ops"
+      ],
+      "focus": "Owns delivery; handles supplier and customer exceptions the agents raise.",
+      "oversight": 1
+    },
+    {
+      "role": "Systems and AI lead (AI-native)",
+      "covers": [
+        "it"
+      ],
+      "focus": "Runs the mesh, the AI boxes and the hub; tunes the agents; the capable verifier for AI output.",
+      "oversight": 1
+    }
+  ],
+  "transition": {
+    "serviceYears": 5,
+    "ageBand": "from22to40",
+    "dualRunMonths": 3,
+    "trainingDays": 10,
+    "contingency": 0.2,
+    "about": "The one-off move: every role that goes is paid statutory redundancy and works its notice inside the dual-running months (the old team and the agents run side by side while each department switches over); the people who stay are trained; a contingency covers what the plan missed. Change any of these to yours."
+  }
 }

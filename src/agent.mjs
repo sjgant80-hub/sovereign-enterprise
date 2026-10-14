@@ -44,7 +44,7 @@ export function needsSecond(domain, confidence, policy) {
  * Decide. Inputs are what the agent has already gathered:
  *   screen — result of screen(text) for any inbound text, or null
  *   own    — this agent's own brain answer
- *   mesh   — meshRoute(...) result when own abstained: { node, answer } or null
+ *   mesh   — the strongest verified reply from another device when own abstained (mesh.mjs pickAnswer): { node, answer } or null
  *   second — a second brain's answer on the same input (for cross-verification), or null
  *   model  — the model tier's answer { label, domain, by } when nothing verified, or null
  * → { state: 'done'|'watch', action, label, domain, by, crossChecked, why }

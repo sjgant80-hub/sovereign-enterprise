@@ -1,0 +1,192 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "energy",
+ "title": "Peak load",
+ "role": "ops",
+ "real": true,
+ "note": "REAL data, DERIVED label — peak=1. Individual Household Electric Power Consumption — DOI 10.24432/C58K54, CC BY 4.0: real one-minute meter readings from one household in Sceaux (near Paris), December 2006 – November 2010, aggregated here to hours. Held-out = by time; grown only on the training split.",
+ "features": [
+  "loadKw",
+  "loadPrevKw",
+  "loadSameHourYesterdayKw",
+  "reactiveKw",
+  "voltageV",
+  "kitchenWh",
+  "laundryWh",
+  "heaterAcWh",
+  "nextHour",
+  "weekday",
+  "month"
+ ],
+ "rules": [
+  {
+   "feat": "loadKw",
+   "op": "<=",
+   "v": 1.5746,
+   "w": -1
+  },
+  {
+   "feat": "loadSameHourYesterdayKw",
+   "op": "<=",
+   "v": 0.227033,
+   "w": -0.25
+  },
+  {
+   "feat": "loadSameHourYesterdayKw",
+   "op": ">",
+   "v": 0.764867,
+   "w": 0.5
+  },
+  {
+   "feat": "kitchenWh",
+   "op": "<=",
+   "v": 0,
+   "w": -0.5
+  },
+  {
+   "feat": "loadKw",
+   "op": "<=",
+   "v": 0.4379,
+   "w": -1
+  }
+ ],
+ "base": 0.199643,
+ "threshold": 0,
+ "spread": 3.25,
+ "dist": {
+  "loadKw": {
+   "min": 0.124,
+   "q1": 0.325267,
+   "med": 0.764167,
+   "q3": 1.5746,
+   "max": 6.560533
+  },
+  "loadPrevKw": {
+   "min": 0.124,
+   "q1": 0.327233,
+   "med": 0.764733,
+   "q3": 1.568333,
+   "max": 6.560533
+  },
+  "loadSameHourYesterdayKw": {
+   "min": 0.1268,
+   "q1": 0.326833,
+   "med": 0.764867,
+   "q3": 1.595567,
+   "max": 6.519633
+  },
+  "reactiveKw": {
+   "min": 0.025433,
+   "q1": 0.076767,
+   "med": 0.1046,
+   "q3": 0.145467,
+   "max": 0.774333
+  },
+  "voltageV": {
+   "min": 226.270667,
+   "q1": 238.889833,
+   "med": 240.752667,
+   "q3": 242.490167,
+   "max": 251.698667
+  },
+  "kitchenWh": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 2902
+  },
+  "laundryWh": {
+   "min": 0,
+   "q1": 0,
+   "med": 20,
+   "q3": 37,
+   "max": 2636
+  },
+  "heaterAcWh": {
+   "min": 0,
+   "q1": 0,
+   "med": 95.172414,
+   "q3": 791,
+   "max": 1227
+  },
+  "nextHour": {
+   "min": 0,
+   "q1": 5,
+   "med": 11,
+   "q3": 17,
+   "max": 23
+  },
+  "weekday": {
+   "min": 0,
+   "q1": 1,
+   "med": 3,
+   "q3": 5,
+   "max": 6
+  },
+  "month": {
+   "min": 1,
+   "q1": 3,
+   "med": 6,
+   "q3": 9,
+   "max": 12
+  }
+ },
+ "heldAuc": 0.843199,
+ "heldAcc": 0.834361,
+ "held": 8271,
+ "train": 20000,
+ "patternId": "9f966fdcfff64d36",
+ "seed": "◊ seed.v1 energy 2 g:24.4.16 1f6f0281142f",
+ "verified": true,
+ "lineage": "Grown by tools/build-real-brains.mjs with src/grow.mjs growPattern — the seed-library ribosome (sjgant80-hub/seed-library, vendored) — on the training split only, graded once on the held-out split. Pattern shape and answer path: the Konomi SLM (sjgant80-hub/konomi-slm). Konomi architecture: Thomas Frumkin.",
+ "kind": "real-derived-label",
+ "licence": "CC BY 4.0",
+ "provenance": {
+  "dataset": "Individual Household Electric Power Consumption",
+  "citation": "Hebrail, Georges and Berard, Alice. Individual Household Electric Power Consumption [Dataset]. UCI Machine Learning Repository, 2006. https://doi.org/10.24432/C58K54",
+  "url": "https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption",
+  "doi": "10.24432/C58K54",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "notice": null,
+  "label": "peak=1: the NEXT hour's mean household load is above 1.790233 kW — the 80th percentile of hourly load over the training period (Dec 2006 – Nov 2009). DERIVED: the threshold label is ours, computed from the real readings; the dataset itself has no label",
+  "split": "by time — target hours before 1 December 2009 are the training split; the final twelve months (December 2009 – November 2010) are the held-out split",
+  "caseMix": null,
+  "rawSha256": "4259c9d7ece5dbee9ab8d53682baac68d791c864f0f64a52b4043cb3b90894b7",
+  "rawFile": "energy/household_power_consumption.txt",
+  "publishedRows": 2075259,
+  "duplicatesRemoved": 0,
+  "usableRows": 33944,
+  "usablePositives": 6620,
+  "populationBase": 0.195027,
+  "trainSplitRows": 25673,
+  "heldSplitRows": 8271,
+  "trainRows": 20000,
+  "trainPositives": 3996,
+  "heldRows": 8271,
+  "heldPositives": 1491,
+  "heldPopulationAuc": null,
+  "heldPopulationRows": null,
+  "grow": {
+   "seedsTried": 4,
+   "chosenSeed": 2,
+   "innerHeldAuc": 0.853205,
+   "innerHeld": 6000,
+   "innerTrain": 14000,
+   "innerVerified": true
+  },
+  "sampleRows": 1500,
+  "samplePositives": 270,
+  "sampleAuc": 0.851111,
+  "sampleAcc": 0.837333,
+  "sampleAnswered": 1500,
+  "extra": {
+   "minutes": 2075259,
+   "missingMinutes": 25979,
+   "hoursWithReadings": 34168,
+   "usableHours": 34151,
+   "p80Kw": 1.790233
+  }
+ }
+}

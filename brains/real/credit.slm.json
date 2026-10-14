@@ -1,0 +1,215 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "credit",
+ "title": "Card default",
+ "role": "finance",
+ "real": true,
+ "note": "REAL data — default=1. Default of Credit Card Clients — DOI 10.24432/C55S3H, CC BY 4.0: real credit-card clients of a bank in Taiwan, April–September 2005. Held-out = interleaved by client order after de-duplication; grown only on the training split.",
+ "features": [
+  "creditLimit",
+  "payStatusSep",
+  "payStatusAug",
+  "payStatusJul",
+  "payStatusJun",
+  "payStatusMay",
+  "payStatusApr",
+  "billSep",
+  "billAug",
+  "billJul",
+  "paidSep",
+  "paidAug",
+  "paidJul",
+  "utilisationSep"
+ ],
+ "rules": [
+  {
+   "feat": "payStatusSep",
+   "op": ">",
+   "v": 1,
+   "w": 2
+  },
+  {
+   "feat": "payStatusSep",
+   "op": ">",
+   "v": 0,
+   "w": 0.5
+  },
+  {
+   "feat": "payStatusAug",
+   "op": ">",
+   "v": 0,
+   "w": 0.5
+  },
+  {
+   "feat": "payStatusJul",
+   "op": ">",
+   "v": 0,
+   "w": 0.5
+  },
+  {
+   "feat": "paidSep",
+   "op": ">",
+   "v": 1303,
+   "w": -0.25
+  },
+  {
+   "feat": "payStatusMay",
+   "op": ">",
+   "v": 0,
+   "w": 0.5
+  }
+ ],
+ "base": 0.217643,
+ "threshold": 0.5,
+ "spread": 4.25,
+ "dist": {
+  "creditLimit": {
+   "min": 10000,
+   "q1": 50000,
+   "med": 140000,
+   "q3": 240000,
+   "max": 1000000
+  },
+  "payStatusSep": {
+   "min": -2,
+   "q1": -1,
+   "med": 0,
+   "q3": 0,
+   "max": 8
+  },
+  "payStatusAug": {
+   "min": -2,
+   "q1": -1,
+   "med": 0,
+   "q3": 0,
+   "max": 8
+  },
+  "payStatusJul": {
+   "min": -2,
+   "q1": -1,
+   "med": 0,
+   "q3": 0,
+   "max": 8
+  },
+  "payStatusJun": {
+   "min": -2,
+   "q1": -1,
+   "med": 0,
+   "q3": 0,
+   "max": 7
+  },
+  "payStatusMay": {
+   "min": -2,
+   "q1": -1,
+   "med": 0,
+   "q3": 0,
+   "max": 7
+  },
+  "payStatusApr": {
+   "min": -2,
+   "q1": -1,
+   "med": 0,
+   "q3": 0,
+   "max": 8
+  },
+  "billSep": {
+   "min": -165580,
+   "q1": 3720,
+   "med": 23561,
+   "q3": 69343,
+   "max": 964511
+  },
+  "billAug": {
+   "min": -67526,
+   "q1": 3157,
+   "med": 22334,
+   "q3": 66541,
+   "max": 983931
+  },
+  "billJul": {
+   "min": -61506,
+   "q1": 2917,
+   "med": 20771,
+   "q3": 62622,
+   "max": 855086
+  },
+  "paidSep": {
+   "min": 0,
+   "q1": 1000,
+   "med": 2120,
+   "q3": 5017,
+   "max": 873552
+  },
+  "paidAug": {
+   "min": 0,
+   "q1": 906,
+   "med": 2032,
+   "q3": 5000,
+   "max": 1215471
+  },
+  "paidJul": {
+   "min": 0,
+   "q1": 396,
+   "med": 1817,
+   "q3": 4500,
+   "max": 896040
+  },
+  "utilisationSep": {
+   "min": -0.619892,
+   "q1": 0.023265,
+   "med": 0.33242,
+   "q3": 0.837438,
+   "max": 5.3095
+  }
+ },
+ "heldAuc": 0.744073,
+ "heldAcc": 0.802692,
+ "held": 8991,
+ "train": 20000,
+ "patternId": "b3ce964f428c0319",
+ "seed": "◊ seed.v1 credit 4 g:24.4.16 a99803a49501",
+ "verified": true,
+ "lineage": "Grown by tools/build-real-brains.mjs with src/grow.mjs growPattern — the seed-library ribosome (sjgant80-hub/seed-library, vendored) — on the training split only, graded once on the held-out split. Pattern shape and answer path: the Konomi SLM (sjgant80-hub/konomi-slm). Konomi architecture: Thomas Frumkin.",
+ "kind": "real",
+ "licence": "CC BY 4.0",
+ "provenance": {
+  "dataset": "Default of Credit Card Clients",
+  "citation": "Yeh, I-Cheng. Default of Credit Card Clients [Dataset]. UCI Machine Learning Repository, 2009. https://doi.org/10.24432/C55S3H — introduced in Yeh & Lien, \"The comparisons of data mining techniques for the predictive accuracy of probability of default of credit card clients\", Expert Systems with Applications 36 (2009), DOI 10.1016/j.eswa.2007.12.020",
+  "url": "https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients",
+  "doi": "10.24432/C55S3H",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "notice": null,
+  "label": "default=1: the client defaulted on the payment due in October 2005 (\"default payment next month\")",
+  "split": "interleaved by client order after de-duplication — 3 clients in every 10 (i mod 10 < 3) are held out; the brain grew only on the other 7",
+  "caseMix": null,
+  "rawSha256": "45bcf4df62ff2e237a74eb155cabfb4bbbc171219a0637daef44fdad07503dd0",
+  "rawFile": "credit/default-of-credit-card-clients.csv",
+  "publishedRows": 30000,
+  "duplicatesRemoved": 35,
+  "usableRows": 29965,
+  "usablePositives": 6630,
+  "populationBase": 0.221258,
+  "trainSplitRows": 20974,
+  "heldSplitRows": 8991,
+  "trainRows": 20000,
+  "trainPositives": 4361,
+  "heldRows": 8991,
+  "heldPositives": 2057,
+  "heldPopulationAuc": null,
+  "heldPopulationRows": null,
+  "grow": {
+   "seedsTried": 4,
+   "chosenSeed": 4,
+   "innerHeldAuc": 0.753666,
+   "innerHeld": 6000,
+   "innerTrain": 14000,
+   "innerVerified": true
+  },
+  "sampleRows": 1500,
+  "samplePositives": 343,
+  "sampleAuc": 0.768533,
+  "sampleAcc": 0.800667,
+  "sampleAnswered": 1500
+ }
+}

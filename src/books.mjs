@@ -5,6 +5,7 @@
 export const CHART = Object.freeze({
   '0030': ['Office equipment', 'asset'],
   '0031': ['Office equipment depreciation', 'asset'],
+  '1001': ['Stock', 'asset'],
   '1100': ['Trade debtors', 'asset'],
   '1200': ['Bank current account', 'asset'],
   '1230': ['Petty cash', 'asset'],

@@ -21,19 +21,18 @@ export async function runCompany({ events = EVENTS, seed = SEED } = {}) {
   const index = read('brains/index.json');
   const patterns = Object.fromEntries(Object.entries(index).map(([d, m]) => [d, read('brains/' + m.file)]));
   const log = [];
-  const co = createCompany({ index, patterns, shopper: read('brains/shopper.sample.json') }, { seed, date: () => DATE, log: (s) => log.push(s) });
+  const real = Object.fromEntries(Object.entries(index).filter(([d, m]) => m.sample && d !== 'shopper').map(([d, m]) => [d, read('brains/' + m.sample)]));
+  const co = createCompany({ index, patterns, shopper: read('brains/shopper.sample.json'), real }, { seed, date: () => DATE, log: (s) => log.push(s) });
   await co.boot();
   const script = [];   // the scripted day: the same interventions a human can make on the page
+  let hostileId = null;
   for (let tick = 0; co.n < events; tick++) {
-    await co.syncAll();
-    for (let i = 0; i < SPEED && co.n < events; i++) await co.next();
-    await co.housekeeping();
-    if (tick === 20) { const r = await co.hostile(prng(7)); script.push({ tick, act: 'hostile message', result: r.by === 'screen' ? 'quarantined' : 'NOT quarantined' }); }
+    await co.tick({ events: Math.min(SPEED, events - co.n) });
+    if (tick === 20) { hostileId = (await co.hostile(prng(7))).id; script.push({ tick, act: 'hostile message' }); }
     if (tick === 40) { const r = await co.poison('day-1'); script.push({ tick, act: 'poisoned brain offered', adopted: r.filter((x) => x.adopted).length, refused: r.filter((x) => !x.adopted).length }); }
     if (tick === 60) { co.online.audit = false; script.push({ tick, act: 'Audit agent offline' }); }
     if (tick === 80) { co.online.audit = true; script.push({ tick, act: 'Audit agent back online' }); }
     if (tick === 100) {
-      await co.syncAll();
       const w = co.nodes.overseer.list('watch').find((x) => x.status === 'open' && x.action);
       if (w) { await co.resolve('overseer', w.id, w.action); script.push({ tick, act: 'overseer approved a held call', channel: w.channel, action: w.action }); }
     }
@@ -45,11 +44,13 @@ export async function runCompany({ events = EVENTS, seed = SEED } = {}) {
       script.push({ tick, act: 'Systems agent fired' });
     }
   }
-  for (let i = 0; i < 3; i++) { await co.syncAll(); await co.housekeeping(); }
-  await co.syncAll();
+  await co.drain();
+  const h = co.byEvent.get(hostileId);
+  const hs = script.find((x) => x.act === 'hostile message');
+  if (hs) hs.result = h && h.by === 'screen' ? 'quarantined' : 'NOT quarantined';
   const s = co.summary('owner');
   const sysAfter = co.ledger.filter((x) => x.agent === 'systems').length;
-  return { model: 'sovereign-enterprise/company-run/1', seed, date: DATE, events, speed: SPEED, script, summary: s, systemsDecisionsTotal: sysAfter, growthLog: log.length };
+  return { model: 'sovereign-enterprise/company-run/2', seed, date: DATE, events, speed: SPEED, script, summary: s, systemsDecisionsTotal: sysAfter, growthLog: log.length };
 }
 
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/').replace(/^\//, '')}` || process.argv[1].endsWith('run-company.mjs')) {

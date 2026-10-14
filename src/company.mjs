@@ -7,20 +7,22 @@
 // adopts the published pattern, but only once it re-verifies on that agent's own data. High-stakes calls need a
 // second, independent brain. Outcomes come back, and an agent regrows its brain on them — the new brain replaces the
 // old only if it beats it on cases neither saw. What no brain can confirm goes to the watch list for a human.
-import { answer, meshRoute, secondOpinion, verifyOn } from './brain.mjs';
+import { answer, verifyOn } from './brain.mjs';
 import { decide, needsSecond, DEFAULT_POLICY, ACTIONS, scorecard } from './agent.mjs';
 import { screen } from './screen.mjs';
+import { redact } from './antibody.mjs';
 import { growPattern } from './grow.mjs';
 
-const COMMON = ['decisions', 'watch', 'quarantine', 'brain', 'adopt', 'handoff', 'msg'];
+const COMMON = ['decisions', 'watch', 'quarantine', 'brain', 'adopt', 'handoff', 'msg', 'inbox', 'ask', 'reply'];
 export const AGENTS = Object.freeze([
   { id: 'sales', name: 'Sales agent', domains: ['shopper'], cols: [...COMMON, 'crm'], job: 'Reads every web session and fast-tracks the ones about to buy into the CRM.' },
   { id: 'service', name: 'Service agent', domains: ['churn'], cols: [...COMMON, 'tasks'], job: 'Reads every customer message, spots who is about to leave and sends the retention offer.' },
   { id: 'finance', name: 'Finance agent', domains: ['fraud', 'credit'], cols: [...COMMON, 'journal', 'vault', 'vault_head', 'payments', 'terms', 'po'], job: 'Clears card payments, sets credit terms, keeps the books and sequences them into the vault.' },
   { id: 'ops', name: 'Ops agent', domains: ['inventory', 'maintenance', 'energy'], cols: [...COMMON, 'tasks', 'po'], job: 'Raises purchase orders before stock-outs, books machine services, sheds load before overloads.' },
   { id: 'systems', name: 'Systems agent', domains: ['intrusion'], cols: [...COMMON, 'tasks', 'security'], job: 'Watches every connection and quarantines intrusions.' },
-  { id: 'audit', name: 'Audit agent', domains: [], grows: ['fraud', 'credit', 'intrusion'], cols: ['brain', 'adopt', 'vault_cosig', 'msg'], job: 'Grows its own independent brains for every high-stakes call — the second brain that must agree — and witnesses the vault.' },
+  { id: 'audit', name: 'Audit agent', domains: [], grows: ['fraud', 'credit', 'intrusion'], cols: ['brain', 'adopt', 'vault_cosig', 'msg', 'reply', 'alert'], job: 'Grows its own independent brains for every high-stakes call — the second brain that must agree — and witnesses the vault.' },
 ]);
+export const HUB = Object.freeze({ id: 'hub', name: 'Office hub', title: 'The door: mail, web, payments and telemetry arrive here', cols: ['inbox', 'msg', 'model'] });
 export const HUMANS = Object.freeze([
   { id: 'owner', name: 'Owner', title: 'Owner · watches the board' },
   { id: 'overseer', name: 'AI overseer', title: 'Admin · clears the watch list' },
@@ -32,6 +34,11 @@ export const HOSTILE = 0.07;        // of the messages a customer can write, thi
 export const LEARN_AFTER = 3;       // asked the mesh this many times about a domain → try to learn it
 export const REGROW_EVERY = 60;     // outcomes on a domain between regrowth attempts
 export const PROMOTE_BY = 0.005;    // a regrown brain must beat the current one by this AUC on cases neither saw
+export const COST_OF_SALES = 0.6;   // in this demo, goods cost 60% of their net selling price (a stated assumption)
+export const OPENING_STOCK = 2000000;   // pence — the stock the company opens with, funded by its capital
+/** What each job decides, in a buyer's words. */
+export const JOBS = Object.freeze({ shopper: 'Buyers (sales)', churn: 'Customers about to leave', fraud: 'Card fraud', credit: 'Credit risk',
+  inventory: 'Stock-outs', maintenance: 'Machine failures', intrusion: 'Intrusions', energy: 'Power overloads' });
 
 const agentById = (id) => AGENTS.find((a) => a.id === id) || null;
 export const agentName = (id) => (agentById(id) || { name: String(id) }).name;
@@ -80,34 +87,47 @@ export function pickEvent(rnd, pools, n) {
   } catch { return null; }
 }
 
-/** One agent handles one piece of work. → { decision, effects, askedMesh, secondBy } — never throws. */
-export function agentStep(input) {
+/**
+ * OPEN a piece of work on the agent's own device: screen the text, ask its own brain. → what happens next:
+ *   next 'final'  — decide now (quarantined, or answered and confident on a normal call)
+ *   next 'second' — answered, but a money/security or low-confidence call: ask the spine for an independent second opinion
+ *   next 'mesh'   — its own brain abstained: ask the spine; another device's brain may cover it
+ * screenFn lets the adopted antibodies join the screen. Never throws.
+ */
+export function openStep(input) {
   try {
-    const { agentId, event, library, peers, policy = DEFAULT_POLICY } = input || {};
-    const scr = event.text ? screen(event.text) : null;
-    if (scr && !scr.ok) {
-      const d = decide({ screen: scr }, policy);
-      return { decision: { ...d, conf: 0, receipt: '', secondBy: '' }, askedMesh: null, secondBy: '', effects: effects(d, event, agentId, scr) };
-    }
+    const { agentId, event, library, policy = DEFAULT_POLICY, screenFn = screen } = input || {};
+    const scr = event.text ? screenFn(event.text) : null;
+    if (scr && !scr.ok) return { next: 'final', scr, own: null, first: null };
     const own = answer(library, event.features);
-    let mesh = null, askedMesh = null;
-    if (own.verdict !== 'VERIFIED') {
-      mesh = meshRoute(peers, event.features, agentId);
-      if (mesh) askedMesh = mesh.answer.domain;
-    }
-    const first = own.verdict === 'VERIFIED' ? { node: agentId, answer: own } : mesh;
-    let second = null, secondBy = '';
-    if (first && needsSecond(first.answer.domain, first.answer.confidence, policy)) {
-      const s = secondOpinion(peers, event.features, first.answer, [agentId, first.node]);
-      if (s) { second = s.answer; secondBy = s.node; }
-    }
-    const d = decide({ screen: scr, own, mesh, second }, policy);
-    const conf = first ? Math.round(first.answer.confidence * 1000) : 0;
-    const receipt = first ? first.answer.receipt.receiptHash.slice(0, 16) : '';
-    return { decision: { ...d, conf, receipt, secondBy: d.crossChecked ? secondBy : '' }, askedMesh, secondBy, effects: effects(d, event, agentId, scr) };
+    if (own.verdict !== 'VERIFIED') return { next: 'mesh', scr, own, first: null };
+    const first = { node: agentId, answer: own };
+    return { next: needsSecond(own.domain, own.confidence, policy) ? 'second' : 'final', scr, own, first };
+  } catch {
+    return { next: 'final', scr: null, own: null, first: null, fault: true };
+  }
+}
+
+/** After the mesh answered (or no one could): does this call still need an independent second opinion? */
+export function afterMesh(mesh, policy = DEFAULT_POLICY) {
+  try {
+    return mesh && mesh.answer && needsSecond(mesh.answer.domain, mesh.answer.confidence, policy) ? 'second' : 'final';
+  } catch { return 'final'; }
+}
+
+/** CLOSE a piece of work: decide from everything gathered and say what it writes. → { decision, effects } — never throws. */
+export function closeStep(input) {
+  try {
+    const { agentId, event, scr = null, own = null, mesh = null, second = null, secondBy = '', model = null, fault = false, policy = DEFAULT_POLICY } = input || {};
+    if (fault) throw new Error('fault');
+    const d = decide({ screen: scr, own, mesh, second, model }, policy);
+    const first = own && own.verdict === 'VERIFIED' ? own : mesh && mesh.answer;
+    const conf = first ? Math.round(first.confidence * 1000) : 0;
+    const receipt = first && first.receipt ? String(first.receipt.receiptHash).slice(0, 16) : '';
+    return { decision: { ...d, conf, receipt, secondBy: d.crossChecked ? String(secondBy) : '' }, effects: effects(d, event, agentId, scr) };
   } catch {
     const d = { state: 'watch', action: null, label: null, domain: null, by: 'fault', crossChecked: false, why: 'the agent failed closed' };
-    return { decision: { ...d, conf: 0, receipt: '', secondBy: '' }, askedMesh: null, secondBy: '', effects: [] };
+    return { decision: { ...d, conf: 0, receipt: '', secondBy: '' }, effects: [] };
   }
 }
 
@@ -120,7 +140,7 @@ export function effects(d, ev, agentId, scr) {
   if (!d || !ev) return out;
   if (d.state === 'watch') {
     if (d.by === 'screen') {
-      rec('quarantine', { agent: agentId, event: ev.id, customer: ev.customer, flags: ((scr && scr.flags) || []).join(','), preview: String((scr && scr.clean) || '').slice(0, 140) });
+      rec('quarantine', { agent: agentId, event: ev.id, customer: ev.customer, flags: ((scr && scr.flags) || []).join(','), preview: redact((scr && scr.clean) || '') });   // digits, emails and links masked: every device holds this
     } else {
       rec('watch', { agent: agentId, event: ev.id, domain: d.domain || '', action: d.action || '', label: d.label === 0 || d.label === 1 ? d.label : -1,
         why: String(d.why || '').slice(0, 300), status: 'open', customer: ev.customer, amount: ev.amount | 0, channel: String(ev.domain || '') });
@@ -128,13 +148,14 @@ export function effects(d, ev, agentId, scr) {
     return out;
   }
   const vat = Math.round(ev.amount / 6);   // a VAT-inclusive gross at 20% → VAT is one sixth
+  const cost = Math.round((ev.amount - vat) * COST_OF_SALES);   // the goods leave stock at cost when they are sold
   switch (d.action) {
     case 'fast-track': rec('crm', { name: 'Web visitor ' + ev.customer, contact: 'web session', stage: 'qualified', value: ev.amount | 0, owner: by }); break;
     case 'retain':
       rec('tasks', { title: 'Retention offer sent to ' + ev.customer, owner: by, status: 'done' });
       rec('msg', { ch: 'general', body: by + ': ' + ev.customer + ' is at risk of leaving — retention offer sent.', by }); break;
     case 'release-payment':
-      out.push({ post: { memo: 'Card sale ' + ev.customer, lines: [['1200', ev.amount, 0], ['4000', 0, ev.amount - vat], ['2200', 0, vat]] } });
+      out.push({ post: { memo: 'Card sale ' + ev.customer, lines: [['1200', ev.amount, 0], ['4000', 0, ev.amount - vat], ['2200', 0, vat], ['5000', cost, 0], ['1001', 0, cost]] } });
       rec('payments', { customer: ev.customer, amount: ev.amount, status: 'released', by }); break;
     case 'hold-payment':
       rec('payments', { customer: ev.customer, amount: ev.amount, status: 'held', by });
@@ -167,11 +188,20 @@ export function splitEffects(list, cols, fallbackOwner) {
   return { mine, handoff };
 }
 
-/** A purchase order the Finance agent posts: net + input VAT against the supplier. */
-export function poEntry(po) {
+/** A purchase order is a commitment: nothing is posted when it is raised. When the goods arrive with the supplier's
+ *  invoice, the Finance agent posts them into stock and reclaims the input VAT against that invoice. */
+export function invoiceEntry(po) {
   if (!po || !Number.isSafeInteger(po.net) || po.net <= 0) return null;
   const vat = Math.round(po.net / 5);
-  return { memo: 'PO · ' + String(po.supplier || 'supplier').slice(0, 80), lines: [['5000', po.net, 0], ['2201', vat, 0], ['2100', 0, po.net + vat]] };
+  return { memo: 'Goods received · ' + String(po.supplier || 'supplier').slice(0, 80), lines: [['1001', po.net, 0], ['2201', vat, 0], ['2100', 0, po.net + vat]] };
+}
+
+/** Paying the supplier's invoice: the creditor is cleared from the bank. */
+export function payEntry(po) {
+  const inv = invoiceEntry(po);
+  if (!inv) return null;
+  const gross = inv.lines[2][2];
+  return { memo: 'Supplier paid · ' + String(po.supplier || 'supplier').slice(0, 80), lines: [['2100', gross, 0], ['1200', 0, gross]] };
 }
 
 /** Learn by being asked: after LEARN_AFTER mesh asks about a domain an agent does not hold, try to adopt it. */
@@ -215,7 +245,30 @@ export function boardKpis(ledger) {
     crossChecked: L.filter((x) => x.crossChecked).length,
     viaMesh: L.filter((x) => typeof x.by === 'string' && x.by.startsWith('mesh:')).length,
     perAgent: per,
+    metrics: jobMetrics(L),
   };
+}
+
+/** Per job: how often the finished calls were right, what never acting ("always no") would score on the same cases, how
+ *  many of the real "yes" cases the agents caught (recall), how many of their "yes" calls were real (precision), and how
+ *  many waited for a person. Integers in permille; null where there is nothing to divide by. */
+export function jobMetrics(ledger) {
+  const out = {};
+  const pm = (a, b) => (b > 0 ? Math.round(1000 * a / b) : null);
+  for (const domain of Object.keys(JOBS)) {
+    const L = (Array.isArray(ledger) ? ledger : []).filter((x) => x && (x.channel || x.domain) === domain);   // the job the work was, whoever decided it
+    if (!L.length) continue;
+    const done = L.filter((x) => x.state === 'done' && (x.label === 0 || x.label === 1) && (x.truth === 0 || x.truth === 1));
+    const tp = done.filter((x) => x.label === 1 && x.truth === 1).length;
+    out[domain] = {
+      job: JOBS[domain], done: done.length, held: L.filter((x) => x.state === 'watch').length,
+      rightPermille: pm(done.filter((x) => x.label === x.truth).length, done.length),
+      baselinePermille: pm(done.filter((x) => x.truth === 0).length, done.length),
+      recallPermille: pm(tp, done.filter((x) => x.truth === 1).length),
+      precisionPermille: pm(tp, done.filter((x) => x.label === 1).length),
+    };
+  }
+  return out;
 }
 
 export { ACTIONS };

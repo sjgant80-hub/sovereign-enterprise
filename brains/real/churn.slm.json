@@ -1,0 +1,173 @@
+{
+ "model": "konomi-slm/1",
+ "domain": "churn",
+ "title": "Customer churn",
+ "role": "service",
+ "real": true,
+ "note": "REAL data — churn=1. Iranian Churn — DOI 10.24432/C5JW3Z, CC BY 4.0: real customers of an Iranian telecom operator, sampled at random by the donors from the company database over 12 months. Held-out = interleaved by row position after de-duplication; grown only on the training split.",
+ "features": [
+  "callFailures",
+  "complained",
+  "subscriptionMonths",
+  "chargeBand",
+  "secondsOfUse",
+  "callsMade",
+  "smsSent",
+  "distinctNumbersCalled",
+  "contractPlan",
+  "inactive",
+  "customerValue"
+ ],
+ "rules": [
+  {
+   "feat": "complained",
+   "op": "<=",
+   "v": 0,
+   "w": -0.5
+  },
+  {
+   "feat": "customerValue",
+   "op": ">",
+   "v": 392.445,
+   "w": -0.5
+  },
+  {
+   "feat": "inactive",
+   "op": "<=",
+   "v": 0,
+   "w": -0.25
+  }
+ ],
+ "base": 0.158423,
+ "threshold": -0.5,
+ "spread": 1.25,
+ "dist": {
+  "callFailures": {
+   "min": 0,
+   "q1": 1,
+   "med": 6,
+   "q3": 12,
+   "max": 36
+  },
+  "complained": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 1
+  },
+  "subscriptionMonths": {
+   "min": 3,
+   "q1": 29,
+   "med": 35,
+   "q3": 38,
+   "max": 47
+  },
+  "chargeBand": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 1,
+   "max": 10
+  },
+  "secondsOfUse": {
+   "min": 0,
+   "q1": 1570,
+   "med": 3110,
+   "q3": 6528,
+   "max": 17090
+  },
+  "callsMade": {
+   "min": 0,
+   "q1": 29,
+   "med": 55,
+   "q3": 95,
+   "max": 255
+  },
+  "smsSent": {
+   "min": 0,
+   "q1": 7,
+   "med": 25,
+   "q3": 126,
+   "max": 522
+  },
+  "distinctNumbersCalled": {
+   "min": 0,
+   "q1": 11,
+   "med": 23,
+   "q3": 35,
+   "max": 95
+  },
+  "contractPlan": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 1
+  },
+  "inactive": {
+   "min": 0,
+   "q1": 0,
+   "med": 0,
+   "q3": 0,
+   "max": 1
+  },
+  "customerValue": {
+   "min": 0,
+   "q1": 124.64,
+   "med": 247.16,
+   "q3": 840.78,
+   "max": 2148.84
+  }
+ },
+ "heldAuc": 0.89996,
+ "heldAcc": 0.895906,
+ "held": 855,
+ "train": 1995,
+ "patternId": "76821455744c2c34",
+ "seed": "◊ seed.v1 churn 1 g:24.4.16 483f9eefacb6",
+ "verified": true,
+ "lineage": "Grown by tools/build-real-brains.mjs with src/grow.mjs growPattern — the seed-library ribosome (sjgant80-hub/seed-library, vendored) — on the training split only, graded once on the held-out split. Pattern shape and answer path: the Konomi SLM (sjgant80-hub/konomi-slm). Konomi architecture: Thomas Frumkin.",
+ "kind": "real",
+ "licence": "CC BY 4.0",
+ "provenance": {
+  "dataset": "Iranian Churn",
+  "citation": "Iranian Churn [Dataset]. UCI Machine Learning Repository, 2020. https://doi.org/10.24432/C5JW3Z",
+  "url": "https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset",
+  "doi": "10.24432/C5JW3Z",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "notice": null,
+  "label": "churn=1: the customer had left by the end of month 12 (every feature aggregates months 1–9; months 10–12 are the planning gap)",
+  "split": "interleaved by row position after de-duplication — 3 rows in every 10 (i mod 10 < 3) are held out; the brain grew only on the other 7",
+  "caseMix": null,
+  "rawSha256": "90d5fb6bd1630cd4de4b4d28fcf8b4cb92a8f6ab7484605b0799d47386f7dbe1",
+  "rawFile": "churn/Customer Churn.csv",
+  "publishedRows": 3150,
+  "duplicatesRemoved": 300,
+  "usableRows": 2850,
+  "usablePositives": 446,
+  "populationBase": 0.156491,
+  "trainSplitRows": 1995,
+  "heldSplitRows": 855,
+  "trainRows": 1995,
+  "trainPositives": 306,
+  "heldRows": 855,
+  "heldPositives": 140,
+  "heldPopulationAuc": null,
+  "heldPopulationRows": null,
+  "grow": {
+   "seedsTried": 4,
+   "chosenSeed": 1,
+   "innerHeldAuc": 0.896094,
+   "innerHeld": 600,
+   "innerTrain": 1395,
+   "innerVerified": true
+  },
+  "sampleRows": 855,
+  "samplePositives": 140,
+  "sampleAuc": 0.89996,
+  "sampleAcc": 0.895906,
+  "sampleAnswered": 855
+ }
+}

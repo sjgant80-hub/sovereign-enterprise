@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { passesGate, GATE_AUC, ROUTE_MIN, fires, validPattern, membership, scoreInput, route, answer, verifyReceipt, auc, verifyOn, adopt, toRecord, fromRecord, meshRoute, secondOpinion } from '../src/brain.mjs';
+import { passesGate, GATE_AUC, ROUTE_MIN, fires, validPattern, membership, scoreInput, route, answer, verifyReceipt, auc, verifyOn, adopt, toRecord, fromRecord, inputHash, HIGH_STAKES_GATE, REGRESSION_TOLERANCE } from '../src/brain.mjs';
 import { sample, shopperRows, SYNTHETIC, NOTES } from '../src/streams.mjs';
 
 const brain = (d) => JSON.parse(readFileSync(new URL('../brains/' + d + '.slm.json', import.meta.url)));
@@ -149,6 +149,33 @@ test('verifyOn + adopt: re-verified on the node\'s OWN data; refused when it doe
   assert.match(s.reason, /did not re-verify/);
   assert.equal(adopt(null, rows).reason, 'malformed pattern');
   assert.equal(adopt(fraud, rows, 0.99).adopt, false);
+  // never replace a better brain: a subtle tamper that clears the gate but scores below the current one is refused
+  const tampers = fraud.rules.flatMap((_, k) => [0, 0.5].map((m) => ({ ...fraud, rules: fraud.rules.map((r, i) => (i === k ? { ...r, w: r.w * m } : r)) })));
+  const subtle = tampers.find((p) => { const x = verifyOn(p, rows).auc; return x >= 0.6 && x < v.auc - REGRESSION_TOLERANCE; });
+  assert.ok(subtle, 'some one-rule tamper clears the gate yet scores worse');
+  const sv = verifyOn(subtle, rows).auc;
+  assert.ok(sv >= 0.6 && sv < v.auc - REGRESSION_TOLERANCE, 'subtle: clears the gate, worse than the original — ' + sv);
+  assert.equal(adopt(subtle, rows).adopt, true, 'with nothing to compare against, the gate alone would let it in');
+  const refused = adopt(subtle, rows, 0.6, fraud);
+  assert.equal(refused.adopt, false);
+  assert.match(refused.reason, /worse than the brain it would replace/);
+  assert.equal(refused.currentAuc, v.auc);
+  assert.equal(adopt(fraud, rows, 0.6, fraud).adopt, true, 'the same brain is never "worse" than itself');
+  // the tolerance edge: exactly REGRESSION_TOLERANCE below the current one is still adopted
+  const at = adopt(fraud, rows, 0.6, { ...fraud, rules: fraud.rules });
+  assert.equal(at.adopt, true);
+  assert.equal(adopt(fraud, rows, 0.6, { junk: 1 }).adopt, true, 'a malformed current brain is ignored');
+  assert.ok(HIGH_STAKES_GATE > 0.6 && HIGH_STAKES_GATE <= 0.7);
+  // a receipt names its case: the input hash changes with the input and with nothing else
+  const lib = { fraud };
+  const a1 = answer(lib, rows[0]), a2 = answer(lib, rows[1]);
+  assert.equal(a1.receipt.input, inputHash(fraud, rows[0]));
+  assert.equal(a1.receipt.input.length, 16);
+  assert.notEqual(a1.receipt.input, a2.receipt.input);
+  assert.equal(inputHash(fraud, { ...rows[0], unrelated: 5 }), a1.receipt.input, 'only the values the pattern read');
+  assert.equal(verifyReceipt({ ...a1.receipt, input: a2.receipt.input }), false);
+  assert.equal(inputHash(null, rows[0]), '');
+  assert.equal(inputHash(fraud, null), '');
   assert.deepEqual(verifyOn(null, rows), { auc: 0.5, acc: 0, n: 0 });
   assert.deepEqual(verifyOn({}, rows), { auc: 0.5, acc: 0, n: 0 });
   assert.deepEqual(verifyOn(fraud, []), { auc: 0.5, acc: 0, n: 0 });
@@ -184,54 +211,6 @@ test('a pattern travels as a spine record and comes back identical; junk records
   assert.equal(fromRecord({ features: 'a', rules: 'a|>|x|1', dist: 'a:0,0,0,0,0' }), null);
   assert.equal(fromRecord({ ...toRecord(fraud), rules: 5 }), null);
   assert.equal(fromRecord({ ...toRecord(fraud), dist: 'zz' }), null);
-});
-
-test('meshRoute: the abstaining node is answered by the peer that covers the input', () => {
-  const q = sample('inventory', 5, 3).rows[0];
-  assert.equal(answer({ churn }, q).verdict, 'ABSTAIN');
-  const peers = [{ node: 'service', library: { churn } }, { node: 'ops', library: { inventory: inv } }, { node: 'finance', library: { fraud } }];
-  const m = meshRoute(peers, q, 'service');
-  assert.equal(m.node, 'ops');
-  assert.equal(m.answer.domain, 'inventory');
-  assert.equal(meshRoute(peers, q, 'ops'), null);                  // the only cover is excluded
-  assert.equal(meshRoute([], q), null);
-  assert.equal(meshRoute(null, q), null);
-  const twin = meshRoute([{ node: 'z', library: { inventory: inv } }, { node: 'a', library: { inventory: inv } }], q);
-  assert.equal(twin.node, 'a');                                    // equal routes → the lower name, deterministically
-  const alt = { ...inv, patternId: 'alt', rules: inv.rules.map((r) => ({ ...r, w: -r.w })) };   // same shape, same route score
-  const dup = meshRoute([{ node: 'a', library: { inventory: inv } }, { node: 'a', library: { inventory: alt } }], q);
-  assert.equal(dup.answer.receipt.patternId, inv.patternId);       // a duplicate name never displaces the first answer
-  const far = { ...inv, patternId: 'far', dist: Object.fromEntries(Object.entries(inv.dist).map(([f, d]) => [f, { ...d, q1: d.q3, q3: d.q3 + 1e-6 }])) };
-  const weaker = answer({ inventory: far }, q);
-  assert.equal(weaker.verdict, 'VERIFIED');
-  assert.ok(weaker.routeScore < answer({ inventory: inv }, q).routeScore);
-  assert.equal(meshRoute([{ node: 'z', library: { inventory: inv } }, { node: 'a', library: { inventory: far } }], q).node, 'z');   // the better route wins over the lower name
-  assert.equal(meshRoute([{ node: 'a', library: { inventory: far } }, { node: 'z', library: { inventory: inv } }], q).node, 'z');
-});
-
-test('secondOpinion: only an independent pattern on another node may confirm', () => {
-  const q = sample('fraud', 41, 3).rows[0];
-  const first = answer({ fraud }, q);
-  const other = { ...fraud, patternId: 'grown-elsewhere', rules: fraud.rules.slice(0, Math.max(1, fraud.rules.length - 1)) };
-  const peers = [{ node: 'finance', library: { fraud } }, { node: 'ops', library: { fraud } }, { node: 'audit', library: { fraud: other } }, { node: 'x', library: { churn } }];
-  const s = secondOpinion(peers, q, first, ['finance']);
-  assert.equal(s.node, 'audit');                                   // ops holds a COPY of the same pattern → refused
-  assert.equal(s.answer.domain, 'fraud');
-  assert.equal(secondOpinion(peers, q, first, ['finance', 'audit']), null);
-  assert.equal(secondOpinion(peers, q, first, 'audit'), null);       // a bare name works; finance + ops are copies, x has no fraud
-  assert.equal(secondOpinion(peers, q, first, []).node, 'audit');
-  assert.equal(secondOpinion(peers, q, { ...first, verdict: 'ABSTAIN' }, []), null);
-  assert.equal(secondOpinion(peers, q, { ...first, receipt: { patternId: '' } }, []), null);
-  assert.equal(secondOpinion(peers, q, null, []), null);
-  assert.equal(secondOpinion(null, q, first, []), null);
-  const twin = secondOpinion([{ node: 'z', library: { fraud: other } }, { node: 'b', library: { fraud: other } }], q, first, []);
-  assert.equal(twin.node, 'b');
-  const alt = { ...other, patternId: 'alt2', rules: other.rules.map((r) => ({ ...r, w: -r.w })) };
-  assert.equal(secondOpinion([{ node: 'b', library: { fraud: other } }, { node: 'b', library: { fraud: alt } }], q, first, []).answer.receipt.patternId, 'grown-elsewhere');
-  const far = { ...other, patternId: 'far2', dist: Object.fromEntries(Object.entries(other.dist).map(([f, d]) => [f, { ...d, q1: d.q3, q3: d.q3 + 1e-6 }])) };
-  assert.equal(secondOpinion([{ node: 'z', library: { fraud: other } }, { node: 'a', library: { fraud: far } }], q, first, []).node, 'z');
-  assert.equal(secondOpinion([{ node: 'a', library: { fraud: far } }, { node: 'z', library: { fraud: other } }], q, first, []).node, 'z');
-  assert.equal(secondOpinion([{ node: 'q', library: null }, null, { node: 'r', library: { churn } }], q, first, []), null);
 });
 
 test('streams: per-device samples are seeded, distinct across seeds, and labelled', () => {

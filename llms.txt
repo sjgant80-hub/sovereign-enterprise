@@ -1,40 +1,53 @@
 # Sovereign Enterprise
 
 > A full AI company on its own devices. Six AI agents (sales, service, finance, operations, systems, audit) run the company end to
-> end; two humans watch. Every device is a brain — a verified, readable pattern library (the Konomi SLM) that answers only inside
-> what it was verified on and abstains outside it — and the brains share what they learn over a signed peer-to-peer spine. Money and
-> security calls need a second, independent brain to agree; what no brain can confirm waits for a human. Nothing leaves the building.
+> end; two people watch and decide the exceptions; an office hub is the door where the work arrives. Every device is a brain — a
+> verified, readable pattern library (the Konomi SLM) that answers only inside what it was verified on and abstains outside it — and
+> the brains talk only through signed records on a peer-to-peer spine. Money and security calls need a second, independent brain to
+> agree; what no brain can confirm waits for a person. Nothing leaves the building.
 
 Live: https://sjgant80-hub.github.io/sovereign-enterprise/
+The case for the board: https://sjgant80-hub.github.io/sovereign-enterprise/#case
+How it works (a real decision traced step by step): https://sjgant80-hub.github.io/sovereign-enterprise/#how
+Blueprint (every organ, how it connects, how it is proven): https://sjgant80-hub.github.io/sovereign-enterprise/#blueprint
+For your business (adoption guide, your headcount, the rival, the cloud): https://sjgant80-hub.github.io/sovereign-enterprise/#business
 White paper: https://sjgant80-hub.github.io/sovereign-enterprise/whitepaper.html
 Source: https://github.com/sjgant80-hub/sovereign-enterprise
 
 ## How the AI company works
-- Each agent is a device with its own Ed25519 key, a grant scoped to its department, and a dedicated brain file it re-verifies on its
-  own data before trusting it.
-- Work lands at a door that does not know who handles it; an agent that cannot answer asks the mesh, and the device whose brain covers
-  the case answers with a receipt.
+- Nine devices: six agents, two people, the office hub. Each has its own Ed25519 key, a grant scoped to its department, and its own
+  copy of the company; every write names the writer's previous write (a per-writer hash chain), so a stolen key cannot rewrite the past.
+- Work arrives at the hub. An agent answers from its own brain; if it cannot, it posts a signed question and other agents post signed
+  replies from their own brains. There is no shared memory: every answer the company acts on is a record every device holds.
 - An agent asked about the same work repeatedly adopts the published brain — only if it re-verifies on its own data. A poisoned brain
   is refused by every device that checks it.
-- High-stakes calls (holding a payment, credit terms, quarantining a machine) need an independent brain on another device to agree; the
-  Audit agent grows its own for exactly that.
+- High-stakes calls (holding a payment, credit terms, quarantining a machine) need an independent brain on another device to agree.
 - Outcomes come back; an agent regrows its brain and promotes the new one only if it beats the old on outcomes neither saw.
-- Inbound text is screened for invisible characters, bidi tricks, tag-character smuggling and injection phrasing before any brain reads it.
+- Inbound text is screened before any brain reads it; a new attack a person confirms becomes a signed antibody every agent re-checks
+  on its own genuine messages before adopting it.
+- A behaviour watch (Gary W. Floyd's Behavioral Entropy Signatures) pauses an agent that stops behaving like itself — a valid key is
+  not enough.
+- Free text (reading a customer's message, routing it, drafting a reply) goes to a language model the company chooses — on its own
+  machine, in the browser, or a provider with its own key; spend capped before any paid call; every call audited; drafts a person sends.
+- Devices on different machines connect directly over WebRTC with no server: a hand-carried code, each key proven on the link.
 
 ## Measured (re-runnable: node tools/run-company.mjs --check)
-- A working day of 480 pieces of work: 77.7% done end to end by agents; 76.7% of agent calls matched the real outcome; 120 money and
-  security calls confirmed by an independent second brain; a poisoned brain refused by 5 of 5 devices; every device converged; books
-  balanced; vault audited.
+- A working day of 480 pieces of work on published datasets: 82.1% done end to end by agents; 91.1% of agent calls matched the real
+  outcome they never saw; 142 money and security calls confirmed by an independent second brain; 66 answered by another device's brain
+  over the spine; every device converged; books balanced; vault audited.
 
 ## The white paper — the AI-native office
 - AI runs 90% of a modelled 50-person UK office's operational work on owned machines; five AI-native people oversee it.
 - Five-year cost: £12.6m today, £12.7m with an AI seat on every desk, £2.3m AI-native and owned — £10.3m saved (82%).
+- Owning the AI capacity vs renting the same dedicated GPUs from AWS London, and how far an AI-native rival can undercut you —
+  computed from cited sources on the page.
 
 ## Proof
-- Unit, boundary, hostile-input and integration suites; two byte-reproducible re-runs (the AI company's working day; a hostile-network
-  simulation); a mutation + fuzz witness over every decision kernel.
+- 384 unit, boundary, hostile-input and integration tests; two byte-reproducible re-runs (the AI company's working day; a
+  hostile-network simulation); a mutation + fuzz witness over every decision kernel; a gate on the page's own script.
 
 ## Credits
 - Konomi architecture and the Konomi SLM lineage: Thomas Frumkin.
-- GEP / WIPER / BES / Dual-Map design lens: Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Service, LLC).
-- Real sales data: UCI Online Shoppers Purchasing Intention (Sakar & Kastro, 2018), CC BY 4.0. MIT licensed.
+- GEP / WIPER / BES / Dual-Map design lens: Gary W. Floyd, Lumiea Systems Research Division — ThunderStruck Service, LLC.
+- Data: UCI Machine Learning Repository and OpenML datasets (CC BY 4.0; the card-fraud sample under ODbL v1.0) — every citation in NOTICE.
+- MIT licensed.

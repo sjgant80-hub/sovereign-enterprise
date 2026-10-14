@@ -1,14 +1,17 @@
 {
   "name": "sovereign-enterprise",
-  "version": "1.0.0",
-  "description": "A company's whole operational layer — tasks, chat, CRM, documents, books, the one-true-record and the people — on the employees' own devices, peer to peer, every write signed and gated. Plus the white paper: how AI runs 90% of an office's work on machines the company owns.",
+  "version": "2.0.0",
+  "description": "A full AI company on its own devices: six AI agents run sales, service, finance, operations, systems and audit end to end while two people watch. Every device is a verified brain; every write is signed and gated, peer to peer. Plus the white paper and the board case: how AI runs 90% of an office's work on machines the company owns.",
   "type": "module",
   "license": "MIT",
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "witness": "node witness-all.mjs",
     "simulate": "node tools/simulate.mjs",
-    "simulate:check": "node tools/simulate.mjs --check"
+    "simulate:check": "node tools/simulate.mjs --check",
+    "company": "node tools/run-company.mjs",
+    "company:check": "node tools/run-company.mjs --check",
+    "model:check": "node tools/model-check.mjs"
   },
   "engines": { "node": ">=20" }
 }

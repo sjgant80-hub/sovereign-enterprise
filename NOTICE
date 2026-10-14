@@ -17,16 +17,46 @@ Vendored, verbatim, and credited:
     SENTINEL-style verify-before-parse guard on seeds).
   - vendor/konomi/domains-ext.mjs — the Konomi SLM's realistic-synthetic domain generators (each a stated rule plus
     seeded noise), with a two-line hook so a device can draw its own sample by seed.
+  - vendor/bes-inward/bes.mjs — the Behavioral Entropy Signatures kernel (op-mix, rhythm variability, L1 divergence) from
+    sjgant80-hub/bes-inward (src/bes.mjs, byte-identical at commit 166ec1a); src/watch.mjs applies it to the company's own agents.
+  - vendor/csv-forge/csv.mjs — csv-forge's CSV reader (sjgant80-hub/csv-forge @ 19633c3, unchanged): parse, infer each
+    column, pick the yes/no column to predict, encode the features. src/train.mjs grows a brain on what it reads.
 
-Real data: brains/shopper.sample.json holds held-out (Nov–Dec) sessions of the Online Shoppers Purchasing Intention
-dataset — Sakar & Kastro, UCI Machine Learning Repository (2018), DOI 10.24432/C5F88Q, CC BY 4.0.
+src/rtc.mjs reuses, adapted: fingerprintOf and the proof-of-key bound to both DTLS fingerprints (sjgant80-hub/fallkard-forge,
+trade.mjs); gathering ICE into one copyable blob and refusing a malformed blob before WebRTC (sjgant80-hub/fall-os webrtc.mjs,
+sjgant80-hub/fall-federate signaling.mjs).
 
-Standards implemented: Ed25519 (RFC 8032) via WebCrypto; SHA-256 (FIPS 180-4); Merkle transparency logs with
+Antibodies (src/antibody.mjs) follow sjgant80-hub/immune-exchange (negative selection: adopt only after re-running on your own
+data) and sjgant80-hub/kar-shingle (shingle -> SHA-256 -> set overlap); the lookalike-letter list is from sjgant80-hub/kar-glyphguard.
+
+DATA (each sample file states its citation, licence, label and split in its own "source" field; built from the raw
+downloads by tools/build-real-brains.mjs; protected characteristics — age, sex, marital status, education — are left
+out on purpose):
+  - brains/shopper.sample.json — Online Shoppers Purchasing Intention, Sakar & Kastro, UCI ML Repository (2018),
+    DOI 10.24432/C5F88Q · CC BY 4.0 · real.
+  - brains/real/churn.* — Iranian Churn, UCI ML Repository (2020), DOI 10.24432/C5JW3Z · CC BY 4.0 · real.
+  - brains/real/fraud.* — Credit Card Fraud Detection, ULB Machine Learning Group / Worldline (Dal Pozzolo, Caelen,
+    Johnson & Bontempi, IEEE CIDM 2015), via OpenML 1597 · Open Database License v1.0 (database) / Database Contents
+    License v1.0 (contents) · real. brains/real/fraud.sample.json IS A DERIVATIVE DATABASE AND IS MADE AVAILABLE UNDER
+    THE ODbL v1.0 — not under this repository's MIT licence.
+  - brains/real/credit.* — Default of Credit Card Clients, Yeh, UCI ML Repository (2009), DOI 10.24432/C55S3H
+    (Yeh & Lien, Expert Systems with Applications 36, 2009) · CC BY 4.0 · real.
+  - brains/real/intrusion.* — RT-IoT2022, Sharmila & Nagapadma, UCI ML Repository (2023), DOI 10.24432/C5P338 ·
+    CC BY 4.0 · real lab-testbed traffic, attacks staged by the researchers.
+  - brains/real/energy.* — Individual Household Electric Power Consumption, Hebrail & Berard, UCI ML Repository
+    (2006), DOI 10.24432/C58K54 · CC BY 4.0 · real meter data; the "next hour above the 80th percentile" label is ours.
+  - brains/real/maintenance.* — AI4I 2020 Predictive Maintenance, Matzka, UCI ML Repository (2020), DOI 10.24432/C5HS5C
+    · CC BY 4.0 · SYNTHETIC by its authors' own description, not real measurements.
+  - inventory — no openly-licensed real stock-out dataset exists; it runs on the Konomi SLM's realistic-synthetic
+    generator (vendor/konomi/domains-ext.mjs), rule stated.
+
+Standards implemented: Ed25519 (RFC 8032) via WebCrypto; WebRTC data channels (RFC 8831), ICE (RFC 8445), STUN (RFC 8489), SDP fingerprints (RFC 8122), DEFLATE (RFC 1951), base64url (RFC 4648); SHA-256 (FIPS 180-4); Merkle transparency logs with
 inclusion and consistency proofs (RFC 6962 / RFC 9162); RGA sequence CRDT (Roh et al., 2011); observed-remove sets
 and last-writer-wins registers (Shapiro et al., 2011); the Mann–Whitney form of the ROC AUC.
 
 The design lens the estate builds in — entropy-guided regulation (the Guided Entropy Principle), weighted
-information pruning (WIPER), behavioural entropy signatures (BES) and dual-map checking — is the work of
+information pruning (WIPER), behavioural entropy signatures (BES — "GEP-Based Security: Behavioral Entropy Signatures for
+Cybersecurity and DevOps", applied here by src/watch.mjs) and dual-map checking — is the work of
 GARY W. FLOYD, Lumiea Systems Research Division (a subsidiary of ThunderStruck Service, LLC), New Caney, Texas.
 
 This build draws directly on: Gary W. Floyd, Lumiea Systems Research Division — ThunderStruck Service, LLC —
@@ -37,5 +67,6 @@ refused), and why a call no brain can confirm is held for a human (PENDING) rath
 
 External figures in the white paper are cited in data/basis.json with their sources: ONS, HMRC (gov.uk), The
 Pensions Regulator, DESNZ, ECB, Salesforce, Microsoft, Anthropic, ElevenLabs, NVIDIA, LMSYS, Apple and the UK
-retailers named there. The office in the white paper is modelled, not a client. The people, customers and suppliers
+retailers named there, and the AWS EC2 price file for EU (London) and the Amazon Bedrock pricing page (read
+2026-10-14). The office in the white paper is modelled, not a client. The people, customers and suppliers
 in the live company are fictional.

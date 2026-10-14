@@ -1,0 +1,86 @@
+{
+ "churn": {
+  "role": "service",
+  "title": "Customer churn",
+  "real": true,
+  "kind": "real",
+  "heldAuc": 0.89996,
+  "patternId": "76821455744c2c34",
+  "file": "real/churn.slm.json",
+  "sample": "real/churn.sample.json",
+  "licence": "CC BY 4.0",
+  "dataset": "Iranian Churn"
+ },
+ "fraud": {
+  "role": "finance",
+  "title": "Card fraud",
+  "real": true,
+  "kind": "real",
+  "heldAuc": 0.958638,
+  "patternId": "0a3677dc5ee17cb8",
+  "file": "real/fraud.slm.json",
+  "sample": "real/fraud.sample.json",
+  "licence": "ODbL 1.0 (database) / DbCL 1.0 (contents)",
+  "dataset": "Credit Card Fraud Detection (ULB Machine Learning Group / Worldline)"
+ },
+ "credit": {
+  "role": "finance",
+  "title": "Card default",
+  "real": true,
+  "kind": "real",
+  "heldAuc": 0.744073,
+  "patternId": "b3ce964f428c0319",
+  "file": "real/credit.slm.json",
+  "sample": "real/credit.sample.json",
+  "licence": "CC BY 4.0",
+  "dataset": "Default of Credit Card Clients"
+ },
+ "inventory": {
+  "role": "ops",
+  "title": "Inventory stockout",
+  "real": false,
+  "kind": "synthetic",
+  "heldAuc": null,
+  "patternId": null,
+  "file": "inventory.slm.json",
+  "sample": null,
+  "licence": "n/a — realistic-synthetic generator (vendor/konomi/domains-ext.mjs, sjgant80-hub/konomi-slm)",
+  "dataset": "none — no openly-licensed real stock-out dataset found"
+ },
+ "maintenance": {
+  "role": "ops",
+  "title": "Machine failure",
+  "real": false,
+  "kind": "published-synthetic",
+  "heldAuc": 0.8587,
+  "patternId": "35f3463412d2f761",
+  "file": "real/maintenance.slm.json",
+  "sample": "real/maintenance.sample.json",
+  "licence": "CC BY 4.0",
+  "dataset": "AI4I 2020 Predictive Maintenance Dataset"
+ },
+ "intrusion": {
+  "role": "systems",
+  "title": "Network intrusion",
+  "real": true,
+  "kind": "real-testbed",
+  "heldAuc": 0.996528,
+  "patternId": "99efe2c2cae5cee2",
+  "file": "real/intrusion.slm.json",
+  "sample": "real/intrusion.sample.json",
+  "licence": "CC BY 4.0",
+  "dataset": "RT-IoT2022"
+ },
+ "energy": {
+  "role": "ops",
+  "title": "Peak load",
+  "real": true,
+  "kind": "real-derived-label",
+  "heldAuc": 0.843199,
+  "patternId": "9f966fdcfff64d36",
+  "file": "real/energy.slm.json",
+  "sample": "real/energy.sample.json",
+  "licence": "CC BY 4.0",
+  "dataset": "Individual Household Electric Power Consumption"
+ }
+}

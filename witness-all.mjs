@@ -11,16 +11,27 @@
 //   agent.mjs  — what an agent does with an answer: screen, own, mesh, second-brain cross-check, watch list
 //   screen.mjs — inbound text screen (invisible Unicode, bidi, tag smuggling, prompt injection)
 //   grow.mjs   — a node grows its own brain on its own data, graded on held-out rows it never grew on
+//   train.mjs  — teach the company your own work: a CSV → a verified brain grown on the device
+//   mesh.mjs   — how the brains talk: ask / reply / second opinion as signed records, never shared memory
+//   market.mjs — the board case: owned compute vs dedicated cloud GPU vs per-token; how far an AI-native rival can undercut
 //   company.mjs — the AI company: the door, each agent's step, what decisions write, learning, regrowth, the board
+//   explain.mjs — the page that explains itself: six diagrams, any decision traced, the blueprint, the adoption guide
+//   adopt.mjs  — fit it to your business: your headcount through the white paper's own model
+//   rtc.mjs    — cross-machine sync: the copy-paste code, the DTLS-bound proof of key, the have/want/env session and
+//                its bounds, and the WebRTC glue (run against an in-memory RTCPeerConnection, so nothing is excluded)
+//   antibody.mjs — a confirmed attack → a signed antibody each device adopts only if it fires on none of its own benign messages
+//   watch.mjs  — the behaviour watch over the agents (BES): off its work, entropy collapse, drift on the same work, auto-pause
+//   model.mjs  — the model tier: adapters (timeouts, request shapes), strict parsers, worst-case budget, the audit record
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const PAIRS = [
-  ['src/crdt.mjs', ['test/crdt.test.mjs', 'test/fuzz.test.mjs']],
-  ['src/gate.mjs', ['test/gate.test.mjs', 'test/fuzz.test.mjs']],
+  ['src/crdt.mjs', ['test/crdt.test.mjs', 'test/fuzz.test.mjs', 'test/spine.fuzz.test.mjs']],
+  ['src/gate.mjs', ['test/gate.test.mjs', 'test/fuzz.test.mjs', 'test/spine.fuzz.test.mjs']],
   ['src/canon.mjs', ['test/canon.test.mjs']],
   ['src/vault.mjs', ['test/vault.test.mjs', 'test/vault.edge.test.mjs']],
   ['src/books.mjs', ['test/books.test.mjs']],
@@ -31,6 +42,15 @@ export const PAIRS = [
   ['src/screen.mjs', ['test/agent.test.mjs', 'test/fuzz.test.mjs']],
   ['src/grow.mjs', ['test/grow.test.mjs']],
   ['src/company.mjs', ['test/company.test.mjs', 'test/fuzz.test.mjs']],
+  ['src/market.mjs', ['test/market.test.mjs']],
+  ['src/mesh.mjs', ['test/mesh.test.mjs']],
+  ['src/train.mjs', ['test/train.test.mjs']],
+  ['src/model.mjs', ['test/model.test.mjs']],
+  ['src/antibody.mjs', ['test/antibody.test.mjs']],
+  ['src/watch.mjs', ['test/watch.test.mjs']],
+  ['src/rtc.mjs', ['test/rtc.test.mjs']],
+  ['src/explain.mjs', ['test/explain.test.mjs']],
+  ['src/adopt.mjs', ['test/adopt.test.mjs']],
 ];
 const only = process.argv.slice(2);
 let allClean = true; const rows = [];
@@ -38,6 +58,13 @@ for (const [src, tests] of PAIRS) {
   if (only.length && !only.includes(src)) continue;
   if (!existsSync(join(HERE, src))) continue;
   const t0 = Date.now();
+  // a red suite kills every mutant and reads as CLEAN — so the unmutated code must pass its tests first, or nothing is judged
+  const base = spawnSync(process.execPath, ['--test', ...tests], { cwd: HERE, encoding: 'utf8', timeout: 300000 });
+  if (base.status !== 0) {
+    console.log(`✗ ${src.padEnd(16)} RED BASELINE — its tests fail with no mutation applied (${tests.join(', ')}); nothing can be judged`);
+    allClean = false;
+    continue;
+  }
   const r = runMutations(join(HERE, src), { cwd: HERE, cap: 5000, timeout: 120000, testCmd: ['node', '--test', ...tests] });
   rows.push(r);
   console.log(`${r.clean && !r.capped ? '✓' : '✗'} ${src.padEnd(16)} ${String(r.killed).padStart(3)}/${String(r.total).padEnd(3)} killed${r.ignored.length ? ` · ${r.ignored.length} reviewed-equivalent` : ''} · ${((Date.now() - t0) / 1000).toFixed(1)}s`);

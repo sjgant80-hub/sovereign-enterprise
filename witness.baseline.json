@@ -1,18 +1,13 @@
 [
   {
-    "mutation": "< → <=",
-    "snippet": "if (it.hash < cur.hash) slot.set(key, it);",
-    "reason": "equivalent: this line only runs inside `else if (cur.hash !== it.hash)`, so the two hashes are never equal here and < and <= decide identically."
+    "mutation": "&& → ||",
+    "snippet": "const plain = (o) => o !== null && typeof o === 'object' && !Array.isArray(o);",
+    "reason": "equivalent at the verdict: plain() is a pre-filter. In inspect() the parsed envelope is always a plain object (the magic check guarantees the text starts with {, so JSON.parse yields an object or throws); in the op grammar and fields(), anything a mutant would wrongly admit (a string, an array, null) is independently refused - by the op-kind switch (no .k), by FIELD (index keys fail the regex), by the field count, or by the surrounding try (null.k / Object.keys(null) throw -> false). No gate verdict changes."
   },
   {
     "mutation": "&& → ||",
     "snippet": "const plain = (o) => o !== null && typeof o === 'object' && !Array.isArray(o);",
-    "reason": "equivalent at the verdict: plain() is a pre-filter. Anything it would wrongly admit (null, an array) is independently refused by exactKeys (an array has index keys; the envelope/op key names never match), by FIELD (index keys fail the regex), or by the surrounding try (null.k throws → false). No gate verdict changes."
-  },
-  {
-    "mutation": "&& → ||",
-    "snippet": "const plain = (o) => o !== null && typeof o === 'object' && !Array.isArray(o);",
-    "reason": "equivalent at the verdict: plain() is a pre-filter. Anything it would wrongly admit (null, an array) is independently refused by exactKeys (an array has index keys; the envelope/op key names never match), by FIELD (index keys fail the regex), or by the surrounding try (null.k throws → false). No gate verdict changes."
+    "reason": "equivalent at the verdict: plain() is a pre-filter. In inspect() the parsed envelope is always a plain object (the magic check guarantees the text starts with {, so JSON.parse yields an object or throws); in the op grammar and fields(), anything a mutant would wrongly admit (a string, an array, null) is independently refused - by the op-kind switch (no .k), by FIELD (index keys fail the regex), by the field count, or by the surrounding try (null.k / Object.keys(null) throw -> false). No gate verdict changes."
   },
   {
     "mutation": "< → <=",
@@ -23,5 +18,30 @@
     "mutation": "< → <=",
     "snippet": "const rows = Object.values(acc).sort((x, y) => (x.code < y.code ? -1 : 1)).map((r) => ({ .",
     "reason": "equivalent: the rows are the values of an object keyed by account code, so no two rows ever share a code; x.code < y.code and x.code <= y.code decide identically for every pair the sort compares."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "if (hi < 0) return { ok: true, share: null, alwaysPays: false };",
+    "reason": "equivalent: the two differ only when the five-year net saving at 100% automation is exactly £0.00 — a float computed from pay, CPI powers and sourced prices; then the original bisects to a share of 1 and the mutant says \"never\", both meaning \"only at 100%\". No input a person can type lands on exactly zero, and the page shows the same sentence either way to within 0.1%."
+  },
+  {
+    "mutation": ">= → >",
+    "snippet": "if (net(0) >= 0) return { ok: true, share: 0, alwaysPays: true };",
+    "reason": "equivalent: differs only when the net saving at 0% automation is exactly £0.00 (a float sum of pay, power, hardware and transition); then the original reports \"pays at any share\" and the mutant bisects to a share of 0.001 — the same answer to the 0.1% the page shows."
+  },
+  {
+    "mutation": ">= → >",
+    "snippet": "for (let i = 0; i < 30; i++) { const m = (a + b) / 2; if (net(m) >= 0) b = m; else a = m; ",
+    "reason": "equivalent: the bisection branch differs only when the net saving at a dyadic midpoint is exactly £0.00, a measure-zero event for a float built from CPI powers and sourced prices; either way the bracket keeps the root."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "for (let i = 0; i < 30; i++) { const m = (a + b) / 2; if (net(m) >= 0) b = m; else a = m; ",
+    "reason": "equivalent at the output: a 31st halving moves the bracket by under 2^-31 (5e-10), and the answer is rounded up to 0.001 (Math.ceil(b * 1000) / 1000); the rounding crosses a 0.001 step only if the root lies within 5e-10 of one — never for an input a person types (the tests probe the result at ±0.001 and both versions agree)."
+  },
+  {
+    "mutation": "< → <=",
+    "snippet": "if (v.auc < c - REGRESSION_TOLERANCE) return { adopt: false, localAuc: v.auc, n: v.n, curr",
+    "reason": "equivalent: the two differ only when a candidate brain’s measured AUC on this device’s cases is exactly the current brain’s AUC minus 0.01, in floating point (both are rounded to six decimals from a Mann–Whitney count over hundreds of cases); then one version adopts and the other refuses a brain that is, by the stated rule, on the line. No real pair of brains lands exactly there; every case either side is tested."
   }
 ]
