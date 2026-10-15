@@ -26,6 +26,7 @@
 //   store.mjs  — the device's secrets at rest: the non-extractable key in IndexedDB, the sealed log and its retention rule, the
 //                one-time migration off the plaintext copies (run against an in-memory IndexedDB with real WebCrypto)
 //   recovery.mjs — owner recovery cards: Shamir over GF(256), the checksummed card, every refusal
+//   receipt.mjs — the per-planting receipt: before and after on the business's own held-out rows, the office comparison, the live results — signed, re-derivable, reproducible
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
@@ -81,6 +82,7 @@ export const PAIRS = [
   ['src/explain.mjs', ['test/explain.test.mjs']],
   ['src/adopt.mjs', ['test/adopt.test.mjs']],
   ['src/plant.mjs', ['test/plant.test.mjs']],
+  ['src/receipt.mjs', ['test/receipt.test.mjs']],
 ];
 // imported (by the tests) it only lends hiddenSpans and PAIRS; run directly, it is the gate
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();
