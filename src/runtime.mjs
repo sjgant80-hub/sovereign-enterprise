@@ -382,7 +382,7 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     const all = Object.values(ACTIONS).flatMap((a) => [a[0], a[1]]);
     for (const it of thief.list('inbox').filter((x) => x.to === id && x.status === 'open')) {
       const put = await thief.put('decisions', uid(thief, 'd'), { agent: id, event: it.id, domain: it.channel, action: all[Math.floor(co.thiefRnd() * all.length) % all.length],
-        state: 'done', by: 'own', cross: true, second: '', conf: 900, receipt: '', why: 'verified pattern, confident', customer: it.customer, channel: it.channel });
+        state: 'done', by: 'own', cross: true, second: '', conf: 900, receipt: '', why: 'verified pattern, clear of its decision line', customer: it.customer, channel: it.channel });
       if (put.ok) await thief.put('inbox', it.id, { status: 'done', doneBy: id });
     }
   };

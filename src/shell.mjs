@@ -26,7 +26,7 @@ import { sha256 } from './sha256.mjs';
 import { sign as signWith, verify } from './keys.mjs';
 import { AGENTS, HUB, OWNER_OF, agentName, openStep, afterMesh, closeStep, effects, splitEffects, shouldLearn, pickEvent } from './company.mjs';
 import { askRecord, replyFor, repliesTo, heardFrom, pickAnswer, pickSecond } from './mesh.mjs';
-import { ACTIONS, DEFAULT_POLICY } from './agent.mjs';
+import { ACTIONS, DEFAULT_POLICY, moneyLimitOf } from './agent.mjs';
 import { adopt, fromRecord, toRecord, GATE_AUC, HIGH_STAKES_GATE } from './brain.mjs';
 import { growPattern } from './grow.mjs';
 import { screenWith, adoptAntibody, BENIGN_CORPUS } from './antibody.mjs';
@@ -68,7 +68,8 @@ export function gateFor(d) {
 export function policyOf(node) {
   try {
     const p = node.list('policy').find((r) => r.id === 'agents');
-    return p && Number.isSafeInteger(p.minConfidence) ? { minConfidence: p.minConfidence / 1000 } : DEFAULT_POLICY;
+    if (!p || !Number.isSafeInteger(p.minConfidence)) return DEFAULT_POLICY;
+    return { minConfidence: p.minConfidence / 1000, moneyLimit: moneyLimitOf({ moneyLimit: p.moneyLimit }) };
   } catch { return DEFAULT_POLICY; }
 }
 

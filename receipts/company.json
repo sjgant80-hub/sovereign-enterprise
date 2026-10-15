@@ -201,10 +201,10 @@
    "cosigned": 11
   },
   "writes": 4089,
-  "digest": "3aa453767f681f4856602175841f2b16cc6cd26b0c1984d51d3086a28d65d498",
+  "digest": "5d2268c6e1150a9611a7a8c2722849eaa4b6edfe172d8923e305070ed4d256d1",
   "converged": true
  },
  "systemsDecisionsTotal": 55,
  "growthLog": 27,
- "receiptHash": "ca24ed6ad8a12a3877da0359ce76f1d7dd733fa243daf7543cc6db0fc159e7a4"
+ "receiptHash": "22b3b5f89c03dd599e19522abc8b1b000eeb26028d4c8e5e19da83f356743d56"
 }

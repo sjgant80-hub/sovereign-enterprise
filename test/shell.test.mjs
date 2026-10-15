@@ -531,14 +531,20 @@ test('uid, seedFor, gateFor, createWork: the ids, seeds and gates every device u
 test('policyOf, isPaused, clearsOf: read from the device’s own view of the spine', async () => {
   const o = await office({ agents: ['ops'] });
   const n = o.nodes.ops;
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05 });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0 });
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 200 });
   await o.nodes.owner.put('policy', 'other', { minConfidence: 900 });
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2 });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0 });
+  await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, moneyLimit: 250000 });   // a person sets a £2,500 limit
+  await o.sync();
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 250000 });
+  await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, moneyLimit: -1 });
+  await o.sync();
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0 }, 'a limit that is not a whole number of pence is no limit');
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 'high' });
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05 });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0 });
   assert.equal(S.isPaused(n, 'ops'), false);
   await o.nodes.owner.put('control', 'sales', { paused: true });
   await o.sync();
@@ -550,7 +556,7 @@ test('policyOf, isPaused, clearsOf: read from the device’s own view of the spi
   await o.sync();
   assert.equal(S.isPaused(n, 'sales'), false);
   assert.deepEqual(S.clearsOf(n), { ops: { at: 'd0007', rebaseline: false }, sales: { at: 'd0042', rebaseline: true } });
-  for (const junk of [null, {}, 7]) { assert.deepEqual(S.policyOf(junk), { minConfidence: 0.05 }); assert.equal(S.isPaused(junk, 'ops'), false); assert.deepEqual(S.clearsOf(junk), {}); }
+  for (const junk of [null, {}, 7]) { assert.deepEqual(S.policyOf(junk), { minConfidence: 0.05, moneyLimit: 0 }); assert.equal(S.isPaused(junk, 'ops'), false); assert.deepEqual(S.clearsOf(junk), {}); }
 });
 
 test('the books and the vault: an entry is posted and sequenced; a device without the whole scope refuses; the witness co-signs only a log that audits', async () => {

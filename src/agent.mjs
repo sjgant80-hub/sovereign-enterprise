@@ -21,7 +21,17 @@ export const ACTIONS = Object.freeze({
   energy: { 1: 'shed-load', 0: 'normal-load', stakes: 'normal', yes: 'about to overload', role: 'ops' },
 });
 
-export const DEFAULT_POLICY = Object.freeze({ minConfidence: 0.05 });
+// moneyLimit — whole pence; 0 = no limit. Above it, a person decides any act that commits the company's money, whatever the
+// brains say: letting a payment through, extending standard credit terms, raising a purchase order.
+export const DEFAULT_POLICY = Object.freeze({ minConfidence: 0.05, moneyLimit: 0 });
+export const MONEY_ACTIONS = Object.freeze(['release-payment', 'standard-terms', 'raise-po']);
+export const MAX_LIMIT = 1e11;   // £1bn in pence — a policy field, not a balance sheet
+const pounds = (p) => '£' + String(Math.floor(p / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (p % 100 ? '.' + String(p % 100).padStart(2, '0') : '');
+/** The money limit a policy sets, in pence (0 = none): a whole number from 0 to MAX_LIMIT, anything else is none. */
+export function moneyLimitOf(policy) {
+  const v = policy && policy.moneyLimit;
+  return Number.isSafeInteger(v) && v >= 1 && v <= MAX_LIMIT ? v : 0;
+}
 
 const verified = (a) => !!a && a.verdict === 'VERIFIED' && (a.label === 0 || a.label === 1) && typeof a.domain === 'string';
 
@@ -41,7 +51,7 @@ export function needsSecond(domain, confidence, policy) {
 }
 
 /**
- * Decide. Inputs are what the agent has already gathered:
+ * Decide. Inputs are what the agent has already gathered (and amount — the work's value in pence, for the money limit):
  *   screen — result of screen(text) for any inbound text, or null
  *   own    — this agent's own brain answer
  *   mesh   — the strongest verified reply from another device when own abstained (mesh.mjs pickAnswer): { node, answer } or null
@@ -50,6 +60,20 @@ export function needsSecond(domain, confidence, policy) {
  * → { state: 'done'|'watch', action, label, domain, by, crossChecked, why }
  */
 export function decide(inputs, policy = DEFAULT_POLICY) {
+  const d = choose(inputs, policy);
+  try {
+    const limit = moneyLimitOf(policy);
+    if (!limit || d.state !== 'done' || !MONEY_ACTIONS.includes(d.action)) return d;
+    const amount = inputs.amount, known = Number.isSafeInteger(amount) && amount >= 0;
+    if (known && amount <= limit) return d;
+    return { ...d, state: 'watch', why: (known ? pounds(amount) + ' is over the ' + pounds(limit) + ' limit a person set'
+      : 'the amount is not known and a ' + pounds(limit) + ' limit is set') + ' — held for a person' };
+  } catch {
+    return { state: 'watch', action: null, label: null, domain: null, by: 'fault', crossChecked: false, why: 'the agent failed closed' };
+  }
+}
+
+function choose(inputs, policy) {
   try {
     const { screen, own, mesh, second, model } = inputs || {};
     if (screen && screen.ok === false) {
@@ -62,7 +86,7 @@ export function decide(inputs, policy = DEFAULT_POLICY) {
       const action = actionFor(a.domain, a.label);
       if (!action) return { state: 'watch', action: null, label: a.label, domain: a.domain, by, crossChecked: false, why: 'no action is defined for this domain' };
       if (!needsSecond(a.domain, a.confidence, policy)) {
-        return { state: 'done', action, label: a.label, domain: a.domain, by, crossChecked: false, why: 'verified pattern, confident' };
+        return { state: 'done', action, label: a.label, domain: a.domain, by, crossChecked: false, why: 'verified pattern, clear of its decision line' };
       }
       if (verified(second) && second.domain === a.domain && second.label === a.label) {
         return { state: 'done', action, label: a.label, domain: a.domain, by, crossChecked: true, why: 'a second brain agreed' };

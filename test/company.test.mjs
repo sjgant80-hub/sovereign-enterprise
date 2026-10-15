@@ -195,6 +195,10 @@ test('nobody covers it → the watch list; junk fails closed', () => {
   assert.equal(openStep().fault, true);
   assert.equal(openStep({ agentId: 'x', event: { get text() { throw new Error('x'); } } }).fault, true);
   const m = closeStep({ agentId: 'ops', event: ev('inventory'), model: { label: 1, domain: 'inventory', by: 'ollama' } });
+  // the work's value reaches the money limit: a purchase order over it waits for a person
+  const po = (amount, moneyLimit) => closeStep({ agentId: 'ops', event: { ...ev('inventory'), amount }, model: { label: 1, domain: 'inventory', by: 'ollama' }, policy: { minConfidence: 0.05, moneyLimit } }).decision;
+  assert.deepEqual([po(5000, 10000).state, po(5000, 1000).state, po(5000, 0).state], ['done', 'watch', 'done']);
+  assert.equal(po(5000, 1000).action, 'raise-po');
   assert.deepEqual([m.decision.state, m.decision.by, m.decision.conf, m.decision.receipt], ['done', 'model:ollama', 0, '']);
 });
 

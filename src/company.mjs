@@ -120,7 +120,7 @@ export function closeStep(input) {
   try {
     const { agentId, event, scr = null, own = null, mesh = null, second = null, secondBy = '', model = null, fault = false, policy = DEFAULT_POLICY } = input || {};
     if (fault) throw new Error('fault');
-    const d = decide({ screen: scr, own, mesh, second, model }, policy);
+    const d = decide({ screen: scr, own, mesh, second, model, amount: event && event.amount }, policy);
     const first = own && own.verdict === 'VERIFIED' ? own : mesh && mesh.answer;
     const conf = first ? Math.round(first.confidence * 1000) : 0;
     const receipt = first && first.receipt ? String(first.receipt.receiptHash).slice(0, 16) : '';

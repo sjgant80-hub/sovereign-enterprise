@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTIONS, actionFor, needsSecond, decide, canSpend, scorecard, DEFAULT_POLICY } from '../src/agent.mjs';
+import { ACTIONS, actionFor, needsSecond, decide, canSpend, scorecard, DEFAULT_POLICY, MONEY_ACTIONS, MAX_LIMIT, moneyLimitOf } from '../src/agent.mjs';
 import { screen, revealTags, emojiJoiner, MAX_CHARS } from '../src/screen.mjs';
 
 const V = (domain, label, confidence = 0.5) => ({ verdict: 'VERIFIED', domain, label, confidence });
@@ -159,4 +159,39 @@ test('screen: length cap and junk', () => {
   assert.equal(screen('a'.repeat(MAX_CHARS)).ok, true);
   assert.equal(screen(42).ok, false);
   assert.equal(screen(null).flags[0], 'not-text');
+});
+
+
+// ── the money limit: above it a person decides any act that commits the company's money ─────────────────────────────
+test('decide: above the money limit a person set, an act that commits money is held — whatever the brains say', () => {
+  const own = (label, domain = 'fraud') => ({ verdict: 'VERIFIED', label, domain, confidence: 0.9 });
+  const second = (label, domain = 'fraud') => ({ verdict: 'VERIFIED', label, domain });
+  const at = (amount, moneyLimit, o = own(0), s = second(0)) => decide({ own: o, second: s, amount }, { minConfidence: 0.05, moneyLimit });
+  // no limit: the brains decide
+  assert.equal(at(50000, 0).state, 'done');
+  assert.equal(DEFAULT_POLICY.moneyLimit, 0);
+  // at the limit, done; a penny over, held — and the reason says both sums in pounds
+  assert.equal(at(100000, 100000).state, 'done');
+  assert.equal(at(0, 100000).state, 'done', 'nothing at stake is under any limit');
+  const over = at(100001, 100000);
+  assert.deepEqual([over.state, over.action, over.crossChecked, over.why], ['watch', 'release-payment', true, '£1,000.01 is over the £1,000 limit a person set — held for a person']);
+  assert.equal(at(123456789, 1000).why, '£1,234,567.89 is over the £10 limit a person set — held for a person');
+  // an unknown or impossible amount, with a limit set: held
+  for (const amount of [undefined, null, -1, 1.5, '500', NaN]) assert.match(at(amount, 100000).why, /^the amount is not known and a £1,000 limit is set/, String(amount));
+  // only acts that commit money: holding a payment, upfront terms and the normal-stakes acts are never limited
+  assert.equal(at(999999, 100, own(1), second(1)).state, 'done', 'hold-payment commits nothing');
+  assert.equal(at(999999, 100, own(1, 'credit'), second(1, 'credit')).state, 'done', 'upfront-terms commits nothing');
+  assert.equal(at(999999, 100, own(0, 'credit'), second(0, 'credit')).action, 'standard-terms');
+  assert.equal(at(999999, 100, own(0, 'credit'), second(0, 'credit')).state, 'watch');
+  assert.equal(decide({ own: { verdict: 'VERIFIED', label: 1, domain: 'inventory', confidence: 0.9 }, amount: 999999 }, { minConfidence: 0.05, moneyLimit: 100 }).state, 'watch', 'raise-po commits money');
+  assert.equal(decide({ own: { verdict: 'VERIFIED', label: 1, domain: 'churn', confidence: 0.9 }, amount: 999999 }, { minConfidence: 0.05, moneyLimit: 100 }).state, 'done');
+  // a call already held stays held, with its own reason
+  assert.match(decide({ own: own(0), amount: 999999 }, { minConfidence: 0.05, moneyLimit: 100 }).why, /no second brain could confirm/);
+  // the limit read from a policy: a whole number of pence from 1 to MAX_LIMIT, anything else is no limit
+  assert.deepEqual([1, 100, MAX_LIMIT, 0, -5, 1.5, MAX_LIMIT + 1, '100', null, undefined].map((v) => moneyLimitOf({ moneyLimit: v })), [1, 100, MAX_LIMIT, 0, 0, 0, 0, 0, 0, 0]);
+  assert.equal(moneyLimitOf(null), 0);
+  assert.deepEqual([...MONEY_ACTIONS].sort(), ['raise-po', 'release-payment', 'standard-terms']);
+  // junk in the inputs never throws: it fails closed
+  assert.equal(decide(null, { moneyLimit: 100 }).state, 'watch');
+  assert.equal(decide({ own: own(0), second: second(0), get amount() { throw new Error('boom'); } }, { moneyLimit: 100 }).why, 'the agent failed closed');
 });
