@@ -396,7 +396,7 @@ test('Wire it: an agent device loads the planted brains when it starts — from 
   await w.ownFiles([{ name: 'fraud.csv', text: text('fraud.csv') }, { name: 'credit.csv', text: text('credit.csv') }, { name: 'x', text: 7 }]);
   st = w.state();
   assert.deepEqual(st.agent.own.map((f) => f.name), ['fraud.csv', 'credit.csv']);
-  assert.match(st.say, /^This device re-checks its planted brains on fraud\.csv, credit\.csv\./);
+  assert.match(st.say, /^This device re-checks its planted brains on fraud\.csv, credit\.csv — until this page closes\.$/, 'no file store here, so it says the files last as long as the page');
   assert.ok(st.agent.planted.results.every((r) => r.n === (r.domain === 'fraud' ? 1070 : 1500)), 'checked on its own copy of each file');
   // another agent writes a brain over the Finance agent's own record, in its name: refused on the next beat, before it is read
   const { id: _id, ...real } = n.owner.list('brain').find((r) => r.id === 'fraud.finance');

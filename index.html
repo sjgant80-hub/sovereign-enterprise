@@ -2100,6 +2100,11 @@ const wireRead = (id) => (id.startsWith('plan:') ? !!(document.querySelector('[d
 const wire = createWire({
   node: () => real.node, keys: () => real.me,
   store: { get: (k) => LS(k), set: (k, v) => LS(k, v) },
+  // the business's own files for an agent device, kept at rest in this device's key store, sealed under its replica key
+  files: {
+    keep: (list) => KS.keepFiles(devNs, list.map((f) => ({ name: f.name, bytes: utf8(f.text) }))),
+    load: async () => { const r = await KS.files(devNs); return r.ok ? r.items.map((f) => ({ name: f.name, text: new TextDecoder().decode(f.bytes) })) : []; },
+  },
   fetchJson: (u) => fetch(u).then((r) => r.json()),
   peers: () => [...real.rtc.filter((l) => l.info && l.info.proven && l.info.peer).map((l) => ({ pub: l.info.peer, via: 'a machine link, key proven' })),
     ...[...real.peers].map((p) => ({ pub: p, via: 'another tab of this browser' }))],

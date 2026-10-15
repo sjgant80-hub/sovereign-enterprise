@@ -839,7 +839,7 @@ const GOLDEN = {
   'spine/wide': 'f827a1fe4040dcdf', 'spine/narrow': 'c763b2ba29d40647', 'brain/wide': 'a85d3f7c0e19593a', 'brain/narrow': 'a1201af739ed62f7',
   'brainFraud/wide': '4c671d96513b2d3d', 'brainFraud/narrow': '76f821fc70598546', 'mycelium/wide': '4353087be268e8bc', 'mycelium/narrow': '404a9cd89a3ca033',
   'trust/wide': 'ff3bb281c0b16dd2', 'trust/narrow': '0bdfff1a18934ccf', start: 'f6a26e4a885c6eea', guide: '57ae5c1a4a5e5145',
-  blueprint: '99707b267e78d8ff', adoption: 'e9b08abacac201d5', fit: '52794550ab9f2a35', trace: 'f08f623def5faf0b',
+  blueprint: '05f4fbc560dbbd99', adoption: 'e9b08abacac201d5', fit: '52794550ab9f2a35', trace: 'f08f623def5faf0b',
 };
 test('golden: every picture and view is byte-stable', () => {
   const rec = { agent: 'sales', event: 'e000043', domain: 'fraud', action: 'release-payment', state: 'done', by: 'mesh:finance', cross: true, second: 'audit', conf: 300, receipt: 'aa11bb22cc33dd44', why: 'a second brain agreed', customer: 'C1000', channel: 'fraud' };

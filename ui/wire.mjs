@@ -213,8 +213,8 @@ function plantedPanel(a) {
     '<p class="note">Holding: ' + esc(Object.entries(p.kept).map(([d, k]) => jobOf(d) + ' — ' + (k === 'planted' ? 'the planted brain' : k === 'shipped' ? 'the shipped brain (it does better here)' : 'no brain: that work waits for a person')).join('; ')) + '.</p>' : '';
   return '<div class="wr-sec"><h4 style="margin:10px 0 4px">Brains planted for this agent</h4><p class="note" style="margin-top:0">When a planting signs brains grown from the business’s own records into the company, this device takes one only if the company grants its signer to plant that job — the owner, an admin, or this agent — and only if it holds up on this device’s own records, at least as well as the brain it has. It checks when it starts and on every beat.</p>' +
     (rows || '<p class="dim" style="margin:0">' + (a.running ? 'No planted brain for this agent’s jobs yet.' : 'Start the agent to load them.') + '</p>') +
-    '<div class="row" style="margin-top:8px"><label class="dim" for="wire-own">This device’s own copy of the business’s records for its jobs (CSV — read here, never uploaded, kept until this page closes)</label><input type="file" id="wire-own" multiple accept=".csv,text/csv" data-wire-own="1"></div>' +
-    (own.length ? '<p class="note">Re-checking on: ' + esc(own.join(', ')) + '.</p>' : '<p class="note">Without one, it re-checks on the published data it holds — enough only when the business’s columns match it.</p>') + '</div>';
+    '<div class="row" style="margin-top:8px"><label class="dim" for="wire-own">This device’s own copy of the business’s records for its jobs (CSV — read here, never uploaded; kept on this device, sealed under its own key, until you replace or forget them)</label><input type="file" id="wire-own" multiple accept=".csv,text/csv" data-wire-own="1"></div>' +
+    (own.length ? '<p class="note">Re-checking on: ' + esc(own.join(', ')) + (a.ownKept ? ' — kept on this device, sealed, so a restart re-checks on them too.' : '.') + ' <button class="sm" data-act="wire-own-forget">Forget these files</button></p>' : '<p class="note">Without one, it re-checks on the published data it holds — enough only when the business’s columns match it.</p>') + '</div>';
 }
 function stateWords(st) {
   if (st.state === 'running') return 'Working — ' + (st.pending | 0) + ' piece' + (st.pending === 1 ? '' : 's') + ' of work waiting on other devices.';
@@ -359,7 +359,7 @@ export function createWire(env) {
     const role = deviceRole(view);
     const wantAgent = ui.want.role === 'agent' && AGENTS.some((a) => a.id === ui.want.agent) ? ui.want.agent : role.role === 'agent' ? role.agent : '';
     const granted = !!wantAgent && agentRoster(n).some((g) => g.agent === wantAgent && g.pub === n.pub);
-    const agent = wantAgent ? { id: wantAgent, granted, running: ui.running, status: ui.status, why: ui.starting ? 'Loading its brains and checking them on the published data…' : ui.why, planted: ui.planted, own: ui.own } : null;
+    const agent = wantAgent ? { id: wantAgent, granted, running: ui.running, status: ui.status, why: ui.starting ? 'Loading its brains and checking them on the published data…' : ui.why, planted: ui.planted, own: ui.own, ownKept: !!ui.ownKept } : null;
     const hub = role.role === 'hub' || view.devices.some((d) => d.pub === view.me && d.role === 'hub') ? { agents: new Set(agentRoster(n).map((g) => g.agent)).size, sent: ui.sent } : null;
     const control = {};
     for (const r of n.list('control')) control[r.id] = { paused: !!r.paused, by: typeof r.by === 'string' ? r.by : '', watch: typeof r.watch === 'string' ? r.watch : '' };
@@ -375,6 +375,7 @@ export function createWire(env) {
     ui.starting = true; paint();
     try {
       if (!ui.brains) ui.brains = await loadBrains(E.fetchJson);
+      await keptFiles();   // a restarted AI box re-checks on the business's files it kept, not only the published data
       const B = ui.brains;
       // planted brains first — read BEFORE this device publishes anything, so its shipped publish never writes over a planted
       // record (src/sow.mjs): a job with a planted brain from a key that may plant it holds what the judgement gives
@@ -416,13 +417,24 @@ export function createWire(env) {
     ui.lib = { ...Object.fromEntries(Object.entries(ui.lib).filter(([d]) => !j.held.includes(d))), ...j.library };
     ui.shell = createAgentShell({ ...ui.shellOpts, library: ui.lib });   // it picks up from the spine, as after a restart
   }
-  /** The business's own files for this device's jobs — kept in memory only, until the page closes. */
+  const cleanFiles = (list) => (Array.isArray(list) ? list : []).filter((f) => f && typeof f.text === 'string' && f.text.length <= 8 * 1024 * 1024).slice(0, 8).map((f) => ({ name: String(f.name || 'a file').slice(0, 80) || 'a file', text: f.text }));
+  /** The business's own files for this device's jobs — kept at rest on this device (env.files: the key store, sealed under
+   *  the device's own key) so a restart re-checks on them too. A new set replaces the old; an empty one forgets them. */
   async function ownFiles(list) {
-    ui.own = (Array.isArray(list) ? list : []).filter((f) => f && typeof f.text === 'string' && f.text.length <= 8 * 1024 * 1024).slice(0, 8).map((f) => ({ name: String(f.name || 'a file').slice(0, 80), text: f.text }));
+    ui.own = cleanFiles(list);
+    let kept = false;
+    try { kept = !!(E.files && (await E.files.keep(ui.own)).ok); } catch { kept = false; }
+    ui.ownKept = kept && ui.own.length > 0;
     const n = node();
     if (n && ui.running && ui.shell) await replant(n);
-    ui.say = ui.own.length ? 'This device re-checks its planted brains on ' + ui.own.map((f) => f.name).join(', ') + '.' : '';
+    ui.say = ui.own.length ? 'This device re-checks its planted brains on ' + ui.own.map((f) => f.name).join(', ') + (kept ? ' — kept on this device, sealed, so a restart re-checks on them too.' : ' — until this page closes.')
+      : kept ? 'Forgotten: this device keeps none of the business’s files.' : '';
     paint();
+  }
+  /** On start: the files this device kept at rest, if none were given since the page opened. */
+  async function keptFiles() {
+    if (ui.own.length || !E.files) return;
+    try { ui.own = cleanFiles(await E.files.load()); ui.ownKept = ui.own.length > 0; } catch { /* nothing kept, or unreadable: the published data stands in */ }
   }
 
   async function beat() {
@@ -476,6 +488,9 @@ export function createWire(env) {
         ui.plan = planOf({ people: Number.isSafeInteger(people) ? people : ui.plan.people, agents });
         set('se.wire.plan', JSON.stringify(ui.plan));
         ui.say = 'Plan saved: ' + ui.plan.people + ' people’s devices and ' + ui.plan.agents.length + ' agents.';
+      } else if (name === 'wire-own-forget') {
+        await ownFiles([]);
+        return;
       } else if (name === 'wire-os') {
         ui.os = OSES.includes(val(read, 'wire-os')) ? val(read, 'wire-os') : ui.os;
       } else if (name === 'wire-model') {

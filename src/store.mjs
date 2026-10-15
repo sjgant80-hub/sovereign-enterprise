@@ -22,6 +22,10 @@
 //     company, so every device holds only ciphertext. forget() is the erasure: the key is deleted and a tombstone kept, so no
 //     key is ever made again for that subject — every sealed copy, on every device and in every backup, stays unreadable,
 //     while the record, its history and the books still verify. wipe() deletes a namespace's subject keys with it.
+//   · THE BUSINESS'S FILES (keepFiles / files). An agent device re-checks a planted brain on its own copy of the business's
+//     records; it keeps that copy at rest — up to FILES_MAX files of up to FILE_MAX bytes, each sealed under the replica key
+//     with its slot and name bound in, so a file cannot be swapped into another's place. A new set replaces the old one;
+//     clear() and wipe() take them with the log, so a device that leaves the company keeps none of the business's records.
 //   · THE LOG is append-only and bounded. RETENTION RULE: per device, the newest LOG_MAX (20,000) envelopes are kept,
 //     oldest dropped first — except grants and revokes (the role tree), which go to a lane of their own and are kept
 //     regardless of age, up to PIN_MAX (5,000; past that they share the bounded lane). A dropped envelope is not lost to
@@ -58,6 +62,8 @@ export const LOG_MAX = 20000;
 export const PIN_MAX = 5000;
 export const TAB_TTL = 7 * 24 * 60 * 60 * 1000;   // a tab-only device not opened for this long, its tab closed, is deleted
 export const LEGACY = Object.freeze({ priv: 'se.priv', env: 'se.env' });
+export const FILE_MAX = 8 * 1024 * 1024;   // the largest business file a device keeps at rest, in bytes
+export const FILES_MAX = 8;                // the most business files a device keeps at once
 const KV = 'kv';
 const ED = { name: 'Ed25519' };
 const AES = { name: 'AES-GCM', length: 256 };
@@ -76,7 +82,8 @@ const range = (a, b) => Array.from({ length: Math.max(0, b - a) }, (_, j) => a +
 const aadOf = (ns) => utf8('se-log-v1|' + ns);
 const SUBJECT = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
 const okSubject = (x) => typeof x === 'string' && SUBJECT.test(x);
-const K = { subj: (ns, x) => 'subj|' + ns + '|' + x, gone: (ns, x) => 'gone|' + ns + '|' + x, subjects: (ns) => 'subjs|' + ns, dev: (ns) => 'dev|' + ns, aes: (ns) => 'aes|' + ns, meta: (ns) => 'log|' + ns, rec: (ns, i) => 'rec|' + ns + '|' + i, pin: (ns, i) => 'pin|' + ns + '|' + i };
+const fileAad = (ns, i, name) => utf8('file|' + ns + '|' + i + '|' + name);
+const K = { file: (ns, i) => 'file|' + ns + '|' + i, files: (ns) => 'files|' + ns, subj: (ns, x) => 'subj|' + ns + '|' + x, gone: (ns, x) => 'gone|' + ns + '|' + x, subjects: (ns) => 'subjs|' + ns, dev: (ns) => 'dev|' + ns, aes: (ns) => 'aes|' + ns, meta: (ns) => 'log|' + ns, rec: (ns, i) => 'rec|' + ns + '|' + i, pin: (ns, i) => 'pin|' + ns + '|' + i };
 
 /** Is this envelope a grant or a revoke (a write of the role tree)? Total: anything unreadable is not. */
 export function isRoleWrite(bytes) {
@@ -100,11 +107,12 @@ export function staleDevices(devices, o) {
   }
 }
 
-/** Seal one record: AES-GCM under `key`, a fresh IV, `aad` bound in. → { ok, sealed: iv ‖ ciphertext } | refusal. */
+/** Seal one record: AES-GCM under `key`, a fresh IV, `aad` bound in; at most `max` bytes (an envelope's MAX_BYTES unless
+ *  the caller is the file lane). → { ok, sealed: iv ‖ ciphertext } | refusal. */
 export async function sealRecord(o) {
   try {
-    const { subtle, key, bytes, aad = EMPTY, random = defaultRandom } = o;
-    if (!(bytes instanceof Uint8Array) || bytes.length > MAX_BYTES) return refuse('record');
+    const { subtle, key, bytes, aad = EMPTY, random = defaultRandom, max = MAX_BYTES } = o;
+    if (!(bytes instanceof Uint8Array) || bytes.length > max) return refuse('record');
     const iv = random(IV);
     if (!(iv instanceof Uint8Array) || iv.length !== IV) return refuse('random');
     const ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, bytes));
@@ -224,6 +232,8 @@ export function createKeyStore(opts) {
     g.onsuccess = () => {
       for (const k of recordKeys(ns, metaOf(g.result))) s.delete(k);
       s.delete(K.meta(ns));
+      const fl = s.get(K.files(ns));   // the business's files go with the log, whether the keys stay (clear) or not (wipe)
+      fl.onsuccess = () => { (Array.isArray(fl.result) ? fl.result.slice(0, FILES_MAX) : []).forEach((_, i) => s.delete(K.file(ns, i))); s.delete(K.files(ns)); };
       if (!keepKeys) {
         s.delete(K.dev(ns)); s.delete(K.aes(ns));
         const l = s.get(K.subjects(ns));   // every subject key this device made goes with it (wipe is a crypto-shred)
@@ -404,6 +414,51 @@ export function createKeyStore(opts) {
 
     /** Drop everything held for ns: device key, replica key (crypto-shred), log. */
     wipe: (ns) => guard(ns, async () => { await drop(ns, false); return { ok: true }; }),
+    /** Keep the business's own files on this device, replacing any kept before: [{ name, bytes }], each sealed under the
+     *  replica key with its slot and name bound in. An empty list keeps none. → { ok, kept } | refusal ('files' | 'file') */
+    keepFiles: (ns, list) => guard(ns, async () => {
+      if (!Array.isArray(list) || list.length > FILES_MAX) return refuse('files');
+      for (const f of list) if (!f || typeof f.name !== 'string' || !f.name || f.name.length > 80 || !(f.bytes instanceof Uint8Array) || f.bytes.length > FILE_MAX) return refuse('file');
+      const rk = await replicaKey(ns, true);
+      const sealed = [];
+      for (const [i, f] of list.entries()) {
+        const r = await sealRecord({ subtle, key: rk.key, bytes: f.bytes, aad: fileAad(ns, i, f.name), random, max: FILE_MAX });
+        if (!r.ok) return r;
+        sealed.push(r.sealed);
+      }
+      await tx('readwrite', (st) => {
+        if (rk.fresh) st.put(rk.key, K.aes(ns));
+        const g = st.get(K.files(ns));
+        g.onsuccess = () => {
+          const old = Array.isArray(g.result) ? Math.min(g.result.length, FILES_MAX) : 0;
+          for (const i of range(sealed.length, old)) st.delete(K.file(ns, i));   // the slots the new set no longer uses
+          sealed.forEach((x, i) => st.put(x, K.file(ns, i)));
+          if (sealed.length) st.put(list.map((f) => f.name), K.files(ns)); else st.delete(K.files(ns));
+        };
+        return () => true;
+      });
+      return { ok: true, kept: sealed.length };
+    }),
+    /** The business's files kept for ns, opened. → { ok, items: [{ name, bytes }], unreadable } — one that does not open
+     *  (a changed byte, a file moved to another slot, a key gone) is counted, never returned. */
+    files: (ns) => guard(ns, async () => {
+      const got = await tx('readonly', (st) => {
+        const out = { names: [], sealed: [] };
+        const g = st.get(K.files(ns));
+        g.onsuccess = () => {
+          out.names = Array.isArray(g.result) ? g.result.slice(0, FILES_MAX) : [];
+          out.names.forEach((_, i) => { const r = st.get(K.file(ns, i)); r.onsuccess = () => { out.sealed[i] = r.result; }; });
+        };
+        return () => out;
+      });
+      const rk = await replicaKey(ns, false);
+      const items = [];
+      for (const [i, name] of got.names.entries()) {
+        const o = rk && typeof name === 'string' ? await openRecord({ subtle, key: rk.key, sealed: got.sealed[i], aad: fileAad(ns, i, name) }) : { ok: false };
+        if (o.ok) items.push({ name, bytes: o.bytes });
+      }
+      return { ok: true, items, unreadable: got.names.length - items.length };
+    }),
     /** The key for one subject's details on this device: AES-GCM-256, NON-extractable, made on first ask.
      *  → { ok: true, key, fresh } | { ok: false, reason: 'subject' | 'erased' | … } — never a key for a forgotten subject. */
     subjectKey: (ns, subject) => guard(ns, async () => {

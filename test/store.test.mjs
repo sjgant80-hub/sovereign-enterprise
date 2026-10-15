@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createKeyStore, sealRecord, openRecord, isRoleWrite, staleDevices, LOG_MAX, PIN_MAX, TAB_TTL, LEGACY, DB_VERSION } from '../src/store.mjs';
+import { createKeyStore, sealRecord, openRecord, isRoleWrite, staleDevices, LOG_MAX, PIN_MAX, TAB_TTL, LEGACY, DB_VERSION, FILE_MAX, FILES_MAX } from '../src/store.mjs';
 import { split, combine } from '../src/recovery.mjs';
 import { createNode, pull, signEnvelope } from '../src/node.mjs';
 import { generate, exportPriv, fromSeed, verify } from '../src/keys.mjs';
@@ -626,4 +626,69 @@ test('subject keys: wipe() takes every one of a namespace’s subject keys with 
   assert.equal((await ks.subjectKey('owner', 'A.b_c-9')).ok, true);
   assert.equal((await ks.subjectKey('no such ns!', 'c-1')).reason, 'ns');
   assert.equal((await createKeyStore({ idb: null, subtle }).subjectKey('owner', 'c-1')).reason, 'no-store');
+});
+
+test('the business’s files at rest: sealed under the replica key, the same after a reload, replaced as a set, gone with clear and wipe', async () => {
+  const { fake, ks } = fresh();
+  assert.deepEqual(await ks.files('owner'), { ok: true, items: [], unreadable: 0 });
+  const csv = (n) => bytesOf('case,outcome\n' + Array.from({ length: n }, (_, i) => i + ',' + (i % 2)).join('\n'));
+  assert.deepEqual(await ks.keepFiles('owner', [{ name: 'cases.csv', bytes: csv(3) }, { name: 'decisions.csv', bytes: csv(5) }]), { ok: true, kept: 2 });
+  const back = await mk(fake).files('owner');   // a reload: a second store over the same database
+  assert.deepEqual(back.items.map((f) => [f.name, new TextDecoder().decode(f.bytes)]), [['cases.csv', new TextDecoder().decode(csv(3))], ['decisions.csv', new TextDecoder().decode(csv(5))]]);
+  assert.equal(back.unreadable, 0);
+  assert.ok(!onDisk(fake).some((b) => has(b, csv(3))), 'no plain copy of the business’s records on disk');
+  // a file cannot be moved into another's slot: its slot and name are bound in
+  const raw = fake.raw('se-test');
+  const [a, b] = [raw.get('file|owner|0'), raw.get('file|owner|1')];
+  raw.set('file|owner|0', b); raw.set('file|owner|1', a);
+  assert.deepEqual(await ks.files('owner'), { ok: true, items: [], unreadable: 2 });
+  raw.set('file|owner|0', a); raw.set('file|owner|1', b);
+  raw.set('files|owner', ['renamed.csv', 'decisions.csv']);
+  const renamed = await ks.files('owner');
+  assert.deepEqual([renamed.items.map((f) => f.name), renamed.unreadable], [['decisions.csv'], 1]);
+  // a new set replaces the old one; the slots it no longer uses are deleted
+  assert.deepEqual(await ks.keepFiles('owner', [{ name: 'only.csv', bytes: csv(1) }]), { ok: true, kept: 1 });
+  assert.deepEqual((await ks.files('owner')).items.map((f) => f.name), ['only.csv']);
+  assert.ok(!raw.has('file|owner|1'), 'the second slot is gone');
+  assert.deepEqual(await ks.keepFiles('owner', []), { ok: true, kept: 0 });
+  assert.deepEqual(await ks.files('owner'), { ok: true, items: [], unreadable: 0 });
+  assert.ok(![...raw.keys()].some((k) => k.startsWith('file')), 'keeping none deletes them all');
+  // clear (the device joins another company) and wipe both take the files with the log
+  for (const how of ['clear', 'wipe']) {
+    await ks.keepFiles('owner', [{ name: 'x.csv', bytes: csv(2) }, { name: 'y.csv', bytes: csv(2) }]);
+    await ks.keepFiles('tab.keep', [{ name: 'z.csv', bytes: csv(2) }]);
+    assert.deepEqual(await ks[how]('owner'), { ok: true });
+    assert.deepEqual(await ks.files('owner'), { ok: true, items: [], unreadable: 0 }, how);
+    assert.ok(![...raw.keys()].some((k) => k.startsWith('file|owner') || k === 'files|owner'), how);
+    assert.equal((await ks.files('tab.keep')).items.length, 1, how + ' leaves another device’s files');
+  }
+  // a missing replica key: the names are there, the files do not open
+  await ks.keepFiles('tab.k2', [{ name: 'a.csv', bytes: csv(1) }]);
+  raw.delete('aes|tab.k2');
+  assert.deepEqual(await ks.files('tab.k2'), { ok: true, items: [], unreadable: 1 });
+});
+
+test('the business’s files: the bounds, and junk refused', async () => {
+  const { ks } = fresh();
+  const one = (name, bytes) => ({ name, bytes });
+  const many = Array.from({ length: FILES_MAX }, (_, i) => one('f' + i + '.csv', bytesOf('a\n' + i)));
+  assert.deepEqual(await ks.keepFiles('owner', many), { ok: true, kept: FILES_MAX }, 'exactly the most files');
+  assert.equal((await ks.files('owner')).items.length, FILES_MAX);
+  assert.deepEqual(await ks.keepFiles('owner', [...many, one('extra.csv', bytesOf('x'))]), { ok: false, reason: 'files' });
+  assert.equal((await ks.files('owner')).items.length, FILES_MAX, 'a refused set leaves the kept one');
+  const big = new Uint8Array(FILE_MAX);
+  assert.deepEqual(await ks.keepFiles('owner', [one('big.csv', big)]), { ok: true, kept: 1 }, 'exactly the largest file');
+  assert.equal((await ks.files('owner')).items[0].bytes.length, FILE_MAX);
+  assert.deepEqual(await ks.keepFiles('owner', [one('bigger.csv', new Uint8Array(FILE_MAX + 1))]), { ok: false, reason: 'file' });
+  assert.deepEqual(await ks.keepFiles('owner', [one('n'.repeat(80), bytesOf('x'))]), { ok: true, kept: 1 }, 'exactly the longest name');
+  for (const bad of [one('', bytesOf('x')), one('n'.repeat(81), bytesOf('x')), one(7, bytesOf('x')), one('a.csv', 'text'), null, 'a.csv', {}])
+    assert.deepEqual(await ks.keepFiles('owner', [bad]), { ok: false, reason: 'file' }, JSON.stringify(bad));
+  for (const bad of ['x', null, undefined, {}, 7]) assert.deepEqual(await ks.keepFiles('owner', bad), { ok: false, reason: 'files' }, String(bad));
+  assert.equal((await ks.keepFiles('no such ns!', [])).reason, 'ns');
+  assert.equal((await createKeyStore({ idb: null, subtle }).files('owner')).reason, 'no-store');
+  // the envelope lane keeps its own bound: a record past MAX_BYTES is still refused there
+  assert.deepEqual(await ks.append('owner', new Uint8Array(MAX_BYTES + 1)), { ok: false, reason: 'record' });
+  const key = await subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  assert.deepEqual(await sealRecord({ subtle, key, bytes: new Uint8Array(MAX_BYTES + 1) }), { ok: false, reason: 'record' }, 'sealRecord defaults to the envelope bound');
+  assert.equal((await sealRecord({ subtle, key, bytes: new Uint8Array(MAX_BYTES + 1), max: MAX_BYTES + 1 })).ok, true);
 });

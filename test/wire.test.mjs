@@ -301,3 +301,52 @@ test('the controller never throws: no device, junk env, a model probe, the OS', 
   assert.equal(bad.w.state().say, 'That did not work: blocked by the browser');
   assert.ok(bad.renders() > 0, 'every action repaints');
 });
+
+test('the business’s files stay with the agent device: kept at rest when given, re-read when the agent restarts, forgotten on request', async () => {
+  const o = await office(['owner', 'finance']);
+  const kept = [];
+  const files = { keep: async (list) => { kept.splice(0, kept.length, ...list.map((f) => ({ ...f }))); return { ok: true, kept: list.length }; }, load: async () => kept.map((f) => ({ ...f })) };
+  const box = new Map();
+  const store = { get: (k) => (box.has(k) ? box.get(k) : null), set: (k, v) => box.set(k, v) };
+  const P = page(o, 'finance', { files, store });
+  P.fields['wire-agent'] = 'finance';
+  await P.w.act('wire-want', { dataset: { role: 'agent' } }, P.read);
+  const O = page(o, 'owner');
+  O.fields['wire-key'] = o.k.finance.pub; O.fields['wire-role'] = 'agent:finance';
+  await O.w.act('wire-grant', { dataset: {} }, O.read);
+  await o.sync();
+  // given: the good file kept at rest, the junk left out
+  await P.w.ownFiles([{ name: 'fraud-cases.csv', text: 'amount,y\n1,0' }, { name: 'junk', text: 7 }, null]);
+  assert.deepEqual(kept.map((f) => [f.name, f.text]), [['fraud-cases.csv', 'amount,y\n1,0']]);
+  assert.match(P.w.state().say, /fraud-cases\.csv — kept on this device, sealed, so a restart re-checks on them too\.$/);
+  // a restart: a fresh controller on the same device, over its store and the files it kept
+  const R = page(o, 'finance', { files, store });
+  assert.deepEqual(R.w.state().agent.own, []);
+  await R.w.act('wire-run', { dataset: {} }, R.read);
+  assert.equal(R.w.running, true);
+  assert.deepEqual(R.w.state().agent.own.map((f) => f.name), ['fraud-cases.csv']);
+  assert.equal(R.w.state().agent.ownKept, true);
+  const h = U.renderWire(R.w.state());
+  assert.equal(balanced(h), '');
+  assert.match(h, /Re-checking on: fraud-cases\.csv — kept on this device, sealed, so a restart re-checks on them too\. <button class="sm" data-act="wire-own-forget">Forget these files<\/button>/);
+  // forgotten: none kept, none used, and it says so
+  await R.w.act('wire-own-forget', { dataset: {} }, R.read);
+  assert.deepEqual(kept, []);
+  assert.deepEqual(R.w.state().agent.own, []);
+  assert.equal(R.w.state().agent.ownKept, false);
+  assert.equal(R.w.state().say, 'Forgotten: this device keeps none of the business’s files.');
+  assert.doesNotMatch(U.renderWire(R.w.state()), /wire-own-forget/);
+  // a page with no file store, or one that fails: the files are used until the page closes — said plainly, never thrown
+  for (const f of [undefined, { keep: async () => { throw new Error('x'); }, load: async () => { throw new Error('x'); } }, { keep: async () => ({ ok: false, reason: 'file' }), load: async () => null }]) {
+    const T = page(o, 'finance', { files: f, store });
+    await T.w.ownFiles([{ name: 'a.csv', text: 'x' }]);
+    assert.match(T.w.state().say, /^This device re-checks its planted brains on a\.csv — until this page closes\.$/);
+    assert.equal(T.w.state().agent.ownKept, false);
+    await T.w.act('wire-run', { dataset: {} }, T.read);
+    assert.deepEqual(T.w.state().agent.own.map((x) => x.name), ['a.csv'], 'what was given since the page opened is not replaced by what was kept');
+  }
+  const E2 = page(o, 'finance', { files: { keep: async () => ({ ok: true }), load: async () => { throw new Error('x'); } }, store });
+  await E2.w.act('wire-run', { dataset: {} }, E2.read);
+  assert.equal(E2.w.running, true, 'an unreadable store never stops the agent');
+  assert.deepEqual(E2.w.state().agent.own, []);
+});
