@@ -99,7 +99,7 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
 .brand{font-weight:800;letter-spacing:.04em;white-space:nowrap;font-size:15px;cursor:pointer}.brand .x{color:var(--accent)}
 .nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}.nav::-webkit-scrollbar{display:none}
 @media(max-width:700px){.topbar .in{flex-wrap:wrap;row-gap:4px;padding-bottom:4px}.brand{flex:1}.nav{order:3;flex:1 0 100%;margin:0 -6px}.nav a{padding:7px 9px;font-size:13.5px}}
-.nav a{color:var(--dim);text-decoration:none;padding:7px 10px;border-radius:8px;white-space:nowrap;font-size:14px}
+.nav a{color:var(--dim);text-decoration:none;padding:7px 8px;border-radius:8px;white-space:nowrap;font-size:14px}
 .nav a.on{color:var(--ink);background:var(--panel);box-shadow:inset 0 -2px 0 var(--accent)}.nav a:hover{color:var(--ink)}
 .view{display:none;padding-top:8px}.view.on{display:block}
 .ov-hero{padding:34px 0 8px;max-width:900px}
@@ -194,6 +194,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
     <a href="#case" data-view="case">The case</a>
     <a href="#paper" data-view="paper">White paper</a>
     <a href="#run" data-view="run">Run your own</a>
+    <a href="#plant" data-view="plant">Plant</a>
     <a href="#wire" data-view="wire">Wire it</a>
   </nav>
   <span id="kstat" class="pill">booting…</span>
@@ -239,7 +240,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
   <h2 class="sec-h">Run your own company</h2>
   <p class="sec-sub">This browser tab becomes a device in your own company. Found it, invite teammates by link, and every device syncs peer to
     peer — same machine over tabs, other machines over a direct encrypted link. Nothing goes to a server.
-    <a href="#wire" data-view="wire">Setting up a whole office? Wire it, step by step.</a></p>
+    <a href="#plant" data-view="plant">Planting a business? Plant it, step by step.</a> <a href="#wire" data-view="wire">Setting up a whole office? Wire it, step by step.</a></p>
   <div class="panel" id="realbox"></div>
   <div class="panel hide" id="rtcbox"></div>
   <div class="panel" id="backupbox"></div>
@@ -271,6 +272,8 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
   <div id="run-slot"></div>
 </section>
 
+<section class="view" id="v-plant" aria-label="Plant — the planter’s console"></section>
+
 <section class="view" id="v-wire" aria-label="Wire it — set up a real office"></section>
 
 <div id="workspace">
@@ -281,7 +284,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 </div>
 
 <p class="foot">
-  Kernel-backed: this page imports <span class="mono">src/runtime · shell · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · audit · exportco · books · lease · sim</span> — the
+  Kernel-backed: this page imports <span class="mono">src/runtime · shell · plant · sow · receipt · bridge · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · audit · exportco · books · lease · sim</span> — the
   same modules the test suite and the mutation witness prove in CI, on every change. The brains are the Konomi SLM's verified pattern libraries
   (Konomi architecture — Thomas Frumkin), grown by the seed-library ribosome (sjgant80-hub). Seven of the eight jobs run on published datasets: six real (card transactions, telecom churn, credit defaults, IoT network flows, household power, web shopping sessions) and one its authors publish as synthetic (AI4I machine data); inventory runs on a synthetic stream because no open stock-out data exists. Every source and licence is on its brain card in Brains and in NOTICE. The design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd,
   Lumiea Systems Research Division — ThunderStruck Service, LLC; the independent second brain and the held-for-a-human verdict draw on his
@@ -291,6 +294,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 </div>
 <div id="rc-print"></div>
 <div id="wire-print"></div>
+<div id="plant-print"></div>
 <div class="tour hide" id="tour" role="dialog" aria-label="Guided tour"></div>
 <script type="module">
 import { createNode, signEnvelope } from './src/node.mjs';
@@ -324,6 +328,7 @@ import { LOG_MAX } from './src/store.mjs';
 import { ollama, openaiCompatible, anthropic, webllm } from './src/model.mjs';
 import { makeAntibody, NOVEL_ATTACK, NOVEL_PARAPHRASES } from './src/antibody.mjs';
 import { createWire, renderWire, WIRE_CSS } from './ui/wire.mjs';
+import { createPlant, renderPlant, PLANT_CSS, MAX_FILE_BYTES } from './ui/plant.mjs';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -337,7 +342,7 @@ const TABS = ['Board', 'Agents', 'Watch', 'Brains', 'Tasks', 'Chat', 'CRM', 'Doc
 const SENSITIVE = new Set(['CRM', 'Books', 'People']);
 const LEASE_TTL = 90000, LEASE_WIN = 30000;
 const TICK = 900, SHIFT = 3000, SPEEDS = [1, 3, 8];
-const TOP = ['overview', 'live', 'how', 'blueprint', 'business', 'case', 'paper', 'run', 'wire'];
+const TOP = ['overview', 'live', 'how', 'blueprint', 'business', 'case', 'paper', 'run', 'plant', 'wire'];
 
 // ── state: the company is the runtime kernel; the page holds only what is the page's ────────────────
 let mode = 'demo';
@@ -361,6 +366,7 @@ function bizState() {
 }
 document.head.appendChild(Object.assign(document.createElement('style'), { textContent: EXPLAIN_CSS }));
 document.head.appendChild(Object.assign(document.createElement('style'), { textContent: WIRE_CSS }));
+document.head.appendChild(Object.assign(document.createElement('style'), { textContent: PLANT_CSS }));
 // For your business: the adoption guide, fit-it-to-your-headcount, the rival and the cloud on those numbers, then grow your own brain
 function renderBusinessView() {
   if (!ui.ctx) { $('v-business').innerHTML = '<p class="dim">Loading the figures…</p>'; return; }
@@ -464,6 +470,7 @@ function render() {
   if (!co) return;
   if (view === 'overview') return renderOverviewLive();
   if (view === 'wire') return renderWireView();
+  if (view === 'plant') return renderPlantView();
   if (view !== 'live' && view !== 'run') return;
   if (mode === 'demo') renderDevices(); else renderReal();
   renderTabs();
@@ -1256,6 +1263,7 @@ async function route(opts = {}) {
   if (view === 'live') { mode = 'demo'; $('live-slot').appendChild(ws); ws.classList.remove('hide'); }
   else if (view === 'run') { mode = 'real'; $('run-slot').appendChild(ws); ws.classList.remove('hide'); if (tab === 'Board' || tab === 'Agents' || tab === 'Watch' || tab === 'Brains') tab = 'Tasks'; if (!real.node) await bootReal(); }
   else if (view === 'wire') { mode = 'real'; ws.classList.add('hide'); if (!real.node) await bootReal(); }
+  else if (view === 'plant') { mode = 'real'; ws.classList.add('hide'); if (!real.node) await bootReal(); }
   else ws.classList.add('hide');
   if (view === 'live' && !TABS.includes(tab)) tab = 'Board';
   if (view === 'overview') renderOverview();
@@ -1265,6 +1273,7 @@ async function route(opts = {}) {
   if (view === 'case') renderCase();
   if (view === 'paper') renderPaper();
   if (view === 'wire') renderWireView(true);
+  if (view === 'plant') { renderPlantView(true); plant.ready().then(() => renderPlantView()).catch(() => {}); }
   if (!opts.keepScroll) window.scrollTo(0, 0);
   if (view === 'live' && $('guide-body') && !$('guide-body').innerHTML) $('guide-body').innerHTML = renderStart();
   render();
@@ -1316,6 +1325,15 @@ document.addEventListener('change', async (e) => {
   }
   if (e.target.id === 'aud-old' && e.target.files && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; if (f.size > 1024 * 1024) audSay('Not made: that file is too large to be a checkpoint.', 'bad'); else await auditGrew(f); return; }
   if (e.target.id === 'bk-file' && e.target.files && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; await restoreFrom(f); return; }
+  // the planter's console: its choices, and the business's files — read on this device, never uploaded
+  const pl = e.target.dataset || {};
+  const readFiles = (fs) => Promise.all([...fs].map(async (f) => ({ name: f.name, size: f.size, text: f.size > MAX_FILE_BYTES ? '' : await f.text() })));
+  if (pl.plant === 'files' && e.target.files) { const list = await readFiles(e.target.files); e.target.value = ''; plant.addFiles(list); return; }
+  if (pl.plant === 'type' || pl.plant === 'floor' || pl.plant === 'tbdate' || pl.plant === 'target') { await plant.act('plant-' + pl.plant, { dataset: { value: e.target.value } }); return; }
+  if (pl.plantHint) { await plant.act('plant-hint', { dataset: { file: pl.file, hint: pl.plantHint, value: e.target.value } }); return; }
+  if (pl.plantAgent) { await plant.act('plant-agent', { dataset: { agent: pl.plantAgent, checked: e.target.checked } }); return; }
+  if (pl.plantPair) { renderPlantView(); return; }
+  if (pl.wireOwn && e.target.files) { const list = await readFiles(e.target.files); e.target.value = ''; await wire.ownFiles(list); return; }
   if (e.target.dataset && e.target.dataset.wireOs) { e.target.blur(); await wire.act('wire-os', e.target, wireRead); return; }
   if (e.target.id === 'train-target') { ui.train = { ...ui.train, target: e.target.value, result: null }; renderTrainBox(); return; }
   if (e.target.id === 'mc') { const n = current(); if (can(n, null)) await n.put('policy', 'agents', { minConfidence: +e.target.value, by: n.name }); render(); }
@@ -1325,6 +1343,7 @@ document.addEventListener('input', (e) => {
   if (e.target.id === 'b-margin') { ui.biz.margin = e.target.value; renderCase(); }
   if (e.target.dataset && e.target.dataset.mdl && e.target.type !== 'checkbox' && e.target.tagName !== 'SELECT') ui.model[e.target.dataset.mdl] = e.target.value;
   if (e.target.dataset && e.target.dataset.biz) { ui.biz[e.target.dataset.biz] = e.target.value; refreshRival(); }
+  if (e.target.dataset && e.target.dataset.plantPair) plant.act('plant-pair', { dataset: { pair: e.target.dataset.plantPair, value: e.target.value } });
   if (e.target.dataset && e.target.dataset.xpFit) {
     ui.biz.pairs = ui.biz.pairs.filter((p) => p.id !== e.target.dataset.xpFit).concat([{ id: e.target.dataset.xpFit, value: e.target.value }]);
     refreshFit();
@@ -1339,6 +1358,7 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.step) { const s = START_STEPS.find((x) => x.id === t.dataset.step); if (s && s.go) { if (s.tab) tab = s.tab; if (s.device) ui.sel = s.device; go(s.go); if (s.then) setTimeout(() => { const el = document.getElementById(s.then); if (!el) return; if (el.tagName === 'BUTTON') el.click(); else el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); } return; }
   if (t.dataset.explain) { ui.trace = t.dataset.explain; go('how'); return; }
   if (t.dataset.act === 'print-brochure') { window.print(); return; }
+  if (t.dataset.act && t.dataset.act.startsWith('plant-')) { t.disabled = true; try { await plant.act(t.dataset.act, t, (id) => ($(id) ? $(id).value : '')); } finally { t.disabled = false; } return; }
   if (t.dataset.act && t.dataset.act.startsWith('wire-')) { t.disabled = true; try { await wire.act(t.dataset.act, t, wireRead); } finally { t.disabled = false; } return; }
   if (t.dataset.act === 'imm-new') { ui.immune.first = (await co.hostile(prng((Date.now() & 0xffff) + 31), NOVEL_ATTACK)).id; render(); return; }
   if (t.dataset.act === 'imm-confirm') { await co.confirmHostile('overseer', NOVEL_ATTACK, 'asked us to wire a refund to an unknown account'); ui.immune.confirmed = true; render(); return; }
@@ -1847,6 +1867,24 @@ function renderWireView(force) {
   const html = renderWire(wire.state());
   if (force || html !== wireShown) { wireShown = html; el.innerHTML = html; }
 }
+// ── Plant (ui/plant.mjs): the planter's console, on this tab's own device ───────────────────────────────────────────────
+const plant = createPlant({
+  node: () => real.node, keys: () => real.me, fetchJson: (u) => fetch(u).then((r) => r.json()), keygen: generate, now: () => Date.now(),
+  download: (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type || 'application/octet-stream' })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); },
+  print: (html) => { const p = $('plant-print'); p.innerHTML = html; document.body.classList.add('print-receipt'); addEventListener('afterprint', () => { document.body.classList.remove('print-receipt'); p.innerHTML = ''; }, { once: true }); window.print(); },
+  render: () => { if (view === 'plant') renderPlantView(); },
+  // the agents switched on become Wire it's plan, so the tech person's checklist plans for exactly those
+  setWirePlan: (agents) => wire.act('wire-plan', null, (id) => (id === 'wire-people' ? String(wire.state().plan.people) : id.startsWith('plan:') ? agents.includes(id.slice(5)) : '')),
+  pause: () => new Promise((r) => setTimeout(r, 40)),
+});
+let plantShown = '';
+function renderPlantView(force) {
+  const el = $('v-plant');
+  const a = document.activeElement;
+  if (!force && a && el.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;   // never redraw under someone typing
+  const html = renderPlant(plant.state());
+  if (force || html !== plantShown) { plantShown = html; el.innerHTML = html; }
+}
 wire.start();   // an agent device's beat, and a check-in whenever someone calls the roll — on whatever view is open
 
 // ── the heartbeat: the company runs whatever page you're on ─────────────────────────────────────────
@@ -1863,6 +1901,7 @@ setInterval(async () => {
     }
     const typing = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT');
     if (view === 'live' || view === 'overview') { if (!typing) render(); else if (view === 'live') renderDevices(); }
+    if (view === 'plant') renderPlantView();   // what the agent devices reported comes back on the spine
     // arriving on How it works before the first decision: trace one as soon as it exists
     if (view === 'how' && !document.querySelector('#v-how .xp-trace') && co.nodes.owner.list('decisions').length) $('v-how').innerHTML = renderHow({ co, trace: ui.trace });
   } catch (e) {

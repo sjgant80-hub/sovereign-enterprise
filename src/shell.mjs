@@ -414,6 +414,8 @@ function writers(node, c, keys) {
 // is which key wrote each field. So every reader that acts on such a record — answers and second opinions, hand-offs,
 // approvals, the behaviour watch — reads the signer, not the name.
 export const SIGNED_FIELDS = Object.freeze({
+  adopt: Object.freeze(['domain', 'patternId', 'from', 'by', 'adopted', 'localAuc', 'n', 'reason', 'source', 'plan']),
+  brain: Object.freeze(['domain', 'title', 'role', 'real', 'features', 'rules', 'dist', 'threshold', 'spread', 'base', 'heldAuc', 'heldAcc', 'held', 'patternId', 'by', 'source', 'localAuc', 'n', 'plan']),
   reply: Object.freeze(['ask', 'item', 'by', 'kind', 'verdict', 'why', 'domain', 'label', 'conf', 'route', 'pattern', 'receipt']),
   handoff: Object.freeze(['from', 'to', 'payload', 'event']),
   decisions: Object.freeze(['agent', 'event', 'domain', 'action', 'state', 'by', 'cross', 'second', 'conf', 'receipt', 'customer', 'channel']),
@@ -448,6 +450,13 @@ export function personApproved(node, c) {
     const w = writers(node, c, APPROVAL_FIELDS);
     return new Set([...w].filter(([, pub]) => people.has(pub)).map(([id]) => id));
   } catch { return new Set(); }
+}
+
+/** Who wrote each record of collection c: id → the ONE key that wrote every field in SIGNED_FIELDS[c] it holds, or '' when
+ *  another device wrote over part of it. The same reading signedAs and ownRecords make — for readers that also accept a
+ *  person's key (src/sow.mjs: a planted brain may be signed by the owner or an admin who planted it). */
+export function signersOf(node, c) {
+  try { return writers(node, c, SIGNED_FIELDS[c]); } catch { return new Map(); }
 }
 
 // ── the agent shell ───────────────────────────────────────────────────────────────────────────────────────────────

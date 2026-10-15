@@ -32,6 +32,8 @@
 //   audit.mjs  — what an outsider can check: signed checkpoints, entry proofs, proofs the books only grew, signed brain files
 //   exportco.mjs — export (the records, never a key; lockable under a passphrase) and restore through the gate; the spreadsheets
 //   bridge.mjs — the bridges: bank statements, customer lists and trial balances in (read, checked, reconciled); the books out to Sage
+//   sow.mjs    — a plan carried into a company: published by the owner's or an admin's device; each agent device reads who really
+//                signed a planted brain, refuses one its signer may not plant before reading it, and re-checks the rest on its own rows
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
@@ -92,6 +94,7 @@ export const PAIRS = [
   ['src/audit.mjs', ['test/audit.test.mjs']],
   ['src/exportco.mjs', ['test/exportco.test.mjs']],
   ['src/bridge.mjs', ['test/bridge.test.mjs']],
+  ['src/sow.mjs', ['test/sow.test.mjs']],
 ];
 // imported (by the tests) it only lends hiddenSpans and PAIRS; run directly, it is the gate
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();

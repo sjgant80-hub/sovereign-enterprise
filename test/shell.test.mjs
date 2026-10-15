@@ -1192,7 +1192,7 @@ test('fuzz: no export throws or rejects on junk', async () => {
   const fns = Object.entries(S).filter(([, v]) => typeof v === 'function');
   assert.deepEqual(fns.map(([k]) => k).sort(), ['adoptAntibodiesOn', 'agentRoster', 'applyEffect', 'askSecond', 'checkIn', 'clearsOf', 'companyMark', 'createAgentShell', 'createWork',
     'finishWork', 'gateFor', 'grantFor', 'honourWork', 'isPaused', 'learnBrain', 'ollamaSteps', 'oversee', 'ownRecords', 'personApproved', 'planOf', 'policyOf', 'postEntry', 'publishBrain', 'receiptRecord',
-    'seedFor', 'signedAs', 'stepAgent', 'stockBrains', 'testWork', 'uid', 'vaultState', 'verifyWiringReceipt', 'wireRecords', 'wiringChecklist', 'wiringReceipt', 'wiringView', 'witnessHead', 'witnessVault']);
+    'seedFor', 'signedAs', 'signersOf', 'stepAgent', 'stockBrains', 'testWork', 'uid', 'vaultState', 'verifyWiringReceipt', 'wireRecords', 'wiringChecklist', 'wiringReceipt', 'wiringView', 'witnessHead', 'witnessVault']);
   // the parts of the agent step (stepAgent, finishWork, askSecond, publishBrain, uid, seedFor) take a context only the runtime and the shell build —
   // they are reached through createAgentShell here, whose tick never rejects
   const internal = new Set(['stepAgent', 'finishWork', 'askSecond', 'publishBrain', 'uid', 'seedFor']);

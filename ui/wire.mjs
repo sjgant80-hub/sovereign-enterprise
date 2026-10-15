@@ -8,13 +8,17 @@
 // Pure renderers (renderWire, installSheetHtml, officeSvg) and one controller (createWire) that talks to the page through
 // the env it is given — so the renderers are tested in Node (test/wire.test.mjs) and the controller with a fake env.
 import { AGENTS, agentName } from '../src/company.mjs';
+import { JOBS as JOB_WORDS } from '../src/company.mjs';
 import { shopperRows, sample } from '../src/streams.mjs';
 import { ollama } from '../src/model.mjs';
 import { wiringView, wiringChecklist, grantFor, checkIn, wiringReceipt, verifyWiringReceipt, receiptRecord, createAgentShell, stockBrains, testWork,
   ollamaSteps, planOf, seedFor, agentRoster, oversee, MINUTES, OSES, LOCAL_MODEL } from '../src/shell.mjs';
+import { plantedFor, judgePlanted, recordPlanted, rowsFor } from '../src/sow.mjs';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const short = (h) => (h ? String(h).slice(0, 8) : '—');
+const plantKey = (e) => e.id + '/' + e.patternId + '/' + e.plan + '/' + e.trusted;
+const jobOf = (d) => (Object.hasOwn(JOB_WORDS, d) ? JOB_WORDS[d] : String(d));
 const HEX64 = /^[0-9a-f]{64}$/;
 const ROLE_WORDS = { owner: 'the owner’s device', admin: 'an admin’s device', staff: 'a person’s device', hub: 'the office hub', agent: 'an AI agent device' };
 const STATUS_WORDS = { done: 'done', todo: 'to do', waiting: 'waiting', optional: 'optional' };
@@ -190,12 +194,27 @@ function agentPanel(s) {
   const rowsHtml = st && Array.isArray(st.last) && st.last.length ? '<div class="tablewrap"><table><tr><th>Work</th><th>Decision</th><th>Whose brain</th></tr>' + st.last.map((d) =>
     '<tr><td class="mono">' + esc(d.event) + '</td><td>' + esc(d.state === 'done' ? d.action : 'held for a person') + '</td><td>' + esc(d.by === 'own' ? 'its own' : String(d.by).replace('mesh:', 'asked: ')) + (d.cross ? ' · confirmed by ' + esc(agentName(d.second)) : '') + '</td></tr>').join('') + '</table></div>' : '';
   return '<div class="panel wr-sec" id="wire-agent-panel"><h3>Run the ' + esc(name) + ' on this device</h3>' +
-    '<p>This browser profile is the ' + esc(name) + '’s own device: it reads the work the hub addresses to it, screens the text, answers from its own brain, asks the other agents’ devices when it cannot, takes a second opinion from another device on money and security calls, and writes each decision signed with this device’s key. Anything no brain can confirm waits for a person. Its brains are Konomi SLM pattern libraries (Konomi architecture — Thomas Frumkin): the shipped ones for its job, re-checked on the published data before it acts; the planting step replaces them with brains grown from the business’s own records.</p>' +
+    '<p>This browser profile is the ' + esc(name) + '’s own device: it reads the work the hub addresses to it, screens the text, answers from its own brain, asks the other agents’ devices when it cannot, takes a second opinion from another device on money and security calls, and writes each decision signed with this device’s key. Anything no brain can confirm waits for a person. Its brains are Konomi SLM pattern libraries (Konomi architecture — Thomas Frumkin): the shipped ones for its job, re-checked on the published data before it acts. A planting can replace them with brains grown from the business’s own records — each re-checked here first (below).</p>' +
     '<div class="row">' + (a.running ? '<button data-act="wire-stop">Stop the agent</button>' : '<button class="primary" data-act="wire-run"' + (a.granted ? '' : ' disabled') + '>Start the agent</button>') +
     '<span class="dim">' + esc(a.running && st ? stateWords(st) : a.granted ? (a.why || 'Ready. It starts again by itself when this page reopens.') : 'Waiting for the owner to grant this device as the ' + name + '.') + '</span></div>' +
     (st && a.running ? '<div class="kpis"><div class="kpi"><div class="v">' + (st.decisions | 0) + '</div><div class="l">decided by this device</div></div><div class="kpi"><div class="v">' + (st.replies | 0) + '</div><div class="l">answers given to other agents</div></div>' +
       '<div class="kpi"><div class="v">' + (st.pending | 0) + '</div><div class="l">waiting on other devices’ replies</div></div><div class="kpi"><div class="v">' + esc(st.watch || '—') + '</div><div class="l">the behaviour watch reads it as</div></div></div>' +
-      '<p class="note">Brains: ' + esc((st.brains || []).join(', ') || 'none') + ' · talks to: ' + esc((st.peers || []).map(agentName).join(', ') || 'no other agent yet') + ' · antibodies adopted: ' + (st.antibodies | 0) + (st.model ? ' · local model connected' : '') + '</p>' + rowsHtml : '') + '</div>';
+      '<p class="note">Brains: ' + esc((st.brains || []).join(', ') || 'none') + ' · talks to: ' + esc((st.peers || []).map(agentName).join(', ') || 'no other agent yet') + ' · antibodies adopted: ' + (st.antibodies | 0) + (st.model ? ' · local model connected' : '') + '</p>' + rowsHtml : '') +
+    plantedPanel(a) + '</div>';
+}
+/** The brains a planting signed into the company for this agent's jobs, and what this device did with each. */
+function plantedPanel(a) {
+  const p = a.planted;
+  const own = (a.own || []).map((f) => f.name);
+  const by = (r) => (r.role === 'owner' ? 'the owner' : r.role === 'admin' ? 'an admin' : r.role ? agentName(r.role) : 'no one device');
+  const rows = p && p.results.length ? '<div class="tablewrap"><table><tr><th>Job</th><th>Planted by</th><th>What this device did</th></tr>' + p.results.map((r) =>
+    '<tr><td>' + esc(jobOf(r.domain)) + '</td><td>' + esc(by(r)) + '</td><td>' + (r.adopted ? '<span class="ok">Adopted</span>' : '<span class="warn">Refused</span>') + ' — ' +
+      esc(r.reason.replace(/^(Adopted|Refused): /, '')) + '</td></tr>').join('') + '</table></div>' +
+    '<p class="note">Holding: ' + esc(Object.entries(p.kept).map(([d, k]) => jobOf(d) + ' — ' + (k === 'planted' ? 'the planted brain' : k === 'shipped' ? 'the shipped brain (it does better here)' : 'no brain: that work waits for a person')).join('; ')) + '.</p>' : '';
+  return '<div class="wr-sec"><h4 style="margin:10px 0 4px">Brains planted for this agent</h4><p class="note" style="margin-top:0">When a planting signs brains grown from the business’s own records into the company, this device takes one only if the company grants its signer to plant that job — the owner, an admin, or this agent — and only if it holds up on this device’s own records, at least as well as the brain it has. It checks when it starts and on every beat.</p>' +
+    (rows || '<p class="dim" style="margin:0">' + (a.running ? 'No planted brain for this agent’s jobs yet.' : 'Start the agent to load them.') + '</p>') +
+    '<div class="row" style="margin-top:8px"><label class="dim" for="wire-own">This device’s own copy of the business’s records for its jobs (CSV — read here, never uploaded, kept until this page closes)</label><input type="file" id="wire-own" multiple accept=".csv,text/csv" data-wire-own="1"></div>' +
+    (own.length ? '<p class="note">Re-checking on: ' + esc(own.join(', ')) + '.</p>' : '<p class="note">Without one, it re-checks on the published data it holds — enough only when the business’s columns match it.</p>') + '</div>';
 }
 function stateWords(st) {
   if (st.state === 'running') return 'Working — ' + (st.pending | 0) + ' piece' + (st.pending === 1 ? '' : 's') + ' of work waiting on other devices.';
@@ -307,7 +326,8 @@ export function createWire(env) {
   const now = () => { try { return Number(E.now()) || Date.now(); } catch { return Date.now(); } };
   const ui = { want: { role: '', agent: '' }, name: '', plan: planOf(null), prefsFor: null,
     os: OSES.includes(E.os) ? E.os : 'windows', model: { checked: false, ok: false, models: [], why: '' }, say: '', verifyOut: '', receipt: null, sent: 0,
-    shell: null, status: null, running: false, starting: false, why: '', brains: null, answered: null, watchedAt: -Infinity, timer: null, log: [] };
+    shell: null, status: null, running: false, starting: false, why: '', brains: null, answered: null, watchedAt: -Infinity, timer: null, log: [],
+    planted: null, judged: new Set(), own: [], lib: {}, shellOpts: null };
   /** This device's own choices, kept per device (the page's storage is per device): read once the device is known. */
   const node = () => {
     let n = null;
@@ -339,7 +359,7 @@ export function createWire(env) {
     const role = deviceRole(view);
     const wantAgent = ui.want.role === 'agent' && AGENTS.some((a) => a.id === ui.want.agent) ? ui.want.agent : role.role === 'agent' ? role.agent : '';
     const granted = !!wantAgent && agentRoster(n).some((g) => g.agent === wantAgent && g.pub === n.pub);
-    const agent = wantAgent ? { id: wantAgent, granted, running: ui.running, status: ui.status, why: ui.starting ? 'Loading its brains and checking them on the published data…' : ui.why } : null;
+    const agent = wantAgent ? { id: wantAgent, granted, running: ui.running, status: ui.status, why: ui.starting ? 'Loading its brains and checking them on the published data…' : ui.why, planted: ui.planted, own: ui.own } : null;
     const hub = role.role === 'hub' || view.devices.some((d) => d.pub === view.me && d.role === 'hub') ? { agents: new Set(agentRoster(n).map((g) => g.agent)).size, sent: ui.sent } : null;
     const control = {};
     for (const r of n.list('control')) control[r.id] = { paused: !!r.paused, by: typeof r.by === 'string' ? r.by : '', watch: typeof r.watch === 'string' ? r.watch : '' };
@@ -356,9 +376,17 @@ export function createWire(env) {
     try {
       if (!ui.brains) ui.brains = await loadBrains(E.fetchJson);
       const B = ui.brains;
-      const r = await stockBrains({ node: n, agent: a, factory: B.factory, features: B.features, titles: B.titles, rows: (d, k) => B.rows(a.id, d, k), log: (x) => ui.log.push(x) });
+      // planted brains first — read BEFORE this device publishes anything, so its shipped publish never writes over a planted
+      // record (src/sow.mjs): a job with a planted brain from a key that may plant it holds what the judgement gives
+      const j = judgePlanted({ node: n, agentId: a.id, rows: (d) => ownRows(n, a.id, d), shipped: B.factory });
+      const r = await stockBrains({ node: n, agent: { ...a, domains: a.domains.filter((d) => !j.held.includes(d)) }, factory: B.factory, features: B.features, titles: B.titles, rows: (d, k) => B.rows(a.id, d, k), log: (x) => ui.log.push(x) });
+      await recordPlanted(n, a.id, j);
+      ui.planted = j;
+      ui.judged = new Set(plantedFor(n, a.id).map(plantKey));
       const model = ui.model.ok ? { adapter: ollama({ model: pickModel(ui.model.models) }), budget: 0 } : null;
-      ui.shell = createAgentShell({ node: n, agentId: a.id, library: r.lib, localRows: (d) => B.rows(a.id, d, 600), model, log: (x) => ui.log.push(x) });
+      ui.shellOpts = { node: n, agentId: a.id, localRows: (d) => B.rows(a.id, d, 600), model, log: (x) => ui.log.push(x) };
+      ui.lib = { ...r.lib, ...j.library };
+      ui.shell = createAgentShell({ ...ui.shellOpts, library: ui.lib });
       ui.running = true;
       ui.why = '';
       set('se.wire.auto', a.id);
@@ -368,10 +396,42 @@ export function createWire(env) {
     } finally { ui.starting = false; paint(); }
   }
 
+  /** This device's own rows for a job: the business's file it was given, read by a planting's job record — else the published data. */
+  function ownRows(n, agentId, d) {
+    for (const f of ui.own) for (const r of n.list('plan')) {
+      if (r.kind !== 'job' || r.domain !== d) continue;
+      const x = rowsFor(r, f.text);
+      if (x.ok) return x.rows;
+    }
+    return ui.brains.rows(agentId, d, 600);
+  }
+  /** Judge the planted brains again (a new planting, or the business's own file given) and run on with what it gives. */
+  async function replant(n) {
+    const id = ui.shellOpts.agentId;
+    const j = judgePlanted({ node: n, agentId: id, rows: (d) => ownRows(n, id, d), shipped: ui.brains.factory });
+    await recordPlanted(n, id, j);
+    ui.planted = j;
+    ui.judged = new Set(plantedFor(n, id).map(plantKey));
+    // a job no longer held by a planting it may trust (a record another device wrote over) keeps the brain it already had
+    ui.lib = { ...Object.fromEntries(Object.entries(ui.lib).filter(([d]) => !j.held.includes(d))), ...j.library };
+    ui.shell = createAgentShell({ ...ui.shellOpts, library: ui.lib });   // it picks up from the spine, as after a restart
+  }
+  /** The business's own files for this device's jobs — kept in memory only, until the page closes. */
+  async function ownFiles(list) {
+    ui.own = (Array.isArray(list) ? list : []).filter((f) => f && typeof f.text === 'string' && f.text.length <= 8 * 1024 * 1024).slice(0, 8).map((f) => ({ name: String(f.name || 'a file').slice(0, 80), text: f.text }));
+    const n = node();
+    if (n && ui.running && ui.shell) await replant(n);
+    ui.say = ui.own.length ? 'This device re-checks its planted brains on ' + ui.own.map((f) => f.name).join(', ') + '.' : '';
+    paint();
+  }
+
   async function beat() {
     const n = node();
     if (!n) return;
-    if (ui.running && ui.shell) ui.status = await ui.shell.tick();
+    if (ui.running && ui.shell) {
+      if (plantedFor(n, ui.shellOpts.agentId).some((e) => !ui.judged.has(plantKey(e)))) await replant(n);   // a planting arrived: judge it, then carry on with what it gives
+      ui.status = await ui.shell.tick();
+    }
     else if (!ui.starting && get('se.wire.auto') && ui.want.role === 'agent' && get('se.wire.auto') === ui.want.agent) await startAgent();   // an AI box restarts its agent by itself
     // a device checks in once when it starts, when its name changes, and whenever someone calls the roll — never on a timer, so a
     // running company is not filled with check-ins; checkIn writes only if what it would say has changed
@@ -481,7 +541,7 @@ export function createWire(env) {
   }
 
   return {
-    state, act, beat, startAgent,
+    state, act, beat, startAgent, ownFiles,
     start() { if (!ui.timer) ui.timer = setInterval(() => { beat().catch(() => {}).finally(paint); }, TICK_MS); },
     stop() { if (ui.timer) { clearInterval(ui.timer); ui.timer = null; } },
     get running() { return ui.running; },

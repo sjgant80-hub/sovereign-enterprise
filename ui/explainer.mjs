@@ -42,6 +42,7 @@ export const START_STEPS = [
   { id: 'fit', title: 'Put in your own numbers', text: 'Enter your headcount and revenue: the five-year saving, the cloud comparison and the rival that could undercut you, on your figures.', go: 'business' },
   { id: 'case', title: 'Take it to your board', text: 'The full case — the saving, the cloud, the rival, security and regulation, the roll-out — printable as a PDF.', go: 'case' },
   { id: 'own', title: 'Run your own', text: 'Turn this browser into a device in your own company, invite your team, and connect another machine directly over WebRTC — no server in the path.', go: 'run' },
+  { id: 'plant', title: 'Plant it in a business', text: 'The planter’s console: name the kind of business, drop its own files (read here, never uploaded) and grow its own brains from them — then bridge its bank, books and customers, sign the plan into a company, watch each agent device re-check it, and take away a signed receipt. One click runs the demo business.', go: 'plant' },
   { id: 'wire', title: 'Wire up a real office', text: 'The tech person’s afternoon, step by step: the owner’s laptop, each person’s device, the office hub, one device per AI agent on the AI box — each step checked against the company itself, ending in a receipt the owner signs.', go: 'wire' },
 ];
 
@@ -57,6 +58,7 @@ export const TOUR = [
   { view: 'how', target: '#v-how', title: 'How it works', text: 'Every step as diagrams — and a real decision this company just made, traced through them.' },
   { view: 'business', target: '#v-business', title: 'On your own numbers', text: 'Put in your headcount, revenue and margin: the saving, the cloud comparison and the rival are recomputed by the same kernels.' },
   { view: 'case', target: '#brochure-doc', title: 'The case for your board', text: 'The saving, the comparison with renting from the cloud, the AI-native rival, security and regulation, the roll-out. Print it for your board.' },
+  { view: 'plant', target: '#v-plant', title: 'Plant it in a business', text: 'The planter’s console: a business’s own files become its own brains, its records are bridged, the plan is signed into its company and checked on every agent device, and a signed receipt proves it worked. One click runs the whole planting on a demo business.' },
   { view: 'wire', target: '#v-wire', title: 'Wire it in a real office', text: 'When you are ready: the step-by-step checklist a tech person follows to put this on the office’s own machines — each AI agent on its own device — with a printable install sheet and a receipt the owner signs.' },
 ];
 

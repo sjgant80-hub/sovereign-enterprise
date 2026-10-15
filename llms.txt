@@ -11,6 +11,7 @@ The case for the board: https://sjgant80-hub.github.io/sovereign-enterprise/#cas
 How it works (a real decision traced step by step): https://sjgant80-hub.github.io/sovereign-enterprise/#how
 Blueprint (every organ, how it connects, how it is proven): https://sjgant80-hub.github.io/sovereign-enterprise/#blueprint
 For your business (adoption guide, your headcount, the rival, the cloud): https://sjgant80-hub.github.io/sovereign-enterprise/#business
+Plant (the planter's console — a business's files to its own brains, its records bridged, the plan signed into its company, a signed receipt): https://sjgant80-hub.github.io/sovereign-enterprise/#plant
 White paper: https://sjgant80-hub.github.io/sovereign-enterprise/whitepaper.html
 Source: https://github.com/sjgant80-hub/sovereign-enterprise
 
@@ -30,6 +31,19 @@ Source: https://github.com/sjgant80-hub/sovereign-enterprise
 - Free text (reading a customer's message, routing it, drafting a reply) goes to a language model the company chooses — on its own
   machine, in the browser, or a provider with its own key; spend capped before any paid call; every call audited; drafts a person sends.
 - Devices on different machines connect directly over WebRTC with no server: a hand-carried code, each key proven on the link.
+
+## Planting it in a business
+- One seed, grown into each business's own company. The planter names the kind of business and its headcount and hands over the
+  records it already keeps, read on the planter's device and never uploaded: each is classified with the reason; each job gets a brain
+  grown from the business's own records (graded on rows it never grew on), the shipped brain, or a person; a decision log is re-grown
+  and checked against the old decisions and what really happened.
+- Bridges: a bank statement reconciled to the penny, a trial balance as the opening entry, a customer list; out as a Sage Accounting
+  journal import and a CRM spreadsheet. Xero is not written (its layout could not be checked against Xero's own documentation).
+- The planter's device (the owner's or an admin's — on site, or remote after joining by the invite link) signs the plan into the
+  company. Each agent device reads which key really wrote a planted brain, takes it only from the owner, an admin or the agent that runs
+  that job, and only if it re-checks on its own records at least as well as the brain it has.
+- The signed planting receipt: each job before and after on its own held-out rows, the five-year cost on the business's own headcount,
+  the records brought across; a redacted showcase copy (no names, no amounts) for the next prospect.
 
 ## Measured (re-runnable: node tools/run-company.mjs --check)
 - A working day of 480 pieces of work on published datasets: 82.1% done end to end by agents; 91.1% of agent calls matched the real

@@ -34,7 +34,7 @@ test('every name the page imports is exported by that module', async () => {
 });
 
 test('every ui module the page imports also imports only names that exist', async () => {
-  for (const f of ['ui/explainer.mjs', 'ui/brochure.mjs', 'ui/train.mjs', 'ui/wire.mjs']) {
+  for (const f of ['ui/explainer.mjs', 'ui/brochure.mjs', 'ui/train.mjs', 'ui/wire.mjs', 'ui/plant.mjs']) {
     const src = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
     for (const [, names, path] of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*'(\.\.\/[^']+)'/g)) {
       const mod = await import(new URL('../' + path.slice(3), import.meta.url));

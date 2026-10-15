@@ -192,6 +192,7 @@ export function renderBrochure(ctx) {
     <dt>What if someone attacks it?</dt><dd>Hostile messages are quarantined before any AI reads them. Once a person confirms a new attack, every device becomes immune to it. An AI update is adopted only if it does at least as well as the brain it replaces on each device's own records. Forged writes are refused at the door. An agent behaving unlike itself is paused automatically until a person clears it.</dd>
     <dt>What if a laptop is stolen?</dt><dd>Revoke its grant and every device refuses its writes from that moment. Nobody can rewrite what that device already wrote: every write names the one before it, so a forged version of the past is flagged with a proof on every device. Then issue the person a new device key. Each device's key is held by its browser in a form no web page can export and its copy of the company is stored sealed, so with full-disk encryption on and the screen locked, a thief with the laptop gets nothing. The owner's device is the one key that cannot be revoked; any two of the three recovery cards printed when the company was founded bring it back on a new machine.</dd>
     <dt>What if the internet goes down?</dt><dd>It keeps working. Devices sync with each other directly; when they reconnect, every device converges to the identical company.</dd>
+    <dt>Do we have to rip out our systems?</dt><dd>No. Your bank statement (one amount column, paid in and paid out, or debit and credit), your accountant’s trial balance and your customer list come in as the files those systems already export: every line is checked, money is read to the penny, the running balances are reconciled, and a line no rule recognises waits in a suspense account for a person. The books go back out as a Sage Accounting journal import, and the customers as a spreadsheet any CRM imports. Xero is not written yet: its import layout could not be checked against Xero’s own documentation, and a guessed file is not shipped. Your old systems keep running beside the agents until each department passes its go/no-go gate.</dd>
     <dt>Who supplies it, and are we locked in?</dt><dd>AI Native Solutions (<a href="https://www.ai-nativesolutions.com" target="_blank" rel="noopener">ai-nativesolutions.com</a>) plants and supports it. The software is MIT-licensed — no licence fee — and you own the machines, the data and the brains, so it keeps running if you stop working with us. Support, response times, warranty and liability are set in each deployment's agreement.</dd>
     <dt>Is this proven or a promise?</dt><dd>The software is proven: its full test suite, a mutation gate that checks the tests catch every deliberate fault, and two byte-for-byte re-runs run on GitHub's servers on every change — and you can run them yourself. The business result on this page is modelled from sourced figures; your pilot measures it on your own records, and its receipt is yours to keep.</dd>
     <dt>What happens to our people?</dt><dd>${leads} AI-native roles direct the agents${kept ? ` and ${kept} kept people keep the client and on-site work` : ''}. Roles that go follow the statutory process — consultation, notice inside the dual-running months, redundancy pay — and the people who know the work best help train the agents before the old process is switched off.</dd>
@@ -223,6 +224,20 @@ export function renderBrochure(ctx) {
   </table></div>
   <p>The hardware: the laptops your leads already have; one hub (${esc(basis.hub.product)}); ${p.capacity.boxes} AI boxes
     (${esc(box.product)}) — one carries the load at ${pct(p.capacity.decodeUtilisation)} busy, the second is the spare.</p>
+</section>
+
+<section class="b-sec">
+  <h3>How it is planted</h3>
+  <p>The same seed grows into each business’s own company — differentiated to what that business does, never a one-size template.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Step</th><th>What happens</th><th>Who</th></tr>
+    <tr><td>Understand</td><td>We walk into the office — or remote in — and learn what the business does: its kind of work and its people, department by department.</td><td>The planter, with you</td></tr>
+    <tr><td>Plant</td><td>Your own records go into the planter’s console, read on that device and never uploaded. Each job gets a brain grown from your records and graded on cases it never grew on; your past decisions are re-grown and checked against what really happened; a job with no data waits for a person.</td><td>The planter</td></tr>
+    <tr><td>Bridge</td><td>Your bank statement, trial balance and customer list are read across and checked to the penny; the books go back out in your accountant’s own import layout.</td><td>The planter</td></tr>
+    <tr><td>Wire</td><td>Your tech person puts it on your own machines — the owner’s laptop, each person’s device, the office hub, one device per agent — following a checklist that checks each step against the company itself.</td><td>Your tech person</td></tr>
+    <tr><td>Load</td><td>Each agent device takes a planted brain only if a key your company grants signed it, and only if it holds up on that device’s own records at least as well as the brain it has.</td><td>The agent devices</td></tr>
+    <tr><td>Tend and prove</td><td>We remote in and tend it. A signed receipt shows each job before and after, measured on your own records; its redacted copy — no names, no amounts — is what the next business sees.</td><td>The planter, with you</td></tr>
+  </table></div>
 </section>
 
 <section class="b-sec">
