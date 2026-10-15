@@ -194,6 +194,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
     <a href="#case" data-view="case">The case</a>
     <a href="#paper" data-view="paper">White paper</a>
     <a href="#run" data-view="run">Run your own</a>
+    <a href="#wire" data-view="wire">Wire it</a>
   </nav>
   <span id="kstat" class="pill">booting…</span>
 </div></header>
@@ -237,7 +238,8 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 <section class="view" id="v-run" aria-label="Run your own company">
   <h2 class="sec-h">Run your own company</h2>
   <p class="sec-sub">This browser tab becomes a device in your own company. Found it, invite teammates by link, and every device syncs peer to
-    peer — same machine over tabs, other machines over a direct encrypted link. Nothing goes to a server.</p>
+    peer — same machine over tabs, other machines over a direct encrypted link. Nothing goes to a server.
+    <a href="#wire" data-view="wire">Setting up a whole office? Wire it, step by step.</a></p>
   <div class="panel" id="realbox"></div>
   <div class="panel hide" id="rtcbox"></div>
   <div class="panel" id="backupbox"></div>
@@ -269,6 +271,8 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
   <div id="run-slot"></div>
 </section>
 
+<section class="view" id="v-wire" aria-label="Wire it — set up a real office"></section>
+
 <div id="workspace">
   <nav class="tabs" id="tabs" aria-label="Views of the company"></nav>
   <p class="help" id="tabhelp"></p>
@@ -277,7 +281,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 </div>
 
 <p class="foot">
-  Kernel-backed: this page imports <span class="mono">src/runtime · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · audit · exportco · books · lease · sim</span> — the
+  Kernel-backed: this page imports <span class="mono">src/runtime · shell · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · audit · exportco · books · lease · sim</span> — the
   same modules the test suite and the mutation witness prove in CI, on every change. The brains are the Konomi SLM's verified pattern libraries
   (Konomi architecture — Thomas Frumkin), grown by the seed-library ribosome (sjgant80-hub). Seven of the eight jobs run on published datasets: six real (card transactions, telecom churn, credit defaults, IoT network flows, household power, web shopping sessions) and one its authors publish as synthetic (AI4I machine data); inventory runs on a synthetic stream because no open stock-out data exists. Every source and licence is on its brain card in Brains and in NOTICE. The design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd,
   Lumiea Systems Research Division — ThunderStruck Service, LLC; the independent second brain and the held-for-a-human verdict draw on his
@@ -286,6 +290,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 </p>
 </div>
 <div id="rc-print"></div>
+<div id="wire-print"></div>
 <div class="tour hide" id="tour" role="dialog" aria-label="Guided tour"></div>
 <script type="module">
 import { createNode, signEnvelope } from './src/node.mjs';
@@ -318,6 +323,7 @@ import { exportCompany, openExport, feed, companyCsvs, lockFile } from './src/ex
 import { LOG_MAX } from './src/store.mjs';
 import { ollama, openaiCompatible, anthropic, webllm } from './src/model.mjs';
 import { makeAntibody, NOVEL_ATTACK, NOVEL_PARAPHRASES } from './src/antibody.mjs';
+import { createWire, renderWire, WIRE_CSS } from './ui/wire.mjs';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -331,7 +337,7 @@ const TABS = ['Board', 'Agents', 'Watch', 'Brains', 'Tasks', 'Chat', 'CRM', 'Doc
 const SENSITIVE = new Set(['CRM', 'Books', 'People']);
 const LEASE_TTL = 90000, LEASE_WIN = 30000;
 const TICK = 900, SHIFT = 3000, SPEEDS = [1, 3, 8];
-const TOP = ['overview', 'live', 'how', 'blueprint', 'business', 'case', 'paper', 'run'];
+const TOP = ['overview', 'live', 'how', 'blueprint', 'business', 'case', 'paper', 'run', 'wire'];
 
 // ── state: the company is the runtime kernel; the page holds only what is the page's ────────────────
 let mode = 'demo';
@@ -354,6 +360,7 @@ function bizState() {
     rival: p && revenue > 0 && Number.isFinite(margin) ? undercut(p, { revenue, margin }) : null, cloud: p ? cloudCompare(p, c.basis) : null };
 }
 document.head.appendChild(Object.assign(document.createElement('style'), { textContent: EXPLAIN_CSS }));
+document.head.appendChild(Object.assign(document.createElement('style'), { textContent: WIRE_CSS }));
 // For your business: the adoption guide, fit-it-to-your-headcount, the rival and the cloud on those numbers, then grow your own brain
 function renderBusinessView() {
   if (!ui.ctx) { $('v-business').innerHTML = '<p class="dim">Loading the figures…</p>'; return; }
@@ -456,6 +463,7 @@ function renderTabs() {
 function render() {
   if (!co) return;
   if (view === 'overview') return renderOverviewLive();
+  if (view === 'wire') return renderWireView();
   if (view !== 'live' && view !== 'run') return;
   if (mode === 'demo') renderDevices(); else renderReal();
   renderTabs();
@@ -1079,7 +1087,7 @@ async function act(a, el) {
     const max = Math.max(0, ...node.hashes().map((h) => { try { const e = JSON.parse(new TextDecoder().decode(node.bytes(h))); return e.from === el.dataset.to ? e.seq : 0; } catch { return 0; } }));
     await node.revoke(el.dataset.g, max);
   }
-  else if (a === 'grant') { const k = val('gk').toLowerCase(); if (/^[0-9a-f]{64}$/.test(k)) await node.grant(uid(node, 'g'), k, val('gr') || 'staff', val('gr') === 'admin' ? ['*'] : ['tasks', 'msg', 'docs', 'crm']); }
+  else if (a === 'grant') { const k = val('gk').toLowerCase(); if (/^[0-9a-f]{64}$/.test(k)) await node.grant(uid(node, 'g'), k, val('gr') || 'staff', val('gr') === 'admin' ? ['*'] : ['tasks', 'msg', 'docs', 'crm', 'wire']); }
   else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await ui.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = t === null ? 'erased — key destroyed, unreadable on every device' : t; return; }
   else if (a === 'erase') { ui.ring.shred(el.dataset.id); const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = 'erased — key destroyed, unreadable on every device'; return; }
   else if (a === 'sim') { ui.proofOut = 'running 8 devices through partitions, drops, duplicates and attacks…'; render(); const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); ui.proofOut = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, forks: r.forks, burnedKeys: r.burnedKeys, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); }
@@ -1247,6 +1255,7 @@ async function route(opts = {}) {
   const ws = $('workspace');
   if (view === 'live') { mode = 'demo'; $('live-slot').appendChild(ws); ws.classList.remove('hide'); }
   else if (view === 'run') { mode = 'real'; $('run-slot').appendChild(ws); ws.classList.remove('hide'); if (tab === 'Board' || tab === 'Agents' || tab === 'Watch' || tab === 'Brains') tab = 'Tasks'; if (!real.node) await bootReal(); }
+  else if (view === 'wire') { mode = 'real'; ws.classList.add('hide'); if (!real.node) await bootReal(); }
   else ws.classList.add('hide');
   if (view === 'live' && !TABS.includes(tab)) tab = 'Board';
   if (view === 'overview') renderOverview();
@@ -1255,6 +1264,7 @@ async function route(opts = {}) {
   if (view === 'business') renderBusinessView();
   if (view === 'case') renderCase();
   if (view === 'paper') renderPaper();
+  if (view === 'wire') renderWireView(true);
   if (!opts.keepScroll) window.scrollTo(0, 0);
   if (view === 'live' && $('guide-body') && !$('guide-body').innerHTML) $('guide-body').innerHTML = renderStart();
   render();
@@ -1306,6 +1316,7 @@ document.addEventListener('change', async (e) => {
   }
   if (e.target.id === 'aud-old' && e.target.files && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; if (f.size > 1024 * 1024) audSay('Not made: that file is too large to be a checkpoint.', 'bad'); else await auditGrew(f); return; }
   if (e.target.id === 'bk-file' && e.target.files && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; await restoreFrom(f); return; }
+  if (e.target.dataset && e.target.dataset.wireOs) { e.target.blur(); await wire.act('wire-os', e.target, wireRead); return; }
   if (e.target.id === 'train-target') { ui.train = { ...ui.train, target: e.target.value, result: null }; renderTrainBox(); return; }
   if (e.target.id === 'mc') { const n = current(); if (can(n, null)) await n.put('policy', 'agents', { minConfidence: +e.target.value, by: n.name }); render(); }
 });
@@ -1328,6 +1339,7 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.step) { const s = START_STEPS.find((x) => x.id === t.dataset.step); if (s && s.go) { if (s.tab) tab = s.tab; if (s.device) ui.sel = s.device; go(s.go); if (s.then) setTimeout(() => { const el = document.getElementById(s.then); if (!el) return; if (el.tagName === 'BUTTON') el.click(); else el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); } return; }
   if (t.dataset.explain) { ui.trace = t.dataset.explain; go('how'); return; }
   if (t.dataset.act === 'print-brochure') { window.print(); return; }
+  if (t.dataset.act && t.dataset.act.startsWith('wire-')) { t.disabled = true; try { await wire.act(t.dataset.act, t, wireRead); } finally { t.disabled = false; } return; }
   if (t.dataset.act === 'imm-new') { ui.immune.first = (await co.hostile(prng((Date.now() & 0xffff) + 31), NOVEL_ATTACK)).id; render(); return; }
   if (t.dataset.act === 'imm-confirm') { await co.confirmHostile('overseer', NOVEL_ATTACK, 'asked us to wire a refund to an unknown account'); ui.immune.confirmed = true; render(); return; }
   if (t.dataset.act === 'imm-again') { ui.immune.again = (await co.hostile(prng((Date.now() & 0xffff) + 37), NOVEL_PARAPHRASES[ui.immune.i++ % NOVEL_PARAPHRASES.length])).id; render(); return; }
@@ -1691,7 +1703,7 @@ async function rtcAct(a, el) {
     rtcSay('');
   } else if (a === 'rtc-grant') {
     const n = real.node;
-    if (/^[0-9a-f]{64}$/.test(el.dataset.pub) && n.canWrite(null)) await n.grant(uid(n, 'g'), el.dataset.pub, 'staff', ['tasks', 'msg', 'docs', 'crm']);
+    if (/^[0-9a-f]{64}$/.test(el.dataset.pub) && n.canWrite(null)) await n.grant(uid(n, 'g'), el.dataset.pub, 'staff', ['tasks', 'msg', 'docs', 'crm', 'wire']);
   } else if (a === 'rtc-close') {
     const l = real.rtc.find((x) => String(x.id) === el.dataset.id);
     if (l) { if (l.session) l.session.close('closed here'); l.conn.close(); }
@@ -1784,7 +1796,7 @@ function renderReal() {
   if ($('leave-no')) $('leave-no').onclick = () => { real.leaving = false; render(); };
   if ($('leave-yes')) $('leave-yes').onclick = async () => { real.cards = null; LS('se.genesis', null); LS('se.env', null); LS('se.priv', null); LS('se.catchup', null); await KS.wipe(devNs); if (storeNs) { try { localStorage.removeItem('se.joined'); } catch { /* blocked */ } } location.href = location.pathname; };
   if ($('rc-print-btn')) $('rc-print-btn').onclick = () => printCards(n.genesis);
-  if ($('rc-done')) $('rc-done').onclick = () => { real.cards = null; $('rc-print').innerHTML = ''; render(); };
+  if ($('rc-done')) $('rc-done').onclick = () => { real.cards = null; $('rc-print').innerHTML = ''; wire.act('wire-cards'); render(); };   // marked on the spine: Wire it's step 2
   if ($('rc-nowait')) $('rc-nowait').onclick = () => { LS('se.catchup', null); real.gateLog.push(`${stamp()} told that the lost owner device never wrote anything: writing now`); render(); };
   $('rconv').className = 'badge ok';
   $('rconv').textContent = `replica ${short(n.fingerprint())} · ${n.size()} signed writes`;
@@ -1794,6 +1806,48 @@ function renderReal() {
   renderBackup();
 }
 
+
+// ── Wire it (ui/wire.mjs): the tech person's afternoon, live against this tab's own device ──────────────────────────
+const detectOs = () => { const p = String((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent || '').toLowerCase(); return p.includes('mac') ? 'mac' : p.includes('linux') || p.includes('x11') ? 'linux' : 'windows'; };
+/** Is Ollama on this machine, and which models does it hold? (GET /api/tags — Ollama's own API) */
+async function probeLocalModel() {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 2500);
+  try {
+    const r = await fetch('http://localhost:11434/api/tags', { signal: ac.signal });
+    if (!r.ok) return { ok: false, models: [], why: 'Ollama answered with an error (' + r.status + ').' };
+    const j = await r.json();
+    const models = Array.isArray(j && j.models) ? j.models.map((m) => String((m && m.name) || '')).filter(Boolean) : [];
+    return { ok: models.length > 0, models, why: models.length ? '' : 'Ollama is running here but holds no model yet — run: ollama pull qwen2.5:7b' };
+  } catch (e) {
+    return { ok: false, models: [], why: e && e.name === 'AbortError' ? 'Nothing answered at localhost:11434 in time — is Ollama running on this machine?'
+      : 'This page could not reach Ollama at localhost:11434: it is not running, or it does not allow this page yet (the commands are above).' };
+  } finally { clearTimeout(t); }
+}
+const wireRead = (id) => (id.startsWith('plan:') ? !!(document.querySelector('[data-plan-agent="' + CSS.escape(id.slice(5)) + '"]') || {}).checked
+  : id.startsWith('role:') ? ((document.querySelector('[data-wire-role="' + CSS.escape(id.slice(5)) + '"]') || {}).value || '') : ($(id) ? $(id).value : ''));
+const wire = createWire({
+  node: () => real.node, keys: () => real.me,
+  store: { get: (k) => LS(k), set: (k, v) => LS(k, v) },
+  fetchJson: (u) => fetch(u).then((r) => r.json()),
+  peers: () => [...real.rtc.filter((l) => l.info && l.info.proven && l.info.peer).map((l) => ({ pub: l.info.peer, via: 'a machine link, key proven' })),
+    ...[...real.peers].map((p) => ({ pub: p, via: 'another tab of this browser' }))],
+  link: () => (real.node ? location.origin + location.pathname + '#join=' + real.node.genesis : ''),
+  origin: location.origin, os: detectOs(), now: () => Date.now(),
+  print: (html) => { const p = $('wire-print'); p.innerHTML = html; document.body.classList.add('print-sheet'); addEventListener('afterprint', () => { document.body.classList.remove('print-sheet'); p.innerHTML = ''; }, { once: true }); window.print(); },
+  download: (name, text) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); },
+  render: () => { if (view === 'wire') renderWireView(); },
+  probeModel: probeLocalModel,
+});
+let wireShown = '';
+function renderWireView(force) {
+  const el = $('v-wire');
+  const a = document.activeElement;
+  if (!force && a && el.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;   // never redraw under someone typing
+  const html = renderWire(wire.state());
+  if (force || html !== wireShown) { wireShown = html; el.innerHTML = html; }
+}
+wire.start();   // an agent device's beat, and a check-in whenever someone calls the roll — on whatever view is open
 
 // ── the heartbeat: the company runs whatever page you're on ─────────────────────────────────────────
 let busy = false;

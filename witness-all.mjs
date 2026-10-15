@@ -26,6 +26,8 @@
 //   store.mjs  — the device's secrets at rest: the non-extractable key in IndexedDB, the sealed log and its retention rule, the
 //                one-time migration off the plaintext copies (run against an in-memory IndexedDB with real WebCrypto)
 //   recovery.mjs — owner recovery cards: Shamir over GF(256), the checksummed card, every refusal
+//   shell.mjs  — node-shell + wiring: the one agent step (the demo runs it too), one real device running one agent, the tech
+//                person’s checklist and the owner-signed wiring receipt
 //   receipt.mjs — the per-planting receipt: before and after on the business's own held-out rows, the office comparison, the live results — signed, re-derivable, reproducible
 //   audit.mjs  — what an outsider can check: signed checkpoints, entry proofs, proofs the books only grew, signed brain files
 //   exportco.mjs — export (the records, never a key; lockable under a passphrase) and restore through the gate; the spreadsheets
@@ -61,6 +63,7 @@ export function hiddenSpans(src) {
   return spans;
 }
 export const PAIRS = [
+  ['src/shell.mjs', ['test/shell.test.mjs']],
   ['src/store.mjs', ['test/store.test.mjs']],
   ['src/recovery.mjs', ['test/recovery.test.mjs']],
   ['src/crdt.mjs', ['test/crdt.test.mjs', 'test/fuzz.test.mjs', 'test/spine.fuzz.test.mjs']],

@@ -29,10 +29,12 @@ import { askRecord, replyFor, repliesTo, heardFrom, pickAnswer, pickSecond } fro
 import { ACTIONS, DEFAULT_POLICY } from './agent.mjs';
 import { ask } from './model.mjs';
 import { watchAll, shouldPause, DEFAULT_POLICY as WATCH_POLICY } from './watch.mjs';
+// the one agent step, the books, the vault witness, the antibodies, hand-offs and the overseer — shared with a real agent device
+import { uid, seedFor, gateFor, policyOf, isPaused, clearsOf, vaultState, postEntry, witnessHead, witnessVault, applyEffect, publishBrain, createWork,
+  stepAgent, finishWork, askSecond, learnBrain, stockBrains, adoptAntibodiesOn, honourWork, oversee } from './shell.mjs';
 
 const pad = (n, w = 6) => String(n).padStart(w, '0');
-const uid = (node, p) => p + pad(node.clock() + 1, 8) + '-' + node.pub.slice(0, 6);
-export const seedFor = (who, d) => (parseInt(sha256(who + '/' + d).slice(0, 8), 16) >>> 0) || 1;
+export { seedFor };   // src/shell.mjs: the one seed a device grows its own brain with
 export const HUMAN_IDS = HUMANS.map((h) => h.id);
 export const AGENT_IDS = AGENTS.map((a) => a.id);
 export const WORKERS = AGENTS.filter((a) => a.domains.length).map((a) => a.id);
@@ -70,8 +72,7 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     afterTick: [],                                       // async (co) → void — e.g. the behaviour watch
   };
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
-  // money and security jobs need more than the plain gate before a brain is trusted with them
-  const gateFor = (d) => (ACTIONS[d] && ACTIONS[d].stakes === 'high' ? HIGH_STAKES_GATE : GATE_AUC);
+  // money and security jobs need more than the plain gate before a brain is trusted with them (gateFor, src/shell.mjs)
   // the best brain this device already knows for a job — its own, else the shipped one — which any offer must not undercut
   const referenceFor = (id, d) => (co.libs[id] && co.libs[id][d]) || co.factory[d] || null;
   const brainLog = (s) => log(s);
@@ -111,17 +112,13 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     if (!co.local[id][d]) co.local[id][d] = co.realLocal && co.realLocal[d] ? co.realLocal[d] : d === 'shopper' ? co.shopperLocal : sample(d, seedFor(id, d), n).rows;
     return co.local[id][d];
   };
-  co.publishBrain = (id, p, source, localAuc, n) =>
-    co.nodes[id].put('brain', p.domain + '.' + id, { ...toRecord(p), by: id, source, localAuc: Math.round(localAuc * 1000), n: n | 0 });
+  co.publishBrain = (id, p, source, localAuc, n) => publishBrain(co.nodes[id], id, p, source, localAuc, n);
 
   // ── what a device may do right now ──
   co.grantLive = (id) => { const n = co.nodes[id]; return n.pub === n.genesis || n.canWrite(null) || n.canWrite(isAgent(id) ? 'brain' : id === HUB.id ? 'inbox' : 'msg'); };
-  co.paused = (id) => { const c = co.nodes[id].list('control').find((r) => r.id === id); return !!(c && c.paused); };
+  co.paused = (id) => isPaused(co.nodes[id], id);
   co.available = (id) => !!id && !!co.online[id] && co.grantLive(id) && !co.paused(id);
-  co.policyOf = (node) => {
-    const p = node.list('policy').find((r) => r.id === 'agents');
-    return p && Number.isSafeInteger(p.minConfidence) ? { minConfidence: p.minConfidence / 1000 } : DEFAULT_POLICY;
-  };
+  co.policyOf = policyOf;
   const idOfPub = (pub) => DEVICE_IDS.find((id) => co.keys[id] && co.keys[id].pub === pub);
   /** The agents this device believes can answer: a live agent grant in ITS OWN view of the roster. */
   co.peersOf = (id) => {
@@ -129,39 +126,11 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     return v.roster.filter((r) => !r.revoked).map((r) => idOfPub(r.to)).filter((x) => x && x !== id && isAgent(x)).sort();
   };
 
-  // ── the books + the vault (Finance sequences; Audit witnesses) ──
-  co.vaultState = (node) => {
-    const recs = node.list('vault').map((r) => ({ index: r.index, leaf: r.leaf, entry: r.entry }));
-    const heads = node.list('vault_head').map((h) => ({ size: h.size, root: h.root }));
-    const cos = node.list('vault_cosig').map((h) => ({ size: h.size, root: h.root, by: h.by }));
-    return { recs, heads, cos, a: audit(recs, heads) };
-  };
-  co.postEntry = async (node, entry) => {
-    const v = validEntry(entry);
-    if (!v.ok) return v;
-    if (!node.canWrite('journal') || !node.canWrite('vault') || !node.canWrite('vault_head')) return { ok: false, reason: 'not-authorised' };
-    const id = uid(node, 'j');
-    const body = { date: entry.date, memo: String(entry.memo).slice(0, 200), lines: encodeLines(v.lines) };
-    const r = await node.put('journal', id, body);
-    if (!r.ok) return r;
-    const { a } = co.vaultState(node);
-    const leaf = leafHash(canonical({ id, ...body }));
-    const leaves = [...a.leaves, leaf];
-    await node.put('vault', 'v' + pad(a.size), { index: a.size, leaf, entry: id });
-    await node.put('vault_head', 'h' + pad(leaves.length), { size: leaves.length, root: root(leaves) });
-    return { ok: true };
-  };
-  co.witnessHead = async (node) => {
-    const { a, heads } = co.vaultState(node);
-    const top = heads.sort((x, y) => y.size - x.size)[0];
-    if (!top || !a.ok) return { ok: false, reason: 'log does not audit' };
-    return node.put('vault_cosig', 'c' + pad(top.size) + '-' + node.pub.slice(0, 6), { size: top.size, root: top.root, by: node.name });
-  };
-  co.doEffect = (node, e) => {
-    if (e && e.post) return co.postEntry(node, { date: date(), ...e.post });
-    if (e && e.c && e.f) return node.put(e.c, uid(node, e.c.slice(0, 2)), e.f);
-    return Promise.resolve({ ok: false });
-  };
+  // ── the books + the vault (Finance sequences; Audit witnesses) — src/shell.mjs, shared with a real agent device ──
+  co.vaultState = vaultState;
+  co.postEntry = postEntry;
+  co.witnessHead = witnessHead;
+  co.doEffect = (node, e) => applyEffect(node, e, date);
 
   // ── the spine: anti-entropy between online devices ──
   co.syncAll = async () => {
@@ -193,27 +162,12 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
       co.pools[d] = rows.filter((_, i) => i % 2 === 1);
     }
     for (const d of Object.keys(OWNER_OF)) if (!co.pools[d]) co.pools[d] = sample(d, 900001 + d.length * 7919, 400).rows;
-    for (const a of AGENTS) { co.libs[a.id] = {}; co.src[a.id] = {}; co.local[a.id] = {}; co.outcomes[a.id] = {}; co.asks[a.id] = {}; co.work[a.id] = { pending: new Map(), replied: new Set(), done: new Set(), tick: 0 }; }
+    for (const a of AGENTS) { co.libs[a.id] = {}; co.src[a.id] = {}; co.local[a.id] = {}; co.outcomes[a.id] = {}; co.asks[a.id] = {}; co.work[a.id] = createWork(); }
+    // every agent re-verifies even its own job's brain file on ITS OWN data before trusting it; the Audit agent grows its own
     for (const a of AGENTS) {
-      const node = co.nodes[a.id];
-      for (const d of a.domains) {          // every agent re-verifies even its own job's brain file on ITS OWN data before trusting it
-        const p = co.factory[d];
-        const v = adopt(p, co.localRows(a.id, d), gateFor(d));
-        await node.put('adopt', uid(node, 'a'), { domain: d, patternId: p.patternId, from: 'factory', by: a.id, adopted: v.adopt, localAuc: Math.round(v.localAuc * 1000), n: v.n, reason: v.reason.slice(0, 200), source: 'factory' });
-        if (!v.adopt) { brainLog(`${a.name} REFUSED its own ${d} brain file — it did not re-verify here (${v.reason})`); continue; }
-        co.libs[a.id][d] = p;
-        co.src[a.id][d] = { source: 'factory file', localAuc: v.localAuc, n: v.n };
-        await co.publishBrain(a.id, p, 'factory', v.localAuc, v.n);
-      }
-      for (const d of a.grows || []) {      // the Audit agent GROWS its own independent brains for every high-stakes call
-        const g = growPattern(d, co.localRows(a.id, d, 700), co.features[d], { seed: seedFor(a.id, d), grownBy: a.id });
-        if (!g.verified) { brainLog(`${a.name} grew a ${d} brain but it failed its held-out gate — CUT`); continue; }
-        g.pattern.title = co.titles[d] + ' (grown by Audit)'; g.pattern.role = 'audit';
-        co.libs[a.id][d] = g.pattern;
-        co.src[a.id][d] = { source: 'grown here', localAuc: g.pattern.heldAuc, n: g.pattern.held };
-        await co.publishBrain(a.id, g.pattern, 'grown', g.pattern.heldAuc, g.pattern.held);
-        brainLog(`${a.name} grew its own ${d} brain on ${g.pattern.train + g.pattern.held} of its own cases — held-out AUC ${g.pattern.heldAuc.toFixed(3)}`);
-      }
+      const r = await stockBrains({ node: co.nodes[a.id], agent: a, factory: co.factory, features: co.features, titles: co.titles, rows: (d, n) => co.localRows(a.id, d, n), log: brainLog });
+      Object.assign(co.libs[a.id], r.lib);
+      Object.assign(co.src[a.id], r.src);
     }
     await co.postEntry(co.nodes.finance, { date: date(), memo: 'Opening capital and stock', lines: [['1200', OPENING_CAPITAL, 0], ['1001', OPENING_STOCK, 0], ['3000', 0, OPENING_CAPITAL + OPENING_STOCK]] });
     for (const id of co.order) {
@@ -252,97 +206,30 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
   };
   co.next = () => co.admit(pickEvent(co.rnd, co.pools, co.n++));
 
-  // ── one agent device's tick, on its own replica ──
+  // ── one agent device's tick, on its own replica — the one step every agent device runs (src/shell.mjs stepAgent):
+  //    reply to the peers' asks, open the new work, close the work whose replies are in or whose deadline passed ──
+  co.agentCtx = (id) => {
+    const node = co.nodes[id];
+    return {
+      node, id, work: co.work[id], asks: co.asks[id], resume: null, deadline: DEADLINE, clock: () => co.work[id].tick,
+      library: () => co.libs[id], screen: co.screenFor(id), peers: () => co.peersOf(id), cols: () => AGENTS.find((a) => a.id === id).cols,
+      policy: () => co.policyOf(node), effect: co.doEffect, get modelAsk() { return co.modelAsk; },
+      learn: (d) => co.learn(id, d), onMesh: (mesh) => bump(co.meshEdges, mesh.node + '>' + id),
+      afterDecision: (event, o, d) => co.decided(id, event, o, d),
+    };
+  };
   co.agentTick = async (id) => {
     if (co.stolen[id] > 0) { co.stolen[id]--; return co.thiefTick(id); }   // a thief holds this device's key (co.steal)
-    const w = co.work[id];
     if (!co.available(id)) return;
-    const node = co.nodes[id];
-    const policy = co.policyOf(node);
-    const replies = node.list('reply');
-    // 1. answer the peers: every ask on the spine this device has not answered, from its OWN library
-    for (const a of node.list('ask')) {
-      if (w.replied.has(a.id) || a.from === id) continue;
-      w.replied.add(a.id);
-      const r = replyFor(a, co.libs[id], id);
-      if (r) await node.put('reply', uid(node, 'r'), r);
-    }
-    const inbox = node.list('inbox');
-    // 2. open the new work addressed to this device
-    for (const it of inbox) {
-      if (it.to !== id || it.status !== 'open' || w.pending.has(it.id) || w.done.has(it.id)) continue;
-      let features = {};
-      try { features = JSON.parse(it.features); } catch { features = {}; }
-      const event = { id: it.id, domain: it.channel, features, customer: it.customer, amount: it.amount | 0, text: it.text || '' };
-      const o = openStep({ agentId: id, event, library: co.libs[id], policy, screenFn: co.screenFor(id) });
-      if (o.next === 'final') { await co.finish(id, event, o, {}); continue; }
-      if (o.next === 'mesh') {
-        const rec = askRecord({ kind: 'answer', item: it.id, from: id, features });
-        const askId = uid(node, 'q');
-        if (rec) await node.put('ask', askId, rec);
-        w.pending.set(it.id, { stage: 'mesh', askId, since: w.tick, o, event, exclude: [id] });
-        continue;
-      }
-      await co.askSecond(id, event, o, o.first, w.tick);
-    }
-    // 3. close the work whose replies are in (or whose deadline passed)
-    const addressed = new Map(inbox.map((x) => [x.id, x]));
-    for (const [itemId, p] of [...w.pending]) {
-      const it = addressed.get(itemId);
-      if (it && (it.to !== id || it.status !== 'open')) { w.pending.delete(itemId); continue; }   // the door re-addressed it, or it is already closed (a thief on this key closed it)
-      const mine = repliesTo(replies, p.askId);
-      const expected = co.peersOf(id).filter((x) => !p.exclude.includes(x));
-      if (!heardFrom(mine, expected) && w.tick - p.since < DEADLINE) continue;
-      if (p.stage === 'mesh') {
-        const mesh = pickAnswer(mine);
-        if (mesh) {
-          bump(co.meshEdges, mesh.node + '>' + id);
-          co.asks[id][mesh.answer.domain] = (co.asks[id][mesh.answer.domain] || 0) + 1;
-          if (shouldLearn(co.asks[id], mesh.answer.domain, co.libs[id])) await co.learn(id, mesh.answer.domain);
-        }
-        if (afterMesh(mesh, policy) === 'second') { w.pending.delete(itemId); await co.askSecond(id, p.event, p.o, mesh, w.tick, mesh); continue; }
-        w.pending.delete(itemId);
-        await co.finish(id, p.event, p.o, { mesh });
-        continue;
-      }
-      const s = pickSecond(mine, p.first.answer.domain, p.first.answer.receipt.patternId, p.exclude);
-      w.pending.delete(itemId);
-      await co.finish(id, p.event, p.o, { mesh: p.mesh || null, second: s ? s.answer : null, secondBy: s ? s.node : '' });
-    }
-    w.tick++;
+    await stepAgent(co.agentCtx(id));
   };
+  co.askSecond = (id, event, o, first, tick, mesh = null) => askSecond(co.agentCtx(id), event, o, first, mesh);
+  /** Decide, write, hand off — then score and learn (co.decided). */
+  co.finish = (id, event, o, gathered = {}) => finishWork(co.agentCtx(id), event, o, gathered);
 
-  co.askSecond = async (id, event, o, first, tick, mesh = null) => {
-    const node = co.nodes[id];
-    const exclude = [...new Set([id, first.node])];
-    const rec = askRecord({ kind: 'second', item: event.id, from: id, features: event.features, domain: first.answer.domain, pattern: first.answer.receipt.patternId, exclude });
-    const askId = uid(node, 'q');
-    if (rec) await node.put('ask', askId, rec);
-    co.work[id].pending.set(event.id, { stage: 'second', askId, since: tick, o, event, first, mesh, exclude });
-  };
-
-  /** Decide, write, hand off, score, learn. */
-  co.finish = async (id, event, o, { mesh = null, second = null, secondBy = '' }) => {
-    const node = co.nodes[id];
-    const w = co.work[id];
-    const policy = co.policyOf(node);
-    let model = null;
-    const quarantined = o.scr && !o.scr.ok;
-    if (!quarantined && !(o.own && o.own.verdict === 'VERIFIED') && !mesh && co.modelAsk) {
-      try { model = await co.modelAsk(id, event); } catch { model = null; }
-    }
-    const { decision: d, effects: fx } = closeStep({ agentId: id, event, scr: o.scr, own: o.own, mesh, second, secondBy, model, fault: o.fault, policy });
-    await node.put('decisions', uid(node, 'd'), { agent: id, event: event.id, domain: d.domain || '', action: d.action || '', state: d.state, by: d.by,
-      cross: !!d.crossChecked, second: d.secondBy || '', conf: d.conf | 0, receipt: d.receipt || '', why: String(d.why || '').slice(0, 300), customer: event.customer, channel: event.domain });
-    const agent = AGENTS.find((a) => a.id === id);
-    const { mine, handoff } = splitEffects(fx, agent.cols, OWNER_OF[d.domain || event.domain]);
-    for (const e of mine) await co.doEffect(node, e);
-    for (const h of handoff) {
-      const payload = JSON.stringify(h.payload);
-      if (payload.length <= 1900) await node.put('handoff', uid(node, 'h'), { from: id, to: h.to, payload, status: 'open', event: event.id });
-    }
-    await node.put('inbox', event.id, { status: 'done', doneBy: id });
-    w.done.add(event.id);
+  /** What the demo does with each decision an agent wrote: the ledger, the second-brain edges and, as the outcomes come back,
+   *  regrowth. Ground truth stays here, in memory, to score the agents — it never goes on the spine. */
+  co.decided = async (id, event, o, d) => {
     const truth = co.truthOf.get(event.id);
     const own = o.own && o.own.verdict === 'VERIFIED' ? o.own : null;
     const entry = { id: event.id, agent: id, channel: event.domain, domain: d.domain || event.domain, state: d.state, label: d.label, truth, by: d.by,
@@ -365,14 +252,11 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
   };
 
   co.learn = async (id, domain) => {
-    const node = co.nodes[id];
-    const recs = node.list('brain').filter((r) => r.domain === domain && r.by !== id);   // no trust in labels: adopt() re-verifies
-    const rec = recs.find((r) => r.by === OWNER_OF[domain]) || recs[0];
     co.asks[id][domain] = 0;
-    if (!rec) return null;
-    const p = fromRecord(rec);
-    const v = adopt(p, co.localRows(id, domain), gateFor(domain), referenceFor(id, domain));
-    await node.put('adopt', uid(node, 'a'), { domain, patternId: rec.patternId || '', from: rec.by || '', by: id, adopted: v.adopt, localAuc: Math.round(v.localAuc * 1000), n: v.n, reason: v.reason.slice(0, 200), source: 'learned' });
+    // no trust in labels: learnBrain (src/shell.mjs) re-verifies the published brain on this agent's own rows, and records it
+    const r = await learnBrain({ node: co.nodes[id], me: id, domain, rows: () => co.localRows(id, domain), reference: referenceFor(id, domain) });
+    if (!r) return null;
+    const { rec, pattern: p, v } = r;
     if (v.adopt) {
       co.libs[id][domain] = p;
       co.src[id][domain] = { source: 'learned from ' + agentName(rec.by), localAuc: v.localAuc, n: v.n };
@@ -424,20 +308,8 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     for (const a of AGENTS) {
       if (!co.available(a.id)) continue;
       const node = co.nodes[a.id];
-      for (const h of node.list('handoff').filter((x) => x.to === a.id && x.status === 'open')) {
-        let payload = null;
-        try { payload = JSON.parse(h.payload); } catch { payload = null; }
-        const ok = payload && co.honoured(node, h.from) ? (await co.doEffect(node, payload)).ok : false;
-        await node.put('handoff', h.id, { status: ok ? 'done' : 'refused', doneBy: a.id });
-      }
-      for (const w of node.list('watch').filter((x) => (x.agent === a.id || (x.agent === 'door' && OWNER_OF[x.channel] === a.id)) && x.status === 'approved' && x.action)) {
-        const label = ACTIONS[w.channel] && ACTIONS[w.channel][1] === w.action ? 1 : 0;
-        const d = { state: 'done', action: w.action, label, domain: w.channel, crossChecked: false };
-        const { mine, handoff } = splitEffects(effects(d, { id: w.event, customer: w.customer, amount: w.amount | 0, domain: w.channel }, a.id), a.cols, OWNER_OF[w.channel]);
-        for (const e of mine) await co.doEffect(node, e);
-        for (const h of handoff) await node.put('handoff', uid(node, 'h'), { from: a.id, to: h.to, payload: JSON.stringify(h.payload), status: 'open', event: w.event });
-        await node.put('watch', w.id, { status: 'executed', executedBy: a.id });
-      }
+      // hand-offs addressed to it, and the held calls a person approved for it (src/shell.mjs honourWork)
+      await honourWork({ node, id: a.id, cols: a.cols, honoured: (from) => co.honoured(node, from), effect: co.doEffect });
     }
     // the door re-addresses open work whose agent is no longer reachable
     const hub = co.nodes.hub;
@@ -447,12 +319,7 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
         if (to && to !== it.to) await hub.put('inbox', it.id, { to, ticks: co.tickN });
       }
     }
-    if (co.available('audit')) {
-      const au = co.nodes.audit;
-      const { a, cos } = co.vaultState(au);
-      const last = cos.reduce((m, c) => Math.max(m, c.size), 0);
-      if (a.ok && a.size >= last + 10) await co.witnessHead(au);
-    }
+    if (co.available('audit')) await witnessVault(co.nodes.audit);   // co-signs once ten entries have gone in since its last
   };
 
   /** One heartbeat of the whole company. */
@@ -490,21 +357,12 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
 
   // ── the behaviour watch (src/watch.mjs — BES, Gary W. Floyd): a valid key and a valid grant are not enough. The AI
   //    overseer watches what each agent DOES on its own replica, pauses one the watch flags, and a human clears it ──
-  co.clearsOf = (node) => Object.fromEntries(node.list('control').filter((c) => typeof c.cleared === 'string' && c.cleared)
-    .map((c) => [c.id, { at: c.cleared, rebaseline: c.rebaseline === true }]));
+  co.clearsOf = clearsOf;
   co.watch = (viewId = 'overseer') => { const node = co.nodes[viewId]; return watchAll(node.list('decisions'), {}, co.clearsOf(node)); };
   co.watchTick = async () => {
     const ov = co.nodes.overseer;
     if (!co.online.overseer || !ov.canWrite('control')) return [];
-    const seen = co.watch('overseer'), paused = [];
-    for (const id of AGENT_IDS) {
-      const r = seen[id];
-      if (!r || !shouldPause(r, WATCH_POLICY) || co.paused(id)) continue;
-      await ov.put('control', id, { paused: true, by: 'AI overseer', watch: r.verdict, why: String(r.reason).slice(0, 300), flaggedAt: r.flaggedAt });
-      brainLog(`AI overseer paused the ${agentName(id)} — the watch read it as ${r.verdict}: ${r.reason}`);
-      paused.push(id);
-    }
-    return paused;
+    return oversee({ node: ov, agents: AGENT_IDS, policy: WATCH_POLICY, paused: co.paused, log: brainLog });   // src/shell.mjs
   };
   co.clear = async (humanId, agentId, rebaseline = false) => {     // a human clears a flag: judged afresh from here on
     const node = co.nodes[humanId];
@@ -544,16 +402,9 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
   co.adoptAntibodies = async () => {
     for (const a of AGENTS) {
       if (!a.domains.length || !co.available(a.id)) continue;
-      const node = co.nodes[a.id];
       const seen = co.antibodySeen[a.id] || (co.antibodySeen[a.id] = new Set());
-      for (const r of node.list('antibody')) {
-        if (seen.has(r.id)) continue;
-        seen.add(r.id);
-        const v = adoptAntibody(r, co.benignFor(a.id));
-        await node.put('adopt', uid(node, 'a'), { domain: 'antibody', patternId: String(r.abId || '').slice(0, 64), from: String(r.by || '').slice(0, 64), by: a.id, adopted: v.adopt, localAuc: 0, n: v.n, reason: v.reason.slice(0, 200), source: 'antibody' });
-        if (v.adopt) (co.antibodies[a.id] || (co.antibodies[a.id] = [])).push(r);
-        brainLog(a.name + ' re-ran antibody ' + String(r.abId || '?').slice(0, 8) + ' on its own ' + v.n + ' known-benign messages — ' + (v.adopt ? 'ADOPTED' : 'REFUSED') + ' (' + v.reason + ')');
-      }
+      const adopted = co.antibodies[a.id] || (co.antibodies[a.id] = []);
+      await adoptAntibodiesOn({ node: co.nodes[a.id], id: a.id, name: a.name, seen, adopted, benign: co.benignFor(a.id), log: brainLog });   // src/shell.mjs
     }
   };
   co.afterTick.push((c) => c.adoptAntibodies());
