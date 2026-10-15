@@ -46,9 +46,13 @@ Source: https://github.com/sjgant80-hub/sovereign-enterprise
   the records brought across; a redacted showcase copy (no names, no amounts) for the next prospect.
 
 ## Measured (re-runnable: node tools/run-company.mjs --check)
-- A working day of 480 pieces of work on published datasets: 82.1% done end to end by agents; 91.1% of agent calls matched the real
-  outcome they never saw; 142 money and security calls confirmed by an independent second brain; 66 answered by another device's brain
-  over the spine; every device converged; books balanced; vault audited.
+- A working day of 480 pieces of work on published datasets: 78.3% done end to end by agents; 90.7% of agent calls matched the real
+  outcome they never saw; 124 money and security calls confirmed by an independent second brain; 30 answered by another device's brain
+  over the spine; 104 held for a person; every device converged; books balanced; vault audited. Receipt 36731431f74b11bf.
+- What those numbers prove (src/evidence.mjs, in the receipt): against doing nothing on the same calls, with an exact test, 3 of
+  8 jobs are measurably better (fraud, inventory, intrusion); the rest show no evidence either way yet. The second brain, on
+  money and security calls: asked 127 times, agreed 124 (both wrong together 5), disagreed 3, caught 0 of the first
+  brain's mistakes — on these datasets the two make the same errors, and the page says so.
 
 ## The white paper — the AI-native office
 - AI runs 90% of a modelled 50-person UK office's operational work on owned machines; five AI-native people oversee it.
