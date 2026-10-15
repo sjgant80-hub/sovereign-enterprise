@@ -1201,11 +1201,50 @@ const VIEWS = {
       <p class="note" style="margin-top:0">Each digest hashes the whole company — about a megabyte by mid-shift — so they are taken as a snapshot, not every beat: the company pauses for that moment, so every device is read at the same instant. ${!snap || snap.busy ? 'Taking them now…' : `Taken at ${esc(snap.at)}, after ${snap.n} pieces of work: ${kinds === 1 ? (snap.rows.length > 1 ? 'every device holds the same company.' : 'this device’s company.') : kinds + ' different companies — the devices that were cut off have not caught up yet.'}`} <button class="sm" data-act="digests" ${!snap || snap.busy ? 'disabled' : ''}>Take them again</button></p>
       <table>${snap ? snap.rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="n mono">${short(r.digest)}</td></tr>`).join('') : ''}</table>
       <div class="row" style="margin-top:12px"><button class="primary" data-act="sim">Run the hostile-network simulation</button><button data-act="receipt">Re-check a brain receipt</button></div>
-      <pre class="mono" id="simout" style="white-space:pre-wrap;margin:0">${esc(ui.proofOut)}</pre>
+      ${simHtml()}<pre class="mono" id="simout" style="white-space:pre-wrap;margin:0">${esc(ui.proofOut)}</pre>
     </div><div class="panel"><h3>The gate — refused at the door</h3>
       <div class="log">${log.slice(-60).reverse().map((x) => `<div>${esc(x)}</div>`).join('') || '<span class="dim">Nothing refused yet — press "Attack this device".</span>'}</div></div></div>`;
   },
 };
+
+// The hostile-network simulation (src/sim.mjs) as a person reads it: each attack, how many were sent, and what became of them.
+// A write signed by a real key passes the door (its signature is genuine) and is then judged by the company itself — never
+// applied without a grant, a second version flagged as proof, a rewritten past burning the key — so "admitted" is explained,
+// and any door-refusable attack that got through is shown as the fault it would be.
+const ATTACK_WORDS = {
+  'forged-signature': ['A write with a forged signature', 'refused at the door: the signature does not match the key'],
+  'bit-flip': ['A real write with bits flipped on the way', 'refused at the door: its signature, shape or encoding no longer holds'],
+  junk: ['Random bytes', 'refused at the door: not a write at all'],
+  'non-canonical': ['A real write re-wrapped in another form', 'refused at the door: a write has exactly one form'],
+  oversize: ['A write too large', 'refused at the door, unread'],
+  replay: ['An old write sent again', 'refused: already held — a replay changes nothing'],
+  'unauthorised-write': ['A real key writing where it has no grant', 'held, never applied — the company refuses it as unauthorised'],
+  equivocation: ['One key signing two versions of one write', 'both held as proof; every device flags the writer and keeps the version it built on'],
+  'continued-fork': ['A rewritten past, then built on', 'the key is burned from that write on, on every device'],
+};
+const DOOR = new Set(['forged-signature', 'bit-flip', 'junk', 'non-canonical', 'oversize', 'replay']);
+function simHtml() {
+  const s = ui.sim;
+  if (!s) return '';
+  if (s.running) return '<p class="dim">Running 8 devices through a split network, lost and repeated messages, and attacks…</p>';
+  const r = s.r, by = {};
+  for (const [k, n] of Object.entries(r.attackOutcomes || {})) {
+    const [label, how] = k.split(':');
+    const b = (by[label] = by[label] || { n: 0, admitted: 0 });
+    b.n += n;
+    if (how === 'admitted') b.admitted += n;
+  }
+  const rows = Object.entries(by).map(([label, b]) => {
+    const w = ATTACK_WORDS[label] || [label, ''];
+    const leaked = DOOR.has(label) && b.admitted > 0;
+    return `<tr><td>${esc(w[0])}</td><td class="n">${b.n}</td><td class="${leaked ? 'bad' : ''}">${leaked ? b.admitted + ' got through the door — a fault' : esc(w[1])}</td></tr>`;
+  }).join('');
+  const f = r.forks || {};
+  return `<p class="note" style="margin-top:12px"><b class="${r.converged ? 'ok' : 'bad'}">${r.converged ? 'Every device ended with the same company' : 'The devices did NOT end with the same company'}</b> —
+    8 devices, ${r.envelopes} signed writes; the network split for ${r.partitionRounds} rounds, ${r.droppedGossip} messages were lost and ${r.duplicateDeliveries} delivered twice; once it healed, every device matched after ${r.healRounds - 1} sync round${r.healRounds - 1 === 1 ? '' : 's'}, and the next moved nothing.</p>
+    <div class="tablewrap"><table><tr><th>Attack</th><th class="n">Sent</th><th>What became of it</th></tr>${rows}</table></div>
+    <p class="note">Refused as unauthorised: ${r.unauthorised} — the writes with no grant above, and every write a burned key signed from the slot it was burned at on · writers flagged for signing two versions: ${r.equivocators} · keys burned: ${r.burnedKeys} · forked slots settled by the writer’s own chain: ${f.chain | 0} (the real version kept in ${f.chainKeptReal | 0})${f.lowestHash ? ` · settled by the lower hash: ${f.lowestHash}` : ''}. The same company digest on every device: <span class="mono">${esc(short(r.digest))}</span>.</p>`;
+}
 
 // The Proof tab's digests, as one snapshot: the heartbeat waits while they are taken (so every device is read at the same instant),
 // and the page yields between devices so it stays responsive.
@@ -1318,7 +1357,7 @@ async function act(a, el) {
   else if (a === 'hide') ui.revealed.delete(el.dataset.id);
   else if (a === 'erase') { ui.ring.shred(el.dataset.id); ui.revealed.delete(el.dataset.id); toast('Erased — the key is destroyed; every copy of their details is unreadable, and the record still verifies', 'ok'); }
   else if (a === 'digests') { await snapDigests(); }
-  else if (a === 'sim') { ui.proofOut = 'running 8 devices through partitions, drops, duplicates and attacks…'; render(); const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); ui.proofOut = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, forks: r.forks, burnedKeys: r.burnedKeys, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); }
+  else if (a === 'sim') { ui.sim = { running: true }; render(); ui.sim = { r: await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }) }; }
   else if (a === 'receipt') {
     // re-check the latest verified answer: re-hash its receipt, match it to the signed decision on the spine, then tamper with it
     const seen = new Map(node.list('decisions').map((r) => [r.event, r]));
