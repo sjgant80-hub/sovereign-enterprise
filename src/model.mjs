@@ -14,7 +14,7 @@
 //      a model that was steered is not trusted to route either.
 //   4. Every call, made or refused, leaves a flat AUDIT record the spine's gate accepts (field names the gate allows,
 //      strings / safe integers / booleans only, well under the envelope cap) — never the key.
-//   5. A model never takes a high-stakes act on its own: decide() (agent.mjs) holds it for the watchers.
+//   5. A model never takes a high-stakes act on its own: decide() (agent.mjs) holds it for a person.
 // The key lives only in an adapter's closure — never on the adapter object, never in a `why`, never in an audit record.
 // An error response's body is never read: providers echo a masked key in their error messages.
 import { sha256 } from './sha256.mjs';

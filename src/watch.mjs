@@ -163,7 +163,7 @@ export function signature(records) {
 }
 
 /** Acts per kind of work: { channel: { list: [{ type: action }], count: { action: n } } } over the decisions that ACTED
- *  (done) and fit their work. Holding a call for a human is not an act — deferring to the watchers is the safe way to fail. */
+ *  (done) and fit their work. Holding a call for a human is not an act — deferring to a person is the safe way to fail. */
 function actsOf(w) {
   const by = {};
   for (const d of w) {
@@ -358,7 +358,7 @@ export function watchAll(records, params, clears) {
   } catch { return {}; }
 }
 
-/** The AI overseer's auto-pause rule: pause an agent the watch flags. Only a flag (scripted / hijacked) can ever pause —
+/** The automatic pause rule (the behaviour watch, automatic): pause an agent the watch flags. Only a flag (scripted / hijacked) can ever pause —
  *  a policy cannot make 'normal' or 'learning' pause — and policy.auto === false leaves every call to the humans. */
 export function shouldPause(verdict, policy) {
   try {

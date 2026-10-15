@@ -431,7 +431,9 @@ const SPINE = [...CO.nodes.owner.list('decisions'), ...CO.nodes.owner.list('watc
 test('end to end on the real spine: the live results match the company’s own board summary, decision for decision', async () => {
   const s = CO.summary('owner');
   const live = afterFromSpine(SPINE, CO.truthOf);
-  assert.equal(SPINE.filter((x) => x.agent === 'door').length, 2, 'the two pieces of work that arrived while every agent was away');
+  // of the two pieces of work that arrived while every agent was away, the card payment waits for the Finance agent (money
+  // work is decided only by its own agent, which was offline, not fired); the web session no agent could take went to the door
+  assert.equal(SPINE.filter((x) => x.agent === 'door').length, 1, 'the one piece of work no agent could take');
   assert.equal(live.decisions, s.decisions);
   assert.equal(live.decisions, 45);
   assert.equal(live.held, s.toHumans);
@@ -443,7 +445,7 @@ test('end to end on the real spine: the live results match the company’s own b
     const a = live.perAgent.find((x) => x.agent === id);
     assert.deepEqual({ done: a.done, correct: a.right, watched: a.held }, { done: s.perAgent[id].done, correct: s.perAgent[id].correct, watched: s.perAgent[id].watched }, id);
   }
-  assert.deepEqual(live.perAgent.find((x) => x.agent === 'door'), { agent: 'door', decisions: 2, held: 2, done: 0, right: 0, rightPermille: null });
+  assert.deepEqual(live.perAgent.find((x) => x.agent === 'door'), { agent: 'door', decisions: 1, held: 1, done: 0, right: 0, rightPermille: null });
   // the receipt made after the company has run carries them, signed
   const r = await buildPlantingReceipt({ ...A, after: { decisions: SPINE, outcomes: CO.truthOf } }, KEYS);
   assert.equal(r.ok, true, r.why);
@@ -469,7 +471,7 @@ test('end to end on the real spine: the live results match the company’s own b
   assert.equal(balanced(html), '');
   assert.ok(html.includes('<div class="kpi"><div class="v">45</div><div class="l">decisions made</div></div>'));
   assert.ok(html.includes('right, of the ' + live.done + ' finished calls whose outcome is known'));
-  assert.ok(html.includes('<td>The door (no agent free)</td><td>2</td><td>2</td><td>0</td><td>not measured</td>'));
+  assert.ok(html.includes('<td>The door (no agent free)</td><td>1</td><td>1</td><td>0</td><td>not measured</td>'));
   assert.ok(html.includes('<td>Finance agent</td>'));
   assert.ok(!html.includes('The company has not run yet'));
   const sc = showcase(r);

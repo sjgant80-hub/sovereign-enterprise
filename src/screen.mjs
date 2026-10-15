@@ -3,7 +3,7 @@
 // After kar-glyphguard (sjgant80-hub): the attacks that hide in text an AI will read — invisible zero-width
 // characters, bidi overrides that reorder what a human sees, Unicode TAG characters that smuggle a hidden ASCII
 // payload ("ASCII smuggling"), raw control characters, and plain-text prompt-injection ("ignore previous
-// instructions…"). Anything flagged is quarantined to the watchers; the agent sees only clean text.
+// instructions…"). Anything flagged is quarantined for a person; the agent sees only clean text.
 
 const ZERO_WIDTH = /[​-‏⁠-⁤﻿]/g;
 const BIDI = /[‪-‮⁦-⁩]/g;

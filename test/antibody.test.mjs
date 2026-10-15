@@ -270,6 +270,9 @@ test('makeAntibody: defaults, sanitised options, refusal below the specificity f
   assert.equal(makeAntibody(NOVEL_ATTACK, { by: '<script>' }).by, 'unknown');
   assert.equal(makeAntibody(NOVEL_ATTACK, { by: 5, reason: 5 }).reason, '');
   assert.equal(makeAntibody(NOVEL_ATTACK, { by: 'Ops agent 2' }).by, 'Ops agent 2');
+  assert.equal(makeAntibody(NOVEL_ATTACK, { by: 'Overseer (a person)' }).by, 'Overseer (a person)', 'the overseer is named as a person');
+  assert.equal(validAntibody({ ...makeAntibody(NOVEL_ATTACK, { by: 'Overseer (a person)' }), id: 'x' }), true);
+  assert.equal(makeAntibody(NOVEL_ATTACK, { by: 'Overseer [a person]' }).by, 'unknown');
   assert.equal([...makeAntibody(NOVEL_ATTACK, { reason: 'r'.repeat(500) }).reason].length, REASON_CHARS);
   assert.equal(makeAntibody(42), null);
   const floor = makeAntibody('alpha bravo charlie delta');              // exactly MIN_PAIRS pairs, exactly MIN_SPAN words

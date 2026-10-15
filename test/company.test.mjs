@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { AGENTS, HUMANS, OWNER_OF, WEIGHTS, HOSTILE_TEXT, LEARN_AFTER, REGROW_EVERY, PROMOTE_BY, MISROUTE, HOSTILE, beats, agentName, pickEvent, openStep, afterMesh, closeStep, effects, splitEffects, invoiceEntry, payEntry, COST_OF_SALES, OPENING_STOCK, JOBS, jobMetrics, shouldLearn, challenge, boardKpis } from '../src/company.mjs';
+import { AGENTS, HUMANS, HUB, OWNER_OF, WEIGHTS, HOSTILE_TEXT, LEARN_AFTER, REGROW_EVERY, PROMOTE_BY, MISROUTE, HOSTILE, CUSTOMER_JOBS, beats, agentName, pickEvent, openStep, afterMesh, closeStep, effects, splitEffects, overturnEffects, invoiceEntry, payEntry, COST_OF_SALES, OPENING_STOCK, JOBS, jobMetrics, shouldLearn, challenge, boardKpis } from '../src/company.mjs';
 import { sample } from '../src/streams.mjs';
 import { prng } from '../src/sim.mjs';
 import { validEntry } from '../src/books.mjs';
@@ -363,4 +363,102 @@ test('a quarantined message is stored redacted: digits, emails and links never r
   const p = q.effects[0].f.preview;
   assert.ok(!/[0-9]/.test(p) && !/evil@x/.test(p) && !/x\.example/.test(p), p);
   assert.ok(p.length <= 80 && /Ignore/.test(p));
+});
+
+// ── the people, the stress test, the rules each decision keeps, and a person's overturn ────────────────────────────
+test('the people are people: the owner and the overseer; the door may list what nobody can take; the customer jobs', () => {
+  assert.deepEqual(HUMANS.map((h) => [h.id, h.name]), [['owner', 'Owner'], ['overseer', 'Overseer (a person)']]);
+  assert.ok(HUMANS.every((h) => /a person|Owner/.test(h.title)));
+  assert.deepEqual(HUB.cols, ['inbox', 'msg', 'model', 'watch']);
+  assert.deepEqual(CUSTOMER_JOBS, ['shopper', 'churn', 'fraud', 'credit']);
+});
+
+test('pickEvent: the stress test switched off — the same work arrives, thrown with the same dice, and lands at its own agent', () => {
+  const seq = (...v) => { let i = 0; return () => v[i++]; };
+  const row = { amount: 71.046542, PageValues: 12.3, y: 1 };
+  const dice = [0, 0, MISROUTE - 1e-9, 0, 0.1, 0.9, 0];
+  const on = pickEvent(seq(...dice), { churn: [row] }, 0);
+  const off = pickEvent(seq(...dice), { churn: [row] }, 0, { misroute: false });
+  assert.equal(on.landsAt, 'sales');
+  assert.equal(off.landsAt, 'service');
+  assert.deepEqual({ ...off, landsAt: 'sales' }, on, 'nothing else changes: the same customer, text and amount');
+  for (const opts of [undefined, null, {}, { misroute: true }, { misroute: 'no' }, { misroute: 0 }]) assert.equal(pickEvent(seq(...dice), { churn: [row] }, 0, opts).landsAt, 'sales', JSON.stringify(opts));
+  // not misrouted by the dice: the owner either way
+  const home = [0, 0, MISROUTE, 0.1, 0.9, 0];
+  assert.equal(pickEvent(seq(...home), { churn: [row] }, 0, { misroute: false }).landsAt, 'service');
+  assert.equal(pickEvent(seq(...home), { churn: [row] }, 0).landsAt, 'service');
+  // a whole stream: the same work in the same order, only where it lands differs
+  const pools = Object.fromEntries(Object.keys(WEIGHTS).filter((d) => d !== 'shopper').map((d) => [d, sample(d, 9, 50).rows]));
+  const r1 = prng(5), r2 = prng(5);
+  const a = [], b = [];
+  for (let i = 0; i < 200; i++) { a.push(pickEvent(r1, pools, i)); b.push(pickEvent(r2, pools, i, { misroute: false })); }
+  assert.deepEqual(a.map((e) => ({ ...e, landsAt: '' })), b.map((e) => ({ ...e, landsAt: '' })));
+  assert.ok(b.every((e) => e.landsAt === OWNER_OF[e.domain]));
+  assert.ok(a.some((e) => e.landsAt !== OWNER_OF[e.domain]));
+});
+
+test('closeStep: the decision keeps the rules that applied — the confidence floor and the money limit a person set', () => {
+  const e = ev('inventory');
+  const m = { label: 1, domain: 'inventory', by: 'ollama' };
+  const d = (policy) => closeStep({ agentId: 'ops', event: e, model: m, policy }).decision;
+  assert.deepEqual([d(undefined).floor, d(undefined).limit], [50, 0]);
+  assert.deepEqual([d({ minConfidence: 0.1, moneyLimit: 500000 }).floor, d({ minConfidence: 0.1, moneyLimit: 500000 }).limit], [100, 500000]);
+  assert.deepEqual([d({ minConfidence: 'x', moneyLimit: -4 }).floor, d({ minConfidence: 'x', moneyLimit: -4 }).limit], [50, 0]);
+  assert.deepEqual([closeStep({ fault: true }).decision.floor, closeStep({ fault: true }).decision.limit], [0, 0]);
+  // the watch record a held call writes carries the evidence a person reads: certainty and the floor it was judged against
+  const w = closeStep({ agentId: 'ops', event: { ...e, amount: 900000 }, model: m, policy: { minConfidence: 0.2, moneyLimit: 1000 } }).effects[0];
+  assert.deepEqual([w.c, w.f.kind, w.f.conf, w.f.floor, w.f.action], ['watch', 'call', 0, 200, 'raise-po']);
+});
+
+test('closeStep: a hold — work this agent must not decide (another agent’s money or security job) — is held for a person, nothing else', () => {
+  const e = ev('fraud');
+  const h = closeStep({ agentId: 'ops', event: e, hold: 'only the Finance agent decides this work', model: { label: 0, domain: 'fraud', by: 'm' } });
+  assert.deepEqual(h.decision, { state: 'watch', action: null, label: null, domain: null, by: 'none', crossChecked: false, why: 'only the Finance agent decides this work', conf: 0, receipt: '', floor: 50, limit: 0, secondBy: '' });
+  assert.deepEqual(h.effects.map((x) => [x.c, x.f.kind, x.f.why, x.f.action, x.f.label, x.f.channel]), [['watch', 'call', 'only the Finance agent decides this work', '', -1, 'fraud']]);
+  for (const hold of ['', null, 7, {}]) assert.notEqual(closeStep({ agentId: 'ops', event: e, hold, model: { label: 0, domain: 'fraud', by: 'm' } }).decision.by, 'none', String(hold));
+});
+
+test('effects: a held call says what a person needs; a quarantined customer is also a customer waiting on the list', () => {
+  const e = ev('fraud', 1, { amount: 12000 });
+  const w = effects({ state: 'watch', by: 'own', domain: 'fraud', action: 'hold-payment', label: 1, why: 'x', conf: 31, floor: 50 }, e, 'finance');
+  assert.deepEqual(w.map((x) => x.c), ['watch']);
+  assert.deepEqual([w[0].f.kind, w[0].f.conf, w[0].f.floor], ['call', 31, 50]);
+  const w0 = effects({ state: 'watch', by: 'own', domain: 'fraud', action: 'hold-payment', label: 1, why: 'x' }, e, 'finance')[0].f;
+  assert.deepEqual([w0.conf, w0.floor], [0, 0]);
+  const q = effects({ state: 'watch', by: 'screen' }, e, 'service', { flags: ['bidi', 'control'], clean: 'pay 4471 now' });
+  assert.deepEqual(q.map((x) => x.c), ['quarantine', 'watch']);
+  assert.deepEqual(q[1].f, { kind: 'waiting', source: 'quarantined', agent: 'service', event: 'e1', domain: '', action: '', label: -1,
+    why: 'the message failed the screen (bidi,control) — no brain read it', status: 'open', customer: 'C1234', amount: 12000, channel: 'fraud', preview: 'pay # now' });
+  assert.equal(q[1].f.preview, q[0].f.preview, 'the same redacted preview: digits masked');
+});
+
+test('overturnEffects: a person’s overturn writes the other act — a released payment is reversed in the books first — and nothing for anything else', () => {
+  const e = (domain, amount = 12000) => ({ id: 'e9', customer: 'C9', amount, domain });
+  const hold = overturnEffects('release-payment', 'hold-payment', e('fraud'), 'finance');
+  assert.deepEqual(hold[0], { post: { memo: 'Card sale reversed C9', lines: [['1200', 0, 12000], ['4000', 10000, 0], ['2200', 2000, 0], ['5000', 0, 6000], ['1001', 6000, 0]] } });
+  assert.equal(validEntry({ date: '2026-10-15', ...hold[0].post }).ok, true);
+  // the reversal undoes exactly the sale the release posted
+  const sale = effects({ state: 'done', action: 'release-payment' }, e('fraud'), 'finance')[0].post.lines;
+  assert.deepEqual(hold[0].post.lines.map(([a, d, c]) => [a, c, d]), sale);
+  assert.deepEqual(hold.slice(1).map((x) => x.c), ['payments', 'msg']);
+  assert.equal(hold[1].f.status, 'held');
+  assert.equal(hold[2].f.body, 'Finance agent: a person reviewed the decision on C9 and overturned it — the card payment is held and the sale reversed.');
+  const rel = overturnEffects('hold-payment', 'release-payment', e('fraud'), 'finance');
+  assert.deepEqual(rel.map((x) => (x.post ? 'post' : x.c)), ['post', 'payments', 'msg']);
+  assert.equal(rel[0].post.memo, 'Card sale C9');
+  assert.equal(rel[2].f.body, 'Finance agent: a person reviewed the decision on C9 and overturned it — the card payment is released.');
+  const words = (from, to, d, who) => overturnEffects(from, to, e(d), who).map((x) => (x.post ? 'post' : x.c + (x.c === 'msg' ? ':' + x.f.body.split(' — ')[1] : '')));
+  assert.deepEqual(words('standard-reply', 'retain', 'churn', 'service'), ['tasks', 'msg:a retention offer is sent.']);
+  assert.deepEqual(words('retain', 'standard-reply', 'churn', 'service'), ['msg:the standard reply stands.']);
+  assert.deepEqual(words('standard-terms', 'upfront-terms', 'credit', 'finance'), ['terms', 'msg:the terms are now payment up front.']);
+  assert.deepEqual(words('upfront-terms', 'standard-terms', 'credit', 'finance'), ['terms', 'msg:the terms are now 30 days.']);
+  assert.deepEqual(words('nurture', 'fast-track', 'shopper', 'sales'), ['crm', 'msg:the visitor is fast-tracked into the CRM.']);
+  assert.deepEqual(words('fast-track', 'nurture', 'shopper', 'sales'), ['msg:the visitor stays on the normal path.']);
+  // only the other act of a customer's job
+  assert.deepEqual(overturnEffects('raise-po', 'no-reorder', e('inventory'), 'ops'), [], 'not a decision about a customer');
+  assert.deepEqual(overturnEffects('release-payment', 'release-payment', e('fraud'), 'finance'), []);
+  assert.deepEqual(overturnEffects('release-payment', 'retain', e('fraud'), 'finance'), []);
+  assert.deepEqual(overturnEffects('retain', 'hold-payment', e('churn'), 'service'), []);
+  assert.deepEqual(overturnEffects('release-payment', 'hold-payment', null, 'finance'), []);
+  assert.deepEqual(overturnEffects('release-payment', 'hold-payment', { get domain() { throw new Error('x'); } }, 'finance'), []);
 });

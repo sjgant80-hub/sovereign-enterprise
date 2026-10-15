@@ -44,7 +44,7 @@ export const PREVIEW_CHARS = 80;         // code points of redacted preview
 export const REASON_CHARS = 200;
 export const FIELDS = Object.freeze(['abId', 'by', 'pairs', 'preview', 'reason', 'scheme', 'span']);
 
-const BY = /^[A-Za-z][A-Za-z0-9 _.:-]{0,39}$/;
+const BY = /^[A-Za-z][A-Za-z0-9 _.:()-]{0,39}$/;   // a device's name — 'Overseer (a person)' included
 const HEX8S = /^(?:[0-9a-f]{8})+$/;
 const DIGITS = /\p{Nd}(?:[\p{Nd}\s.,:/-]*\p{Nd})?/gu;   // a run of digits with separators: 12-34-56, 12 34 56, 9,000
 const VOWELS = 'aeiouy';

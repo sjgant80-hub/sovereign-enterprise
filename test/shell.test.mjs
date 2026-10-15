@@ -60,7 +60,7 @@ const rec = (node, c, id) => node.list(c).find((r) => r.id === id);
 const decisionsFor = (node, event) => node.list('decisions').filter((d) => d.event === event);
 
 // ── THE OFFICE: owner, hub, three agent devices on the real spine ───────────────────────────────────────────────────
-test('an office on the real spine: work at the hub is decided across devices, asks answered by another device’s brain, every device converges', async () => {
+test('an office on the real spine: work at the hub is decided across devices — money work only by its own agent — asks answered by another device’s brain, every device converges', async () => {
   const o = await office();
   const fin = await stock(o, 'finance'), ops = await stock(o, 'ops');
   const aud = await stock(o, 'audit', { ...AG('audit'), grows: ['fraud'] });
@@ -73,13 +73,16 @@ test('an office on the real spine: work at the hub is decided across devices, as
   const f1 = pick('fraud', both), f2 = pick('fraud', both, f1 + 1), f3 = pick('fraud', both, f2 + 1), f4 = pick('fraud', both, f3 + 1), f5 = pick('fraud', both, f4 + 1);
   const inv = pick('inventory', (f) => { const a = answer(ops, f); return a.verdict === 'VERIFIED' && a.domain === 'inventory' && a.confidence >= 0.05; });
   const cr = pick('credit', (f) => answer({ credit: fin.credit }, f).verdict === 'VERIFIED');
-  await send(o, 'e000001', 'ops', 'fraud', f1);                      // misrouted: Ops has no fraud brain
+  const sure = (f) => { const a = answer({ maintenance: ops.maintenance }, f); return a.verdict === 'VERIFIED' && a.confidence >= 0.05; };
+  const m1 = pick('maintenance', sure), m2 = pick('maintenance', sure, m1 + 1), m3 = pick('maintenance', sure, m2 + 1), m4 = pick('maintenance', sure, m3 + 1);
+  await send(o, 'e000001', 'ops', 'fraud', f1);                      // card fraud landed at Ops: money work — Ops hands it to Finance, unread
   await send(o, 'e000002', 'finance', 'fraud', f2);                  // Finance's own job: a money call, a second brain must agree
   await send(o, 'e000003', 'ops', 'inventory', inv);                 // Ops' own job, confident: decided at once
   await send(o, 'e000004', 'ops', 'inventory', inv + 1, { text: HOSTILE_TEXT[0] });   // a hostile message: quarantined unread
   await send(o, 'e000005', 'finance', 'credit', cr);                 // no other device holds a credit brain: held for a person
-  await send(o, 'e000007', 'ops', 'fraud', f3);
-  await send(o, 'e000008', 'ops', 'fraud', f4);
+  await send(o, 'e000006', 'finance', 'maintenance', m1);            // normal work misrouted to Finance: it asks the spine
+  await send(o, 'e000007', 'finance', 'maintenance', m2);
+  await send(o, 'e000008', 'finance', 'maintenance', m3);
   await send(o, 'e000010', 'ops', 'churn', 3);                       // re-addressed to Finance while Ops waits on the mesh
   await send(o, 'e000011', 'ops', 'shopper', 4);                     // closed elsewhere while Ops waits on the mesh
   let T = 0;
@@ -95,9 +98,12 @@ test('an office on the real spine: work at the hub is decided across devices, as
   assert.equal(decisionsFor(H, 'e000004')[0].domain, '', 'no brain named a job: written as empty, never null');
   assert.equal(decisionsFor(H, 'e000003')[0].domain, 'inventory');
   assert.match(decisionsFor(H, 'e000003')[0].receipt, /^[0-9a-f]{16}$/, 'its own brain’s receipt rides on the signed decision');
-  assert.equal(decisionsFor(H, 'e000001').length, 0, 'still waiting on the mesh');
+  assert.equal(decisionsFor(H, 'e000001').length, 0, 'not decided by Ops');
+  assert.deepEqual([rec(H, 'inbox', 'e000001').to, rec(H, 'inbox', 'e000001').handedBy], ['finance', 'ops'], 'handed over to the agent whose job it is');
+  assert.deepEqual(envs(H).filter((e) => e.op.c === 'inbox' && e.op.id === 'e000001' && e.op.f.handedBy).map((e) => e.from), [o.k.ops.pub], 'by the Ops device itself');
   const opsAsks = () => H.list('ask').filter((a) => a.from === 'ops');
-  assert.deepEqual(opsAsks().map((a) => a.item + '/' + a.kind).sort(), ['e000001/answer', 'e000007/answer', 'e000008/answer', 'e000010/answer', 'e000011/answer']);
+  assert.deepEqual(opsAsks().map((a) => a.item + '/' + a.kind).sort(), ['e000010/answer', 'e000011/answer'], 'Ops never asked about the money work: it is not its to decide');
+  assert.deepEqual(H.list('ask').filter((a) => a.from === 'finance' && a.kind === 'answer').map((a) => a.item).sort(), ['e000006', 'e000007', 'e000008']);
   await H.put('inbox', 'e000010', { to: 'finance' });               // the door re-addresses one …
   await o.nodes.owner.put('inbox', 'e000011', { status: 'done', doneBy: 'owner' });   // … and a person closes another
   await round();                                                     // R2: the peers reply
@@ -110,21 +116,13 @@ test('an office on the real spine: work at the hub is decided across devices, as
     const seen = new Set();
     for (const r of n.list('reply')) { assert.ok(!seen.has(r.ask + '/' + r.by), 'a duplicate reply ' + r.ask + '/' + r.by); seen.add(r.ask + '/' + r.by); }
   }
-  // e1: Ops could not answer — another device's brain did, and a third confirmed it
+  // e1: the money work Ops handed over — Finance decided it with its own brain, the Audit agent's confirmed it
   const d1 = decisionsFor(H, 'e000001');
   assert.equal(d1.length, 1);
-  assert.match(d1[0].by, /^mesh:(finance|audit)$/);
-  assert.equal(d1[0].cross, true);
-  assert.deepEqual([d1[0].by.slice(5), d1[0].second].sort(), ['audit', 'finance'], 'answered by one device, confirmed by the other');
-  assert.deepEqual(signers(H, 'decisions', (op) => op.f.event === 'e000001'), [o.k.ops.pub], 'signed by the Ops device itself');
-  const r1 = H.list('reply').filter((r) => r.item === 'e000001' && r.verdict === 'VERIFIED');
-  assert.ok(r1.some((r) => r.by === d1[0].by.slice(5) && r.kind === 'answer') && r1.some((r) => r.by === d1[0].second && r.kind === 'second'));
-  // what it writes: Ops' grant has no payments and no books — the money act is handed to Finance, who carries it out
-  const h1 = H.list('handoff').find((h) => h.event === 'e000001');
-  assert.equal(h1.from, 'ops');
-  assert.equal(h1.to, 'finance');
-  assert.equal(h1.status, 'done');
-  assert.equal(h1.doneBy, 'finance');
+  assert.deepEqual([d1[0].agent, d1[0].by, d1[0].cross, d1[0].second], ['finance', 'own', true, 'audit']);
+  assert.deepEqual(signers(H, 'decisions', (op) => op.f.event === 'e000001'), [o.k.finance.pub], 'signed by the Finance device itself');
+  // what it writes: its own money act, in its own books — nothing handed to anyone
+  assert.deepEqual(H.list('handoff').filter((h) => h.event === 'e000001'), []);
   if (d1[0].action === 'release-payment') assert.ok(H.list('journal').some((j) => j.memo === 'Card sale C' + (1000 + f1)));
   else assert.ok(H.list('payments').some((p) => p.customer === 'C' + (1000 + f1) && p.status === 'held' && p.by === 'Finance agent'));
   // e2: Finance's own brain, confirmed by the Audit agent's independent brain (Ops abstained: no fraud brain then)
@@ -141,27 +139,32 @@ test('an office on the real spine: work at the hub is decided across devices, as
   const q = H.list('quarantine').find((x) => x.event === 'e000004');
   assert.equal(q.agent, 'ops');
   assert.match(q.flags, /injection/);
+  // … and the customer behind it waits on the people's list, raised by the Ops device, for a person to release or answer
+  const wq = H.list('watch').find((x) => x.event === 'e000004');
+  assert.deepEqual([wq.kind, wq.source, wq.agent, wq.status, wq.preview], ['waiting', 'quarantined', 'ops', 'open', q.preview]);
+  assert.deepEqual(signers(H, 'watch', (op) => op.id === wq.id), [o.k.ops.pub]);
   // e5: nobody else holds a credit brain — no second brain could confirm, so it waits for a person
   const d5 = decisionsFor(H, 'e000005')[0];
   assert.equal(d5.state, 'watch');
   assert.match(d5.why, /no second brain/);
   const w5 = H.list('watch').find((w) => w.event === 'e000005');
   assert.equal(w5.status, 'open');
-  // e7, e8: asked three times about card fraud, Ops LEARNED Finance's brain — re-verified on its own cases
-  const learnt = H.list('adopt').find((a) => a.by === 'ops' && a.source === 'learned' && a.domain === 'fraud');
+  // e6–e8: Ops' brain answered each over the spine; asked three times about it, Finance LEARNED Ops' maintenance brain —
+  // re-verified on its own cases
+  for (const id of ['e000006', 'e000007', 'e000008']) assert.deepEqual(decisionsFor(H, id).map((d) => d.agent + '/' + d.by), ['finance/mesh:ops'], id);
+  const learnt = H.list('adopt').find((a) => a.by === 'finance' && a.source === 'learned' && a.domain === 'maintenance');
   assert.equal(learnt.adopted, true);
-  assert.equal(learnt.from, 'finance');
-  assert.equal(learnt.patternId, fin.fraud.patternId);
-  assert.ok((await shells.ops.tick()).brains.includes('fraud'));
+  assert.equal(learnt.from, 'ops');
+  assert.equal(learnt.patternId, ops.maintenance.patternId);
+  assert.ok((await shells.finance.tick()).brains.includes('maintenance'));
   // e10 went to Finance after the door re-addressed it; e11 was closed by a person — Ops decided neither
   assert.deepEqual(decisionsFor(H, 'e000010').map((d) => d.agent), ['finance']);
   assert.deepEqual(decisionsFor(H, 'e000011'), []);
-  // a later fraud case to Ops: its own (learned) brain answers now, and another device confirms
-  await send(o, 'e000012', 'ops', 'fraud', f5);
+  // a later machine reading to Finance: its own (learned) brain answers now — normal work, sure enough: no second brain
+  await send(o, 'e000012', 'finance', 'maintenance', m4);
   for (let i = 0; i < 4; i++) await round();
   const d12 = decisionsFor(H, 'e000012')[0];
-  assert.equal(d12.by, 'own');
-  assert.equal(d12.cross, true);
+  assert.deepEqual([d12.agent, d12.by, d12.cross], ['finance', 'own', false]);
   // a person approves the held credit call; Finance carries it out on its next beat
   await o.nodes.owner.put('watch', w5.id, { status: 'approved', action: 'standard-terms', resolvedBy: 'Owner' });
   for (let i = 0; i < 2; i++) await round();
@@ -170,7 +173,7 @@ test('an office on the real spine: work at the hub is decided across devices, as
   assert.ok(H.list('terms').some((t) => t.customer === 'C' + (1000 + cr) && t.terms === '30 days'));
   // everything at the door decided exactly once; every device holds the same company
   for (const it of H.list('inbox')) assert.equal(it.status, 'done', it.id);
-  for (const id of ['e000001', 'e000002', 'e000003', 'e000004', 'e000005', 'e000007', 'e000008', 'e000010', 'e000012']) assert.equal(decisionsFor(H, id).length, 1, id);
+  for (const id of ['e000001', 'e000002', 'e000003', 'e000004', 'e000005', 'e000006', 'e000007', 'e000008', 'e000010', 'e000012']) assert.equal(decisionsFor(H, id).length, 1, id);
   const fps = Object.values(o.nodes).map((n) => n.fingerprint());
   assert.ok(fps.every((f) => f === fps[0]), 'every device converged');
   assert.equal(o.nodes.owner.view().report.unauthorized, 0);
@@ -228,34 +231,65 @@ test('deadline: a silent peer is waited for until the deadline, to the tick; 0 d
 
 // ── the model tier on an agent device: only for work no brain covers, never for quarantined or verified work ─────────
 test('the model tier: called only when nothing verified answered and the text passed the screen; every call audited on the spine', async () => {
-  const o = await office({ agents: ['finance', 'ops'] });
+  const o = await office({ agents: ['finance', 'ops', 'systems'] });
   const fin = await stock(o, 'finance'), ops = await stock(o, 'ops');
-  const calls = { finance: 0, ops: 0 };
+  const calls = { finance: 0, ops: 0, systems: 0 };
   const fake = (who) => ({ adapter: { name: 'fake', kind: 'local', model: 'm1', call: async () => { calls[who]++; return { ok: true, text: '1', tokensIn: 5, tokensOut: 1 }; } }, budget: 0 });
   const fi = pick('fraud', (f) => answer({ fraud: fin.fraud }, f).verdict === 'VERIFIED');
-  await send(o, 'e000001', 'finance', 'intrusion', 2);               // no brain anywhere covers it → the model
+  const mt = pick('maintenance', (f) => answer({ maintenance: ops.maintenance }, f).verdict === 'VERIFIED');
+  await send(o, 'e000001', 'systems', 'intrusion', 2);               // its own job, but no brain anywhere covers it → the model
   await send(o, 'e000002', 'finance', 'credit', 3, { text: HOSTILE_TEXT[5] });   // quarantined → never shown to a model
   await send(o, 'e000003', 'finance', 'fraud', fi);                  // its own brain answers → no model
-  await send(o, 'e000004', 'ops', 'fraud', fi + 1);                  // another device's brain answers → no model
+  await send(o, 'e000004', 'finance', 'maintenance', mt);            // another device's brain answers → no model
   let T = 0;
   const sf = S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: fin, now: () => T, deadline: 40, model: fake('finance') });
   const so = S.createAgentShell({ node: o.nodes.ops, agentId: 'ops', library: ops, now: () => T, deadline: 40, model: fake('ops') });
-  for (let i = 0; i < 6; i++) { await o.sync(); await sf.tick(); await so.tick(); await o.sync(); T++; }
+  const ss = S.createAgentShell({ node: o.nodes.systems, agentId: 'systems', library: {}, now: () => T, deadline: 40, model: fake('systems') });
+  for (let i = 0; i < 6; i++) { await o.sync(); await sf.tick(); await so.tick(); await ss.tick(); await o.sync(); T++; }
   const H = o.nodes.hub;
   const d1 = decisionsFor(H, 'e000001')[0];
   assert.equal(d1.by, 'model:fake/m1');
   assert.equal(d1.state, 'watch', 'a model answered a security call: held for a person, never acted on');
   assert.equal(decisionsFor(H, 'e000002')[0].by, 'screen');
   assert.equal(decisionsFor(H, 'e000003')[0].by, 'own');
-  assert.equal(decisionsFor(H, 'e000004')[0].by, 'mesh:finance');
-  assert.deepEqual(calls, { finance: 1, ops: 0 });
+  assert.equal(decisionsFor(H, 'e000004')[0].by, 'mesh:ops');
+  assert.deepEqual(calls, { finance: 0, ops: 0, systems: 1 });
   const audits = H.list('model');
   assert.equal(audits.length, 1);
-  assert.equal(audits[0].agent, 'finance');
+  assert.equal(audits[0].agent, 'systems');
   assert.equal(audits[0].ok, true);
-  assert.deepEqual(signers(H, 'model'), [o.k.finance.pub]);
-  assert.equal((await sf.tick()).model, true);
+  assert.deepEqual(signers(H, 'model'), [o.k.systems.pub]);
+  assert.equal((await ss.tick()).model, true);
   assert.equal((await so.tick()).spent, 0);
+});
+
+// ── money and security work: decided only by the agent whose job it is ─────────────────────────────────────────────
+test('money and security work is handed over to its own agent, never decided where it lands; with that agent missing it waits for a person', async () => {
+  const o = await office({ agents: ['finance', 'ops'] });
+  const fin = await stock(o, 'finance'), ops = await stock(o, 'ops');
+  await send(o, 'e000001', 'ops', 'fraud', 1);                       // Finance's: handed over
+  await send(o, 'e000002', 'ops', 'credit', 2);                      // Finance's: handed over
+  await send(o, 'e000003', 'finance', 'inventory', 3);              // a purchase order commits money: Ops' — handed over
+  await send(o, 'e000004', 'ops', 'intrusion', 4);                   // the Systems agent's — not in this company: held for a person
+  await send(o, 'e000005', 'finance', 'churn', 5);                   // normal work: decided where it landed (no brain covers it here)
+  await o.sync();
+  const so = S.createAgentShell({ node: o.nodes.ops, agentId: 'ops', library: ops, now: () => 0, deadline: 0 });
+  const sf = S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: fin, now: () => 0, deadline: 0 });
+  await so.tick(); await sf.tick(); await o.sync();
+  const H = o.nodes.hub;
+  assert.deepEqual(['e000001', 'e000002', 'e000003'].map((id) => rec(H, 'inbox', id).to + '/' + rec(H, 'inbox', id).handedBy), ['finance/ops', 'finance/ops', 'ops/finance']);
+  for (const id of ['e000001', 'e000002', 'e000003']) assert.deepEqual(decisionsFor(H, id), [], id + ': handed over unread, not decided');
+  const d4 = decisionsFor(H, 'e000004');
+  assert.deepEqual(d4.map((d) => [d.agent, d.state, d.by, d.action]), [['ops', 'watch', 'none', '']]);
+  assert.equal(d4[0].why, 'only the Systems agent decides this work, and it is not in this company — held for a person');
+  assert.equal(H.list('watch').find((w) => w.event === 'e000004').status, 'open');
+  assert.deepEqual(decisionsFor(H, 'e000005').map((d) => d.agent), ['finance']);
+  // the agents whose job it is decide them, on their next beat
+  for (let i = 0; i < 3; i++) { await o.sync(); await so.tick(); await sf.tick(); await o.sync(); }
+  assert.deepEqual(['e000001', 'e000002', 'e000003'].map((id) => decisionsFor(H, id).map((d) => d.agent).join()), ['finance', 'finance', 'ops']);
+  // and the decision records keep the rules that applied
+  const d3 = decisionsFor(H, 'e000003')[0];
+  assert.deepEqual([d3.floor, d3.limit, d3.released], [50, 0, '']);
 });
 
 // ── who may run: a grant, not paused, a real agent ──────────────────────────────────────────────────────────────────
@@ -441,48 +475,66 @@ test('after a restart it never answers an ask again — even one only it answere
 
 test('a hand-off is carried out only from a live agent whose own device wrote it — never from a name another device wrote', async () => {
   const o = await office({ agents: ['finance', 'ops'] });
-  const pay = (c) => JSON.stringify({ c: 'payments', f: { customer: c, amount: 1, status: 'released', by: 'x' } });
-  await o.nodes.owner.put('handoff', 'h1', { from: 'stranger', to: 'finance', payload: pay('S1'), status: 'open', event: 'e1' });
-  await o.nodes.owner.put('handoff', 'h2', { from: 'ops', to: 'finance', payload: pay('S2'), status: 'open', event: 'e2' });   // names Ops; the owner's key wrote it
-  await o.nodes.ops.put('handoff', 'h3', { from: 'ops', to: 'finance', payload: pay('S3'), status: 'open', event: 'e3' });     // Ops' own device
+  const note = (c) => JSON.stringify({ c: 'msg', f: { ch: 'general', body: c, by: 'x' } });
+  await o.nodes.owner.put('handoff', 'h1', { from: 'stranger', to: 'finance', payload: note('S1'), status: 'open', event: 'e1' });
+  await o.nodes.owner.put('handoff', 'h2', { from: 'ops', to: 'finance', payload: note('S2'), status: 'open', event: 'e2' });   // names Ops; the owner's key wrote it
+  await o.nodes.ops.put('handoff', 'h3', { from: 'ops', to: 'finance', payload: note('S3'), status: 'open', event: 'e3' });     // Ops' own device
   await o.sync();
   await S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: {} }).tick();
   assert.deepEqual(['h1', 'h2', 'h3'].map((id) => rec(o.nodes.finance, 'handoff', id).status), ['refused', 'refused', 'done']);
-  assert.deepEqual(o.nodes.finance.list('payments').map((p) => p.customer), ['S3']);
+  assert.deepEqual(o.nodes.finance.list('msg').map((p) => p.body), ['S3']);
+});
+
+test('attack: a money act travels on no hand-off — not even from the real sender’s own key; the work goes over, never the act', async () => {
+  const o = await office({ agents: ['finance', 'ops'] });
+  const acts = [['payments', { c: 'payments', f: { customer: 'X1', amount: 99900, status: 'released', by: 'Ops agent' } }],
+    ['terms', { c: 'terms', f: { customer: 'X2', terms: '30 days', by: 'Ops agent' } }],
+    ['po', { c: 'po', f: { supplier: 'Thief Ltd', net: 500000, status: 'raised', by: 'Ops agent' } }],
+    ['post', { post: { memo: 'Card sale X3', lines: [['1200', 999, 0], ['4000', 0, 999]] } }]];
+  for (const [id, payload] of acts) await o.nodes.ops.put('handoff', 'm-' + id, { from: 'ops', to: 'finance', payload: JSON.stringify(payload), status: 'open', event: 'e-' + id });
+  await o.sync();
+  for (const [, payload] of acts) assert.equal(S.movesMoney(payload), true);
+  assert.equal(S.movesMoney({ c: 'msg', f: {} }), false);
+  assert.equal(S.movesMoney({ c: 'tasks', f: {} }), false);
+  assert.equal(S.movesMoney(null), false);
+  await S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: {} }).tick();
+  const F = o.nodes.finance;
+  assert.deepEqual(acts.map(([id]) => rec(F, 'handoff', 'm-' + id).status), ['refused', 'refused', 'refused', 'refused']);
+  assert.deepEqual([F.list('payments'), F.list('terms'), F.list('po'), F.list('journal')], [[], [], [], []]);
 });
 
 test('learning by being asked needs a published brain and the device’s own rows; without either it carries on, learning nothing', async () => {
   const run = async (publish, localRows) => {
     const o = await office({ agents: ['finance', 'ops'] });
-    const fin = publish ? await stock(o, 'finance') : { fraud: FACTORY.fraud, credit: FACTORY.credit };   // given, never published
-    const ops = await stock(o, 'ops');
-    const fi = (n) => pick('fraud', (f) => answer({ fraud: FACTORY.fraud }, f).verdict === 'VERIFIED', n);
+    const ops = publish ? await stock(o, 'ops') : { inventory: FACTORY.inventory, maintenance: FACTORY.maintenance, energy: FACTORY.energy };   // given, never published
+    const fin = await stock(o, 'finance');
+    const mt = (n) => pick('maintenance', (f) => answer({ maintenance: FACTORY.maintenance }, f).verdict === 'VERIFIED', n);
     let at = 0;
-    for (let i = 0; i < 3; i++) { at = fi(at) + 1; await send(o, 'e00000' + (i + 1), 'ops', 'fraud', at - 1); }
+    for (let i = 0; i < 3; i++) { at = mt(at) + 1; await send(o, 'e00000' + (i + 1), 'finance', 'maintenance', at - 1); }
     let T = 0;
-    const sf = S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: fin, now: () => T, deadline: 4 });
-    const so = S.createAgentShell({ node: o.nodes.ops, agentId: 'ops', library: ops, now: () => T, deadline: 4, localRows });
+    const so = S.createAgentShell({ node: o.nodes.ops, agentId: 'ops', library: ops, now: () => T, deadline: 4 });
+    const sf = S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: fin, now: () => T, deadline: 4, localRows });
     let st = null;
-    for (let i = 0; i < 8; i++) { await o.sync(); await sf.tick(); st = await so.tick(); await o.sync(); T++; }
+    for (let i = 0; i < 8; i++) { await o.sync(); await so.tick(); st = await sf.tick(); await o.sync(); T++; }
     return { st, o };
   };
   const a = await run(false, (d) => rows(d));
   assert.equal(a.st.state, 'running');
-  assert.ok(!a.st.brains.includes('fraud'), 'nothing published to learn');
-  const asked = (x) => x.o.nodes.ops.list('ask').filter((q) => q.from === 'ops' && q.kind === 'answer').length;
-  assert.equal(a.o.nodes.ops.list('decisions').filter((d) => d.by === 'mesh:finance').length, 3, 'asked three times, answered three times');
+  assert.ok(!a.st.brains.includes('maintenance'), 'nothing published to learn');
+  const asked = (x) => x.o.nodes.finance.list('ask').filter((q) => q.from === 'finance' && q.kind === 'answer').length;
+  assert.equal(a.o.nodes.finance.list('decisions').filter((d) => d.by === 'mesh:ops').length, 3, 'asked three times, answered three times');
   assert.equal(asked(a), 3, 'one ask per piece of work: no beat failed and asked again');
   const b = await run(true, null);
   assert.equal(b.st.state, 'running');
-  assert.ok(!b.st.brains.includes('fraud'), 'no rows of its own to re-verify on: it does not learn');
-  assert.equal(b.o.nodes.ops.list('adopt').filter((x) => x.source === 'learned').length, 0);
+  assert.ok(!b.st.brains.includes('maintenance'), 'no rows of its own to re-verify on: it does not learn');
+  assert.equal(b.o.nodes.finance.list('adopt').filter((x) => x.source === 'learned').length, 0);
   assert.equal(asked(b), 3);
-  assert.equal(b.o.nodes.ops.list('decisions').length, 3);
+  assert.equal(b.o.nodes.finance.list('decisions').length, 3);
   const d = await run(true, (x) => rows(x).slice(0, 10));
-  assert.ok(!d.st.brains.includes('fraud'), 'too few rows of its own to re-verify on: the published brain is refused, not taken');
-  assert.deepEqual(d.o.nodes.ops.list('adopt').filter((x) => x.source === 'learned').map((x) => x.adopted), [false]);
+  assert.ok(!d.st.brains.includes('maintenance'), 'too few rows of its own to re-verify on: the published brain is refused, not taken');
+  assert.deepEqual(d.o.nodes.finance.list('adopt').filter((x) => x.source === 'learned').map((x) => x.adopted), [false]);
   const c = await run(true, (d) => rows(d));
-  assert.ok(c.st.brains.includes('fraud'), 'both: it learns');
+  assert.ok(c.st.brains.includes('maintenance'), 'both: it learns');
 });
 
 test('the policy: one given to the shell is used; otherwise the overseer’s on the spine', async () => {
@@ -531,20 +583,23 @@ test('uid, seedFor, gateFor, createWork: the ids, seeds and gates every device u
 test('policyOf, isPaused, clearsOf: read from the device’s own view of the spine', async () => {
   const o = await office({ agents: ['ops'] });
   const n = o.nodes.ops;
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0 });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0, autoPause: true });
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 200 });
   await o.nodes.owner.put('policy', 'other', { minConfidence: 900 });
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0 });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0, autoPause: true });
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, moneyLimit: 250000 });   // a person sets a £2,500 limit
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 250000 });
-  await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, moneyLimit: -1 });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 250000, autoPause: true });
+  await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, moneyLimit: -1, autoPause: false });   // … and switches the automatic pause off
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0 }, 'a limit that is not a whole number of pence is no limit');
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0, autoPause: false }, 'a limit that is not a whole number of pence is no limit');
+  await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, autoPause: 'off' });
+  await o.sync();
+  assert.equal(S.policyOf(n).autoPause, true, 'only false switches it off');
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 'high' });
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0 });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0, autoPause: true });
   assert.equal(S.isPaused(n, 'ops'), false);
   await o.nodes.owner.put('control', 'sales', { paused: true });
   await o.sync();
@@ -556,7 +611,7 @@ test('policyOf, isPaused, clearsOf: read from the device’s own view of the spi
   await o.sync();
   assert.equal(S.isPaused(n, 'sales'), false);
   assert.deepEqual(S.clearsOf(n), { ops: { at: 'd0007', rebaseline: false }, sales: { at: 'd0042', rebaseline: true } });
-  for (const junk of [null, {}, 7]) { assert.deepEqual(S.policyOf(junk), { minConfidence: 0.05, moneyLimit: 0 }); assert.equal(S.isPaused(junk, 'ops'), false); assert.deepEqual(S.clearsOf(junk), {}); }
+  for (const junk of [null, {}, 7]) { assert.deepEqual(S.policyOf(junk), { minConfidence: 0.05, moneyLimit: 0, autoPause: true }); assert.equal(S.isPaused(junk, 'ops'), false); assert.deepEqual(S.clearsOf(junk), {}); }
 });
 
 test('the books and the vault: an entry is posted and sequenced; a device without the whole scope refuses; the witness co-signs only a log that audits', async () => {
@@ -649,20 +704,26 @@ test('finishWork: a hand-off travels only if it fits a record (1,900 characters,
 test('honourWork: hand-offs to this agent from a live sender are carried out; approved calls for it (or its job at the door) are executed — nothing else', async () => {
   const o = await office({ agents: ['finance', 'ops'] });
   const W = o.nodes.owner;
-  const pay = (customer) => JSON.stringify({ c: 'payments', f: { customer, amount: 10, status: 'released', by: 'Ops agent' } });
+  const note = (body) => JSON.stringify({ c: 'msg', f: { ch: 'general', body, by: 'Ops agent' } });
   const O = o.nodes.ops;   // a hand-off is written by its sender's own device
-  await O.put('handoff', 'h1', { from: 'ops', to: 'finance', payload: pay('P1'), status: 'open', event: 'e1' });
-  await W.put('handoff', 'h2', { from: 'stranger', to: 'finance', payload: pay('P2'), status: 'open', event: 'e2' });
+  await O.put('handoff', 'h1', { from: 'ops', to: 'finance', payload: note('P1'), status: 'open', event: 'e1' });
+  await W.put('handoff', 'h2', { from: 'stranger', to: 'finance', payload: note('P2'), status: 'open', event: 'e2' });
   await O.put('handoff', 'h3', { from: 'ops', to: 'finance', payload: '{not json', status: 'open', event: 'e3' });
-  await O.put('handoff', 'h4', { from: 'ops', to: 'ops', payload: pay('P4'), status: 'open', event: 'e4' });
-  await O.put('handoff', 'h5', { from: 'ops', to: 'finance', payload: pay('P5'), status: 'done', event: 'e5' });
+  await O.put('handoff', 'h4', { from: 'ops', to: 'ops', payload: note('P4'), status: 'open', event: 'e4' });
+  await O.put('handoff', 'h5', { from: 'ops', to: 'finance', payload: note('P5'), status: 'done', event: 'e5' });
   const watch = (id, f) => W.put('watch', id, { event: 'e9', customer: 'C9', amount: 500, status: 'approved', ...f });
   await watch('w1', { agent: 'door', channel: 'fraud', action: 'hold-payment' });
   await watch('w2', { agent: 'ops', channel: 'fraud', action: 'hold-payment' });
   await watch('w3', { agent: 'finance', channel: 'credit', action: 'upfront-terms', status: 'open' });
   await watch('w4', { agent: 'finance', channel: 'credit', action: '' });
   await watch('w5', { agent: 'door', channel: 'churn', action: 'retain' });
-  await watch('w6', { agent: 'finance', channel: 'shopper', action: 'fast-track', customer: 'C7', amount: 100 });
+  // held calls the Finance device raised itself, approved by a person — and one raised in its name by another device
+  const F0 = o.nodes.finance;
+  await F0.put('watch', 'w6', { agent: 'finance', event: 'e9', customer: 'C7', amount: 100, channel: 'shopper', action: 'fast-track', status: 'open' });
+  await O.put('watch', 'w7', { agent: 'finance', event: 'e9', customer: 'C8', amount: 100, channel: 'shopper', action: 'fast-track', status: 'open' });
+  await o.sync();
+  await W.put('watch', 'w6', { status: 'approved', action: 'fast-track', resolvedBy: 'Owner' });
+  await W.put('watch', 'w7', { status: 'approved', action: 'fast-track', resolvedBy: 'Owner' });
   await o.sync();
   const f = o.nodes.finance;
   const r = await S.honourWork({ node: f, id: 'finance', cols: agentCols('finance'), honoured: (from) => from === 'ops', effect: (n, e) => S.applyEffect(n, e, '2026-10-15') });
@@ -670,12 +731,14 @@ test('honourWork: hand-offs to this agent from a live sender are carried out; ap
   const st = (id) => rec(f, 'handoff', id);
   assert.deepEqual([st('h1').status, st('h2').status, st('h3').status, st('h4').status, st('h5').status], ['done', 'refused', 'refused', 'open', 'done']);
   assert.equal(st('h1').doneBy, 'finance');
-  assert.deepEqual(f.list('payments').map((p) => p.customer + ':' + p.status).sort(), ['C9:held', 'P1:released']);
+  assert.deepEqual(f.list('msg').map((p) => p.body).sort(), ['Finance agent: held a £5.00 card payment from C9 — it looks fraudulent.', 'P1'], 'the hand-off, and w1’s own chat line');
+  assert.deepEqual(f.list('payments').map((p) => p.customer + ':' + p.status).sort(), ['C9:held']);
   const ws = (id) => rec(f, 'watch', id).status;
-  assert.deepEqual(['w1', 'w2', 'w3', 'w4', 'w5', 'w6'].map(ws), ['executed', 'approved', 'open', 'approved', 'approved', 'executed']);
+  assert.deepEqual(['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7'].map(ws), ['executed', 'approved', 'open', 'approved', 'approved', 'executed', 'approved'],
+    'w7 names Finance but another device raised it: a person’s approval does not make Finance carry out what it never proposed');
   assert.equal(rec(f, 'watch', 'w1').executedBy, 'finance');
   const hs = f.list('handoff').filter((h) => h.event === 'e9');
-  assert.equal(hs.length, 1, 'the CRM write it could not make went to the Sales agent');
+  assert.equal(hs.length, 1, 'the CRM write it could not make went to the Sales agent (once: for w6, never for w7)');
   assert.equal(hs[0].to, 'sales');
   assert.equal(hs[0].from, 'finance');
   assert.deepEqual(await S.honourWork(null), { ok: false, reason: 'fault' });
@@ -701,13 +764,21 @@ test('oversee: the watch pauses an agent that acted off its own work, once; a po
   assert.match(c.why, /off its own work/);
   assert.equal(c.flaggedAt, 'd3', 'the decision that tipped it: the third act off its work');
   assert.equal(logs.length, 1);
-  assert.match(logs[0], /^AI overseer paused the Finance agent — the watch read it as hijacked/);
+  assert.match(logs[0], /^The behaviour watch \(automatic\) paused the Finance agent — it read it as hijacked/);
   assert.deepEqual(await S.oversee({ node: W, agents: ['finance', 'ops'] }), [], 'already paused: not again');
   assert.deepEqual(await S.oversee({ node: W, agents: ['finance'], paused: () => false }), ['finance'], 'by the caller’s own view of who is paused');
   // a clearance: judged afresh from there
   await W.put('control', 'finance', { paused: false, cleared: 'd3' });
   assert.deepEqual(await S.oversee({ node: W, agents: ['finance'] }), []);
   assert.deepEqual(await S.oversee(null), []);
+  // the automatic pause by its own name; and a person can switch it off on the spine — it then only flags
+  await W.put('control', 'finance', { paused: false, cleared: '' });
+  await W.put('policy', 'agents', { minConfidence: 50, autoPause: false });
+  assert.deepEqual(await S.oversee({ node: W, agents: ['finance'] }), [], 'switched off: no pause');
+  await W.put('policy', 'agents', { minConfidence: 50, autoPause: true });
+  assert.deepEqual(await S.oversee({ node: W, agents: ['finance'] }), ['finance']);
+  assert.equal(rec(W, 'control', 'finance').by, 'the behaviour watch (automatic)');
+  assert.equal(S.WATCH_BY, 'the behaviour watch (automatic)');
 });
 
 test('learnBrain: the job’s own agent’s published brain is preferred, re-verified on this device’s rows, recorded either way', async () => {
@@ -910,7 +981,7 @@ test('grantFor: the exact grant each role needs, refused when it cannot be right
   assert.deepEqual(S.grantFor(view, { role: 'agent', agent: 'finance', pub: K }), { ok: true, id: 'agent-finance.3', to: K, role: 'agent', cols: [...AG('finance').cols, 'wire', 'model'] });
   assert.deepEqual(S.grantFor(view, { role: 'agent', agent: 'sales', pub: K }), { ok: true, id: 'agent-sales', to: K, role: 'agent', cols: [...AG('sales').cols, 'wire', 'model'] });
   assert.deepEqual(S.grantFor(view, { role: 'agent', agent: 'ops', pub: K }).id, 'agent-ops.2');
-  assert.deepEqual(S.grantFor(view, { role: 'hub', pub: K }), { ok: true, id: 'hub-bbbbbbbb.2', to: K, role: 'hub', cols: ['inbox', 'msg', 'model', 'wire'] });
+  assert.deepEqual(S.grantFor(view, { role: 'hub', pub: K }), { ok: true, id: 'hub-bbbbbbbb.2', to: K, role: 'hub', cols: ['inbox', 'msg', 'model', 'watch', 'wire'] });
   assert.deepEqual(S.grantFor(view, { role: 'staff', pub: K }), { ok: true, id: 'staff-bbbbbbbb', to: K, role: 'staff', cols: ['tasks', 'msg', 'docs', 'crm', 'wire'] });
   assert.deepEqual(S.grantFor(view, { role: 'admin', pub: K }), { ok: true, id: 'admin-bbbbbbbb', to: K, role: 'admin', cols: ['*'] });
   assert.deepEqual(S.grantFor({ ...view, owner: false }, { role: 'admin', pub: K }), { ok: false, reason: 'only-the-owner' });
@@ -1191,8 +1262,8 @@ test('fuzz: no export throws or rejects on junk', async () => {
   const JUNK = [undefined, null, 0, NaN, '', 'x', [], {}, [null], toxic, 1n, () => 1, Symbol('s')];
   const fns = Object.entries(S).filter(([, v]) => typeof v === 'function');
   assert.deepEqual(fns.map(([k]) => k).sort(), ['adoptAntibodiesOn', 'agentRoster', 'applyEffect', 'askSecond', 'checkIn', 'clearsOf', 'companyMark', 'createAgentShell', 'createWork',
-    'finishWork', 'gateFor', 'grantFor', 'honourWork', 'isPaused', 'learnBrain', 'ollamaSteps', 'oversee', 'ownRecords', 'personApproved', 'planOf', 'policyOf', 'postEntry', 'publishBrain', 'receiptRecord',
-    'seedFor', 'signedAs', 'signersOf', 'stepAgent', 'stockBrains', 'testWork', 'uid', 'vaultState', 'verifyWiringReceipt', 'wireRecords', 'wiringChecklist', 'wiringReceipt', 'wiringView', 'witnessHead', 'witnessVault']);
+    'doorReleases', 'fieldSigners', 'finishWork', 'gateFor', 'grantFor', 'honourWork', 'isPaused', 'learnBrain', 'movesMoney', 'ollamaSteps', 'oversee', 'ownRecords', 'personApproved', 'personReleased', 'planOf', 'policyOf', 'postEntry', 'publishBrain', 'receiptRecord',
+    'rolesOf', 'seedFor', 'signedAs', 'signersOf', 'stepAgent', 'stockBrains', 'testWork', 'uid', 'vaultState', 'verifyWiringReceipt', 'wireRecords', 'wiringChecklist', 'wiringReceipt', 'wiringView', 'witnessHead', 'witnessVault']);
   // the parts of the agent step (stepAgent, finishWork, askSecond, publishBrain, uid, seedFor) take a context only the runtime and the shell build —
   // they are reached through createAgentShell here, whose tick never rejects
   const internal = new Set(['stepAgent', 'finishWork', 'askSecond', 'publishBrain', 'uid', 'seedFor']);
@@ -1213,7 +1284,7 @@ test('fuzz: no export throws or rejects on junk', async () => {
 // a compromised agent (here the Systems agent's device) can make with its own, valid key — each refused.
 test('attack: a hand-off forged in another agent’s name, or written over, is refused; the real one is carried out', async () => {
   const o = await office({ agents: ['finance', 'ops', 'systems'] });
-  const pay = (c) => JSON.stringify({ c: 'payments', f: { customer: c, amount: 1, status: 'released', by: 'x' } });
+  const pay = (c) => JSON.stringify({ c: 'msg', f: { ch: 'general', body: c, by: 'x' } });   // (a money act never travels on a hand-off at all)
   const X = o.nodes.systems;
   await X.put('handoff', 'f1', { from: 'ops', to: 'finance', payload: pay('FORGED'), status: 'open', event: 'e1' });   // "from Ops" — Systems' key
   await o.nodes.ops.put('handoff', 'r1', { from: 'ops', to: 'finance', payload: pay('REAL'), status: 'open', event: 'e2' });
@@ -1224,7 +1295,7 @@ test('attack: a hand-off forged in another agent’s name, or written over, is r
   assert.equal(rec(o.nodes.finance, 'handoff', 'r2').payload, pay('SWAPPED'), 'the overwrite wins the field — so the field alone proves nothing');
   await S.honourWork({ node: o.nodes.finance, id: 'finance', cols: agentCols('finance'), honoured: () => true, effect: (n, e) => S.applyEffect(n, e, '2026-10-15') });
   assert.deepEqual(['f1', 'r1', 'r2'].map((id) => rec(o.nodes.finance, 'handoff', id).status), ['refused', 'done', 'refused']);
-  assert.deepEqual(o.nodes.finance.list('payments').map((p) => p.customer), ['REAL']);
+  assert.deepEqual(o.nodes.finance.list('msg').map((p) => p.body), ['REAL']);
 });
 
 test('attack: an agent cannot approve a held call — its own or another’s; only a person (the owner or an admin) can', async () => {
@@ -1294,4 +1365,188 @@ test('attack: decisions forged in another agent’s name neither frame it to the
     assert.deepEqual([...S.personApproved(n, 'watch')], []);
   }
   assert.deepEqual(S.signedAs(P, 'nope', (r) => r.by), []);
+});
+
+// ── the people's controls on the real spine (src/oversight.mjs is the list; these are the readers that act) ───────────
+test('fieldSigners, rolesOf: who wrote each field, and who is a person, an agent (fired ones too) or the hub', async () => {
+  const o = await office({ agents: ['finance', 'ops'], extra: ['overseer'] });
+  await o.nodes.owner.grant('admin-overseer', o.k.overseer.pub, 'admin', ['*']);
+  await o.sync();
+  await o.nodes.finance.put('watch', 'w1', { agent: 'finance', event: 'e1', status: 'open', action: 'hold-payment' });
+  await o.sync();
+  await o.nodes.overseer.put('watch', 'w1', { status: 'approved', action: 'release-payment' });
+  await o.sync();
+  const sig = S.fieldSigners(o.nodes.hub, 'watch').get('w1');
+  assert.deepEqual(sig, { agent: o.k.finance.pub, event: o.k.finance.pub, status: o.k.overseer.pub, action: o.k.overseer.pub });
+  assert.deepEqual(S.fieldSigners(o.nodes.hub, 'nothing'), new Map());
+  const r = S.rolesOf(o.nodes.hub);
+  assert.deepEqual([...r.people].sort(), [o.k.owner.pub, o.k.overseer.pub].sort());
+  assert.deepEqual([...r.hubs], [o.k.hub.pub]);
+  assert.deepEqual([...r.agents].sort(), [[o.k.finance.pub, 'finance'], [o.k.ops.pub, 'ops']].sort());
+  // a fired agent's key still names it (its old records are its own); a revoked admin is no longer a person here
+  await o.nodes.owner.revoke('agent-ops', o.nodes.ops.tip().seq);
+  await o.nodes.owner.revoke('admin-overseer', o.nodes.overseer.tip().seq);
+  await o.sync();
+  const r2 = S.rolesOf(o.nodes.hub);
+  assert.equal(r2.agents.get(o.k.ops.pub), 'ops');
+  assert.deepEqual([...r2.people], [o.k.owner.pub]);
+  for (const junk of [null, {}, 7]) assert.deepEqual(S.rolesOf(junk), { people: new Set(), agents: new Map(), hubs: new Set() });
+});
+
+test('a quarantined customer a PERSON releases goes back to its desk, unscreened; a release no person wrote is screened like any message', async () => {
+  const o = await office({ agents: ['finance', 'ops'], extra: ['overseer'] });
+  await o.nodes.owner.grant('admin-overseer', o.k.overseer.pub, 'admin', ['*']);
+  const fin = await stock(o, 'finance');
+  const cr = pick('credit', (f) => { const a = answer({ credit: fin.credit }, f); return a.verdict === 'VERIFIED'; });
+  const GENUINE_BUT_ODD = 'refund​​ my account thanks';   // zero-width characters, as a copy-paste from an email leaves them
+  await send(o, 'e000001', 'finance', 'credit', cr, { text: GENUINE_BUT_ODD });
+  await o.sync();
+  const sf = S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: fin, now: () => 0, deadline: 0 });
+  await sf.tick(); await o.sync();
+  const H = o.nodes.hub;
+  assert.equal(decisionsFor(H, 'e000001')[0].by, 'screen');
+  const w = H.list('watch').find((x) => x.event === 'e000001' && x.kind === 'waiting');
+  assert.deepEqual([w.source, w.status, w.agent], ['quarantined', 'open', 'finance']);
+  assert.deepEqual(S.doorReleases(H), [], 'nobody has released it');
+  // an AGENT writing the release, and the HUB writing it: neither is a person — nothing is released
+  await o.nodes.ops.put('watch', w.id, { status: 'released', action: 'release' });
+  await o.sync();
+  assert.deepEqual([...S.personReleased(H)], []);
+  assert.deepEqual(S.doorReleases(H), []);
+  await H.put('inbox', 'e000002', { to: 'finance', channel: 'credit', customer: 'C2', amount: 0, text: GENUINE_BUT_ODD, features: JSON.stringify(caseOf('credit', cr)), status: 'open', ticks: 0, released: w.id });
+  await o.sync();
+  await sf.tick(); await o.sync();
+  assert.equal(decisionsFor(H, 'e000002')[0].by, 'screen', 'a release the door wrote without a person behind it does not skip the screen');
+  assert.equal(decisionsFor(H, 'e000002')[0].released, '');
+  // a PERSON releases it: the door hands it back as new work, and the desk decides it on its features, unscreened
+  await o.nodes.overseer.put('watch', w.id, { status: 'released', action: 'release', releasedTo: 'finance', resolvedBy: 'Overseer' });
+  await o.sync();
+  assert.deepEqual([...S.personReleased(H)], [w.id]);
+  const rel = S.doorReleases(H);
+  assert.deepEqual(rel.map((x) => [x.item.id, x.work.id]), [[w.id, 'e000001']]);
+  const work = rel[0].work;
+  await H.put('inbox', 'e000003', { to: 'finance', channel: work.channel, customer: work.customer, amount: work.amount, text: work.text, features: work.features, status: 'open', ticks: 0, released: w.id });
+  await H.put('watch', w.id, { status: 'executed', executedBy: 'door' });
+  await o.sync();
+  assert.deepEqual(S.doorReleases(H), [], 'handed back once');
+  assert.deepEqual([...S.personReleased(H)], [w.id], 'still a person’s release: the action stays theirs');
+  for (let i = 0; i < 3; i++) { await sf.tick(); await o.sync(); }
+  const d3 = decisionsFor(H, 'e000003')[0];
+  assert.notEqual(d3.by, 'screen');
+  assert.equal(d3.released, w.id, 'the decision says a person released it');
+  assert.deepEqual([S.doorReleases(null), [...S.personReleased(null)]], [[], []]);
+});
+
+test('a person’s review of a customer decision: the job’s own agent carries out an overturn — only if a person chose it on an item the door raised', async () => {
+  const o = await office({ agents: ['finance', 'ops'], extra: ['overseer'] });
+  await o.nodes.owner.grant('admin-overseer', o.k.overseer.pub, 'admin', ['*']);
+  await o.sync();
+  const H = o.nodes.hub, F = o.nodes.finance, V = o.nodes.overseer;
+  const review = (n, id, f) => n.put('watch', id, { kind: 'review', agent: 'door', decidedBy: 'finance', event: 'e-' + id, domain: 'fraud', channel: 'fraud', action: '', label: -1,
+    customer: 'C' + id, amount: 1200, was: 'release-payment', why: 'the customer asked', status: 'open', ...f });
+  await review(H, 'rv1');                                 // the door raised it; a person overturns it
+  await review(H, 'rv2');                                 // the door raised it; the Finance agent "overturns" it itself
+  await review(o.nodes.ops, 'rv3');                       // an agent raised it; a person overturns it
+  await review(H, 'rv4');                                 // the door raised it; a person upholds it
+  await review(H, 'rv5', { domain: 'credit', channel: 'credit', was: 'standard-terms' });   // a person overturns credit terms
+  await o.sync();
+  await V.put('watch', 'rv1', { status: 'approved', action: 'hold-payment', resolvedBy: 'Overseer' });
+  await F.put('watch', 'rv2', { status: 'approved', action: 'hold-payment', resolvedBy: 'Finance agent' });
+  await V.put('watch', 'rv3', { status: 'approved', action: 'hold-payment', resolvedBy: 'Overseer' });
+  await V.put('watch', 'rv4', { status: 'upheld', action: 'uphold', resolvedBy: 'Overseer' });
+  await V.put('watch', 'rv5', { status: 'approved', action: 'upfront-terms', resolvedBy: 'Overseer' });
+  await o.sync();
+  await S.honourWork({ node: F, id: 'finance', cols: agentCols('finance'), effect: (n, e) => S.applyEffect(n, e, '2026-10-15') });
+  assert.deepEqual(['rv1', 'rv2', 'rv3', 'rv4', 'rv5'].map((id) => rec(F, 'watch', id).status), ['executed', 'approved', 'approved', 'upheld', 'executed']);
+  // the overturn of a released payment: the sale reversed in the books, the payment held, one line in Chat — all by Finance
+  const j = F.list('journal').find((x) => x.memo === 'Card sale reversed Crv1');
+  assert.ok(j, 'the card sale is reversed');
+  assert.deepEqual(F.list('payments').map((p) => p.customer + ':' + p.status), ['Crv1:held']);
+  assert.deepEqual(F.list('terms').map((t) => t.customer + ':' + t.terms), ['Crv5:payment up front']);
+  assert.ok(F.list('msg').some((m) => m.body === 'Finance agent: a person reviewed the decision on Crv1 and overturned it — the card payment is held and the sale reversed.'));
+  assert.deepEqual(signers(F, 'payments'), [o.k.finance.pub]);
+  // the Ops agent is not the owner of a fraud decision: it carries out none of them
+  const before = o.nodes.ops.size();
+  await o.sync();
+  await S.honourWork({ node: o.nodes.ops, id: 'ops', cols: agentCols('ops'), effect: (n, e) => S.applyEffect(n, e, '2026-10-15') });
+  assert.equal(o.nodes.ops.list('payments').length, 1, 'only the one Finance wrote');
+  assert.ok(o.nodes.ops.size() >= before);
+});
+
+test('a brain change is carried out by the agent that holds the brain — a promotion it raised itself, a roll-back a person raised — and only once a person approved it', async () => {
+  const o = await office({ agents: ['finance', 'ops'], extra: ['overseer'] });
+  await o.nodes.owner.grant('admin-overseer', o.k.overseer.pub, 'admin', ['*']);
+  await o.sync();
+  const F = o.nodes.finance, V = o.nodes.overseer, P = o.nodes.ops;
+  const promo = (n, id, f) => n.put('watch', id, { kind: 'promote', agent: 'finance', domain: 'fraud', channel: 'fraud', event: '', customer: '', amount: 0, label: -1, status: 'open', action: 'promote',
+    patternId: 'p-' + id, fromPattern: 'p-old', localAuc: 800, currentAuc: 700, n: 60, diff: 'adds +1 if V4 > 1', why: 'beat it', ...f });
+  await promo(F, 'pr1');                                    // its own; a person approves
+  await promo(F, 'pr2');                                    // its own; the agent approves it itself
+  await promo(P, 'pr3');                                    // raised in Finance's name by Ops; a person approves
+  await promo(F, 'pr4');                                    // its own; a person refuses
+  await V.put('watch', 'rb1', { kind: 'rollback', agent: 'finance', domain: 'fraud', channel: 'fraud', patternId: 'p-old', status: 'approved', action: 'rollback', resolvedBy: 'Overseer' });
+  await P.put('watch', 'rb2', { kind: 'rollback', agent: 'finance', domain: 'fraud', channel: 'fraud', patternId: 'p-evil', status: 'approved', action: 'rollback' });   // an agent asks
+  await o.sync();
+  await V.put('watch', 'pr1', { status: 'approved', action: 'promote', resolvedBy: 'Overseer' });
+  await F.put('watch', 'pr2', { status: 'approved', action: 'promote' });
+  await V.put('watch', 'pr3', { status: 'approved', action: 'promote', resolvedBy: 'Overseer' });
+  await V.put('watch', 'pr4', { status: 'refused', action: 'refuse', resolvedBy: 'Overseer' });
+  await o.sync();
+  const asked = [];
+  const brain = async (w) => { asked.push(w.id); return w.id === 'rb1' ? { ok: false, why: 'that brain is not in this agent’s history' } : { ok: true, why: '' }; };
+  await S.honourWork({ node: F, id: 'finance', cols: agentCols('finance'), effect: (n, e) => S.applyEffect(n, e, '2026-10-15'), brain });
+  assert.deepEqual(asked.sort(), ['pr1', 'rb1']);
+  assert.deepEqual(['pr1', 'pr2', 'pr3', 'pr4', 'rb1', 'rb2'].map((id) => rec(F, 'watch', id).status), ['executed', 'approved', 'approved', 'refused', 'refused', 'approved']);
+  assert.equal(rec(F, 'watch', 'rb1').why, 'that brain is not in this agent’s history');
+  // without a brain to change (a device with no regrowth), it leaves the approved change for the device that can
+  await promo(F, 'pr5');
+  await o.sync();
+  await V.put('watch', 'pr5', { status: 'approved', action: 'promote' });
+  await o.sync();
+  await S.honourWork({ node: F, id: 'finance', cols: agentCols('finance'), effect: (n, e) => S.applyEffect(n, e, '2026-10-15') });
+  assert.equal(rec(F, 'watch', 'pr5').status, 'approved');
+  // and another agent never carries out Finance's brain change
+  const seen = [];
+  await S.honourWork({ node: P, id: 'ops', cols: agentCols('ops'), effect: (n, e) => S.applyEffect(n, e, '2026-10-15'), brain: async (w) => { seen.push(w.id); return { ok: true }; } });
+  assert.deepEqual(seen, []);
+});
+
+
+test('a door call is carried out only if the hub or a person raised it; a brain roll-back only if a person raised it — never an agent itself', async () => {
+  const o = await office({ agents: ['finance', 'ops'], extra: ['overseer'] });
+  await o.nodes.owner.grant('admin-overseer', o.k.overseer.pub, 'admin', ['*']);
+  await o.sync();
+  const H = o.nodes.hub, F = o.nodes.finance, P = o.nodes.ops, V = o.nodes.overseer;
+  const door = (n, id) => n.put('watch', id, { kind: 'call', agent: 'door', event: 'e-' + id, channel: 'fraud', customer: 'C' + id, amount: 300, status: 'open', action: '' });
+  await door(H, 'd-hub');           // the door (the office hub) raised it
+  await door(V, 'd-person');        // a person raised it
+  await door(P, 'd-agent');         // the Ops agent wrote a door item for Finance's job — not the door
+  // a roll-back of Finance's fraud brain: raised by a person, and one raised by the Finance agent itself
+  const rb = (n, id) => n.put('watch', id, { kind: 'rollback', agent: 'finance', domain: 'fraud', channel: 'fraud', patternId: 'b0', status: 'open', action: '' });
+  await rb(V, 'r-person');
+  await rb(F, 'r-agent');
+  await o.sync();
+  for (const id of ['d-hub', 'd-person', 'd-agent']) await V.put('watch', id, { status: 'approved', action: 'hold-payment', resolvedBy: 'Overseer' });
+  for (const id of ['r-person', 'r-agent']) await V.put('watch', id, { status: 'approved', action: 'rollback', resolvedBy: 'Overseer' });
+  await o.sync();
+  const asked = [];
+  await S.honourWork({ node: F, id: 'finance', cols: agentCols('finance'), effect: (n, e) => S.applyEffect(n, e, '2026-10-15'), brain: async (w) => { asked.push(w.id); return { ok: true, why: '' }; } });
+  const st = (id) => rec(F, 'watch', id).status;
+  assert.deepEqual(['d-hub', 'd-person', 'd-agent'].map(st), ['executed', 'executed', 'approved'], 'an agent cannot raise a door item for another agent to carry out');
+  assert.deepEqual(asked, ['r-person'], 'the agent never carries out a roll-back it raised itself');
+  assert.deepEqual(['r-person', 'r-agent'].map(st), ['executed', 'approved']);
+  assert.deepEqual(F.list('payments').map((p) => p.customer).sort(), ['Cd-hub', 'Cd-person']);
+});
+
+test('rolesOf: only an agent grant with an agent’s name is an agent — a staff grant named like one is not, and an odd agent grant breaks nothing', async () => {
+  const o = await office({ agents: ['finance'], extra: ['mallory', 'odd'] });
+  await o.nodes.owner.grant('agent-ops', o.k.mallory.pub, 'staff', ['tasks']);     // named like the Ops agent, granted as staff
+  await o.nodes.owner.grant('bot-1', o.k.odd.pub, 'agent', ['tasks']);             // an agent grant whose id is not an agent's name
+  await o.sync();
+  const r = S.rolesOf(o.nodes.finance);
+  assert.equal(r.agents.get(o.k.finance.pub), 'finance');
+  assert.equal(r.agents.has(o.k.mallory.pub), false, 'a staff key named agent-ops is not the Ops agent');
+  assert.equal(r.agents.has(o.k.odd.pub), false);
+  assert.equal(r.people.has(o.k.owner.pub), true);
+  assert.equal(r.hubs.has(o.k.hub.pub), true);
 });

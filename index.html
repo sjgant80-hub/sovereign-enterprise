@@ -131,6 +131,13 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
 .guide summary{cursor:pointer;font-weight:700;list-style:none}.guide summary::-webkit-details-marker{display:none}
 .guide summary::after{content:' ▾';color:var(--dim)}.guide[open] summary::after{content:' ▴'}
 .guide ol{margin:10px 0 4px;padding-left:20px;color:var(--dim);font-size:14px}.guide li{margin:4px 0}.guide li b{color:var(--ink)}
+.toasts{position:fixed;right:16px;bottom:16px;z-index:60;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 32px));pointer-events:none}
+.toast{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:10px;padding:9px 12px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.toast.ok{border-left-color:var(--ok)}.toast.warn{border-left-color:var(--warn)}.toast.bad{border-left-color:var(--bad)}
+.witem .evid{margin:6px 0 4px;padding-left:18px;font-size:13px;color:var(--dim)}.witem .evid li{margin:2px 0}
+.witem .choices{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.witem textarea{width:100%;min-height:44px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}.seg button.on{border-color:var(--accent2);color:var(--accent2)}
+.bootfail{position:sticky;top:0;z-index:70;background:var(--warn);color:#111;padding:10px 14px;font-weight:600}.bootfail button{margin-left:10px}
 .flash{background:color-mix(in srgb,var(--accent2) 14%,var(--panel));border:1px solid var(--accent2);border-radius:10px;padding:9px 12px;margin:0 0 12px;font-size:14px}
 button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-decoration:underline;font-size:12px}
 .tour{position:fixed;right:16px;bottom:16px;width:min(380px,calc(100vw - 32px));z-index:50;background:var(--panel);border:1px solid var(--accent2);border-radius:14px;padding:14px 16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
@@ -219,6 +226,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
     <button id="attack" class="sm danger">Attack this device</button>
     <button id="splitnet" class="sm">Split the network</button>
     <button id="healnet" class="sm">Heal</button>
+    <label class="dim" style="font-size:13px"><input type="checkbox" id="stress" checked> Stress test: a quarter of the work lands at the wrong agent</label>
   </div>
   <div id="live-slot"></div>
 </section>
@@ -296,7 +304,24 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 <div id="wire-print"></div>
 <div id="plant-print"></div>
 <div class="tour hide" id="tour" role="dialog" aria-label="Guided tour"></div>
+<script>
+// F9 — if the page's code never starts (most often: it was updated while this browser still held older copies of its files,
+// and the two do not fit together), say so in plain words and offer a reload, instead of a page that silently does nothing.
+setTimeout(function () {
+  if (window.__seStarted) return;
+  var b = document.createElement('div');
+  b.className = 'bootfail';
+  b.setAttribute('role', 'alert');
+  b.textContent = 'This page did not start — most often because it was updated while your browser held an older copy of it. ';
+  var r = document.createElement('button');
+  r.textContent = 'Reload the page';
+  r.addEventListener('click', function () { location.reload(); });
+  b.appendChild(r);
+  document.body.prepend(b);
+}, 12000);
+</script>
 <script type="module">
+window.__seStarted = true;   // the module linked: every file it needs fits — the guard above stays quiet
 import { createNode, signEnvelope } from './src/node.mjs';
 import { connectAsHost, connectAsGuest, attachSession, isMember } from './src/rtc.mjs';
 import { GENESIS_PREV } from './src/gate.mjs';
@@ -314,6 +339,10 @@ import { NOTES, REAL } from './src/streams.mjs';
 import { AGENTS, HUMANS, HUB, LEARN_AFTER, agentName, boardKpis } from './src/company.mjs';
 import { ACTIONS } from './src/agent.mjs';
 import { createCompany, HUMAN_IDS, AGENT_IDS, displayName, isAgent } from './src/runtime.mjs';
+import { queue, bulkPlan, falsePositives, policyForm, policyWords, brainHistory, attribution, reviewable } from './src/oversight.mjs';
+import { signersOf } from './src/shell.mjs';
+import { jobEvidence, secondOpinion } from './src/evidence.mjs';
+import { parseIceServers } from './src/rtc.mjs';
 import { plan, gbp0, gbpM } from './src/office.mjs';
 import { cloudCompare, undercut } from './src/market.mjs';
 import { renderBrochure } from './ui/brochure.mjs';
@@ -351,6 +380,7 @@ let view = 'overview';
 let co = null;
 const ui = { sel: 'owner', leases: {}, running: true, speed: 1, brainLog: [], gateLog: [], ring: keyRing(), ready: false, proofOut: '', flash: '',
   trace: null, tour: -1, ctx: null, train: {},
+  wsort: 'risk', wfilter: 'all', bulk: '500', seen: new Map(),   // the Watch queue: how it is sorted and filtered, the bulk-accept limit, when each item was first seen
   // the visitor's business — one picture shared by For your business, The case and the Overview
   biz: { pairs: [], revenue: '6000000', margin: '8' } };
 const parseMargin = (x) => { const t = String(x ?? '').replace('%', '').trim(); const n = Number(t); return t !== '' && Number.isFinite(n) && n > -100 && n < 100 ? n / 100 : NaN; };
@@ -438,7 +468,7 @@ function renderDevices() {
     const lib = ai ? Object.keys(co.libs[id] || {}).length : 0;
     const n = ai ? co.ledger.filter((x) => x.agent === id).length : 0;
     const sub = ai ? `${lib} brain${lib === 1 ? '' : 's'} · ${n} decisions` : id === HUB.id ? 'the door · ' + co.n + ' items in' : HUMANS.find((h) => h.id === id).title;
-    const state = !grantLive(id) ? '<div class="lk">grant revoked — fired</div>' : paused(id) ? '<div class="lk">paused by the watchers</div>' : L.action === 'lock' ? '<div class="lk">lease expired — locked</div>' : '';
+    const state = !grantLive(id) ? '<div class="lk">grant revoked — fired</div>' : paused(id) ? '<div class="lk">paused — a person resumes it</div>' : L.action === 'lock' ? '<div class="lk">lease expired — locked</div>' : '';
     return `<div class="dev ${id === ui.sel ? 'sel' : ''}" data-dev="${id}" role="listitem" tabindex="0" aria-label="${esc(displayName(id))}">
       <span class="net ${co.online[id] ? 'up' : 'down'}" data-net="${id}" role="button" tabindex="0" aria-label="Take ${esc(displayName(id))} ${co.online[id] ? 'offline' : 'online'}">${co.online[id] ? 'online' : 'offline'}</span>
       <div class="nm"><span class="kind ${kc}">${kl}</span>${esc(displayName(id).replace(' agent', ''))}</div>
@@ -457,6 +487,31 @@ function renderDevices() {
 }
 
 function openWatch(node) { return node.list('watch').filter((w) => w.status === 'open'); }
+/** What the numbers prove (src/evidence.mjs), live from this run: per job, the agents against doing nothing on the same calls,
+ *  and what the second brain added on the money and security calls. */
+function provesPanel() {
+  const j = jobEvidence(co.ledger), s = secondOpinion(co.ledger);
+  const VERDICT = { better: 'better than doing nothing', worse: 'worse than doing nothing', 'no evidence either way': 'no evidence either way yet' };
+  const rows = Object.entries(j).map(([d, x]) => `<tr><td>${esc(x.job)}</td><td class="n">${x.n}</td><td class="n">${x.tp}</td><td class="n">${x.fp}</td><td class="n">${x.fn}</td>
+    <td class="${x.versus.verdict === 'better' ? 'ok' : x.versus.verdict === 'worse' ? 'bad' : 'dim'}">${esc(VERDICT[x.versus.verdict])} <span class="mono dim">p ${x.versus.p < 0.0001 ? '< 0.0001' : x.versus.p.toFixed(4)}</span></td></tr>`).join('');
+  return `<div class="panel" style="margin-top:14px"><h3>What the numbers prove — and what they don’t</h3>
+    <p class="note" style="margin-top:0">“Right” alone flatters a job where the answer is nearly always “no”: doing nothing scores high there too. So each job is set against doing nothing on the same finished calls. Doing nothing is right where the agents raised a false alarm, and wrong where they caught one — an exact test on those two counts says whether the difference is evidence or chance.</p>
+    <div class="tablewrap"><table><tr><th>Job</th><th class="n">Calls</th><th class="n">Caught</th><th class="n">False alarms</th><th class="n">Missed</th><th>Against doing nothing</th></tr>${rows}</table></div>
+    <p class="note">The second brain, on money and security calls: asked ${s.asked} times — agreed ${s.agreed} (both wrong together ${s.agreedWrong}), disagreed ${s.disagreed}: it caught the first brain’s mistake ${s.caught} time${s.caught === 1 ? '' : 's'} and held a right call for a person ${s.falseAlarm} time${s.falseAlarm === 1 ? '' : 's'}. ${s.noSecond} waited for a person because no second brain could answer. Two brains that make the same mistakes protect less than two that don’t — this is measured, not assumed.</p></div>`;
+}
+/** C8 — a short note for every action, so a person sees what their click did. */
+function toast(text, tone = '') {
+  const box = $('toasts');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + tone;
+  el.textContent = String(text).slice(0, 300);
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+const CHOICE_DONE = { choose: 'Chosen — the agent carries it out on its next round', release: 'Released to the desk', reply: 'Your reply was sent to the customer',
+  hostile: 'Confirmed hostile — an antibody goes to every agent', send: 'Approved and sent', discard: 'Draft discarded', uphold: 'Decision upheld',
+  overturn: 'Overturned — the agent carries out the other act', promote: 'Approved — the agent switches to the regrown brain', refuse: 'Refused — the current brain stays' };
 function renderTabs() {
   const node = current();
   const nWatch = node && mode === 'demo' ? openWatch(node).length : 0;
@@ -604,13 +659,17 @@ function behaviourPanel(node, human) {
       'off its work ' + (w.offWork || 0), r.decisions + ' decisions'].filter(Boolean).join(' · ');
     return `<div class="item"><span class="grow"><span class="kind ai">AI</span><b>${esc(a.name)}</b> <span class="${tone[r.verdict] || ''}">${esc(r.verdict)}${paused(a.id) ? ' · paused' : ''}</span><br>
       <span class="mono dim">${esc(nums)}</span><br><span class="dim">${esc(r.reason)}</span>
-      ${flag && human ? `<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="sm" data-act="watch-clear" data-id="${a.id}">Clear</button><button class="sm" data-act="watch-relearn" data-id="${a.id}">Clear + re-learn</button></span>` : ''}</span></div>`;
+      ${flag && human ? (() => {
+        const t = co.theftReport(ui.sel, a.id);
+        const list = t.ok && t.n ? `<div class="dim" style="margin-top:6px">Since the trouble began this key decided ${t.n} piece${t.n === 1 ? '' : 's'} of work — ${t.offWork} did not fit its job:</div><ul class="evid">${t.list.slice(0, 12).map((x) => `<li class="${x.fits ? '' : 'warn'}">${esc(x.customer || x.event)} · ${esc(x.words)}${x.fits ? '' : ' — ' + esc(x.why)}</li>`).join('')}</ul>` : '';
+        return `${list}<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="sm" data-act="watch-clear" data-id="${a.id}">False alarm — resume it</button><button class="sm" data-act="watch-relearn" data-id="${a.id}">False alarm — resume and re-learn its habits</button><button class="sm danger" data-act="rekey" data-id="${a.id}">Real theft — fire this key and issue a new one</button></span>`;
+      })() : ''}</span></div>`;
   }).join('');
   return `<div class="panel" style="margin-top:14px"><h3>Behaviour watch — is each agent behaving like itself?</h3>${items}
     <p class="note">A valid key and a valid grant are not enough: the watch reads what each agent <b>does</b> — Gary W. Floyd's Behavioral Entropy Signatures
     (Lumiea Systems Research Division — ThunderStruck Service, LLC), over the company's own agents. Each agent's habits are learned from its first 120 decisions
     and then frozen. One thing every time, clockwork, or a collapse in what it does given the work → <b>scripted</b>; an act its work does not call for, or a
-    large and real drift from its own acts on the same work → <b>hijacked</b>. The AI overseer pauses a flagged agent and the door routes its work to the
+    large and real drift from its own acts on the same work → <b>hijacked</b>. The behaviour watch (automatic) pauses a flagged agent and the door routes its work to the
     others; a human clears it. Try "Steal an agent's key".</p></div>`;
 }
 
@@ -628,7 +687,7 @@ function immunePanel(node) {
       on its own known-genuine messages and adopts it only if it fires on none of them. Try it, in order:</p>
     <ol class="steps">
       ${step(1, 'Send a new kind of attack', 'A customer asks the company to wire a “refund” to an unknown account — no hidden characters, no trigger words.', 'imm-new', 'Send it', fate(I.first))}
-      ${step(2, 'Confirm it was hostile', 'As the AI overseer: one click turns it into a signed antibody on the spine.', 'imm-confirm', 'Confirm as hostile', I.confirmed ? uptake(AB_TRUE) : '', !!I.first)}
+      ${step(2, 'Confirm it was hostile', 'As the overseer (a person): one click turns it into a signed antibody on the spine.', 'imm-confirm', 'Confirm as hostile', I.confirmed ? uptake(AB_TRUE) : '', !!I.first)}
       ${step(3, 'Send it again, reworded', 'The same scam in different words, padding and typos.', 'imm-again', 'Send it reworded', fate(I.again), I.confirmed)}
       ${step(4, 'Confirm a genuine message by mistake', '“' + esc(MISTAKE_TEXT) + '” — an over-broad antibody would block real customers.', 'imm-mistake', 'Confirm by mistake', I.mistake ? uptake(AB_MISTAKE) : '')}
     </ol></div>`;
@@ -840,6 +899,7 @@ const VIEWS = {
     const pl = profitAndLoss(entries), bs = balanceSheet(entries);
     const watch = openWatch(node).length;
     const quar = node.list('quarantine').length;
+    const fp = falsePositives(co.items(ui.sel));
     const { a } = vaultState(node);
     const rowsA = AGENTS.map((ag) => {
       const s = k.perAgent[ag.id];
@@ -858,6 +918,7 @@ const VIEWS = {
       <div class="kpi"><div class="v">${k.viaMesh}</div><div class="l">answered by another device's brain, over the spine</div></div>
       <div class="kpi"><div class="v">${co.learned} · ${co.regrowths.promoted}/${co.regrowths.tried}</div><div class="l">brains learned · regrowths promoted / tried</div></div>
       <div class="kpi"><div class="v bad">${quar}</div><div class="l">hostile messages quarantined unread</div></div>
+      <div class="kpi"><div class="v">${fp.released} of ${fp.quarantined}</div><div class="l">quarantined messages a person released as genuine (false alarms)</div></div>
     </div>
     <div class="grid two"><div class="panel"><h3>The agents</h3><div class="tablewrap"><table>
       <tr><th>Agent</th><th>Status</th><th class="n">Brains</th><th class="n">Decisions</th><th class="n">Right</th><th class="n">To humans</th><th class="n">Via mesh</th></tr>${rowsA}</table></div>
@@ -873,17 +934,18 @@ const VIEWS = {
       <tr><td>Intrusions quarantined</td><td class="n">${node.list('security').length}</td></tr>
       <tr><td>Humans' calls (right vs outcome)</td><td class="n">${co.human.done ? `${co.human.right}/${co.human.done}` : '—'}</td></tr></table>
       <p class="note">This board is this device's replica — ${esc(displayName(ui.sel))}. Every device that has seen the same signed writes shows the same company.</p></div></div>
-    ${modelPanel(node)}`;
+    ${provesPanel()}${modelPanel(node)}`;
   },
   Agents(node) {
     const recs = node.list('decisions').slice(-80).reverse();
+    const sg = signersOf(node, 'decisions'), who = co.whoOn(node);
     const cards = AGENTS.map((a) => `<div class="item"><span class="grow"><span class="kind ai">AI</span><b>${esc(a.name)}</b> <span class="dim">— ${esc(a.job)}</span><br>
       <span class="mono dim">brains: ${Object.entries(co.src[a.id] || {}).map(([d, s]) => `${esc(d)} (${esc(s.source)})`).join(' · ') || 'none'}</span></span></div>`).join('');
     return `<div class="grid two"><div class="panel"><h3>Live — every decision, as this device has it (${node.list('decisions').length})</h3><div class="feed">${recs.map((r) => {
       const led = co.byEvent.get(r.event);
       const chip = r.by === 'screen' ? '<span class="chip quar">quarantined</span>' : r.state === 'done' ? '<span class="chip done">done</span>' : '<span class="chip watch">to a human</span>';
-      return `<div class="ev">${chip}<span><b>${esc(agentName(r.agent))}</b> · ${esc(r.action || '—')} <span class="dim">· ${esc(r.channel)} · ${esc(r.customer)}</span> ${led ? outcomeMark(led) : ''} <button class="sm link" data-explain="${esc(r.event)}" aria-label="Trace this decision step by step">Trace</button></span>
-        <div class="meta">${esc(r.by)}${r.cross ? ` · confirmed by ${esc(agentName(r.second))}` : ''} · certainty ${(r.conf / 1000).toFixed(3)} of 1${r.receipt ? ' · receipt ' + esc(r.receipt) : ''} · ${esc(r.why)}</div></div>`;
+      return `<div class="ev">${chip}<span><b>${esc(agentName(r.agent))}</b> · ${esc(r.action || '—')} <span class="dim">· ${esc(r.channel)} · ${esc(r.customer)}</span> ${led ? outcomeMark(led) : ''} <button class="sm link" data-explain="${esc(r.event)}" aria-label="Trace this decision step by step">Trace</button>${reviewable(r).ok ? ` <button class="sm link" data-act="review" data-id="${esc(r.event)}">Ask a person to review</button>` : ''}</span>
+        <div class="meta">${(() => { const t = attribution(r.agent, sg.get(r.id), who); return `<span class="${t.ok ? 'dim' : 'warn'}">${esc(t.words)}</span> · `; })()}${esc(r.by)}${r.cross ? ` · confirmed by ${esc(agentName(r.second))}` : ''} · certainty ${(r.conf / 1000).toFixed(3)} of 1${r.receipt ? ' · receipt ' + esc(r.receipt) : ''} · ${esc(r.why)}</div></div>`;
     }).join('') || '<p class="dim">The door opens in a moment…</p>'}</div></div>
     <div class="panel"><h3>Who runs what</h3>${cards}
       <p class="note">Work lands at a door that does not know who handles it — a quarter of it reaches the wrong agent. That agent asks the mesh; the device whose
@@ -892,28 +954,47 @@ const VIEWS = {
   },
   Watch(node) {
     const human = selIsHuman() && can(node, null);
-    const items = openWatch(node).slice(-40).reverse();
-    const done = node.list('watch').filter((w) => w.status !== 'open').slice(-12).reverse();
+    const now = Date.now();
+    for (const r of node.list('watch')) if (!ui.seen.has(r.id)) ui.seen.set(r.id, now);
+    const all = co.items(ui.sel, { now, seen: ui.seen });
+    const q = queue(all, { sort: ui.wsort, filter: ui.wfilter });
+    const bulk = bulkPlan(all, Math.round((parseFloat(ui.bulk) || 0) * 100));
+    const CHIP = { call: 'held call', waiting: 'customer waiting', draft: 'draft reply', review: 'review asked', promote: 'brain change', rollback: 'roll back' };
+    const itemHtml = (i) => {
+      const box = !human || !i.actions.length ? '' : i.kind === 'waiting' ? `<textarea id="rp-${esc(i.id)}" rows="2" maxlength="1200" placeholder="Your own reply to the customer (for “Reply”)" aria-label="Your reply to the customer"></textarea>`
+        : i.kind === 'draft' ? `<textarea id="rp-${esc(i.id)}" rows="3" maxlength="1200" aria-label="The drafted reply — edit it before you send">${esc((i.record && i.record.draft) || '')}</textarea>` : '';
+      const btns = human && i.actions.length ? `<div class="choices">${box}${i.actions.map((x) => `<button class="sm" data-act="item" data-id="${esc(i.id)}" data-choice="${esc(x.act)}" data-value="${esc(x.value)}">${esc(x.label)}</button>`).join('')}</div>` : '';
+      return `<div class="ev witem"><div><span class="chip watch">${esc(CHIP[i.kind] || i.kind)}</span> <b>${esc(i.title)}</b><span class="dim">${i.money ? ' · ' + esc(i.money) : ''}${i.ageWords ? ' · waiting ' + esc(i.ageWords) : ''}</span></div>
+        <ul class="evid">${i.evidence.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>
+        <div class="meta ${i.writer.ok ? '' : 'warn'}">${esc(i.writer.words)}${i.note ? ' · ' + esc(i.note) : ''}</div>${btns}</div>`;
+    };
+    const seg = (act, list, on, words) => `<span class="seg">${list.map((v) => `<button class="sm ${v === on ? 'on' : ''}" data-act="${act}" data-v="${v}" aria-pressed="${v === on}">${esc(words[v])}</button>`).join('')}</span>`;
+    const done = all.filter((i) => i.ok && !i.open && i.kind !== 'rollback').slice(-12).reverse();
     const quar = node.list('quarantine').slice(-20).reverse();
+    const pol = node.list('policy').find((r) => r.id === 'agents') || {};
     const ctl = AGENTS.map((a) => `<div class="item"><span class="grow"><span class="kind ai">AI</span>${esc(a.name)} ${paused(a.id) ? '<span class="warn">· paused</span>' : ''}</span>
       ${human ? `<button class="sm" data-act="${paused(a.id) ? 'resume' : 'pause'}" data-id="${a.id}">${paused(a.id) ? 'Resume' : 'Pause'}</button>` : ''}</div>`).join('');
-    const pol = policyOf(node).minConfidence;
-    return `<div class="grid two"><div class="panel"><h3>Waiting for a human — ${openWatch(node).length}</h3>
-      ${human ? '' : '<p class="dim">Select a human device (Owner or AI overseer) to clear these.</p>'}
-      <div class="feed">${items.map((w) => {
-        const acts = ACTIONS[w.channel] ? [ACTIONS[w.channel][1], ACTIONS[w.channel][0]] : [];
-        return `<div class="ev"><span class="chip watch">${esc(w.channel || '?')}</span><span><b>${esc(agentName(w.agent))}</b> · ${esc(w.customer)}${w.amount ? ' · ' + gbp(w.amount) : ''}
-          ${w.action ? `<span class="dim"> · proposes</span> <b>${esc(w.action)}</b>` : '<span class="dim"> · no proposal</span>'}</span>
-          <div class="meta">${esc(w.why)}</div>
-          ${human ? `<div class="meta">${acts.map((x) => `<button class="sm ${x === w.action ? 'primary' : ''}" data-act="resolve" data-id="${esc(w.id)}" data-pick="${esc(x)}">${esc(x)}</button>`).join(' ')}</div>` : ''}</div>`;
-      }).join('') || '<p class="dim">Nothing waiting — the agents have it.</p>'}</div>
-      ${done.length ? `<h3 style="margin-top:14px">Recently cleared</h3><div class="log">${done.map((w) => `<div>${esc(w.channel)} · ${esc(w.customer)} → ${esc(w.action || '—')}${w.resolvedBy ? ' · chosen by ' + esc(w.resolvedBy) : ''}${w.executedBy ? ' · done by ' + esc(agentName(w.executedBy)) : ' · waiting for the agent'}</div>`).join('')}</div>` : ''}
-    </div><div class="panel"><h3>Controls</h3>${ctl}
-      ${human ? `<div class="row" style="margin-top:10px"><button class="danger" data-act="pause-all">Pause every agent</button><button data-act="resume-all">Resume all</button></div>
-      <div class="row"><label for="mc" class="dim">Second brain below confidence</label><select id="mc">${[50, 100, 200, 350].map((v) => `<option value="${v}" ${Math.round(pol * 1000) === v ? 'selected' : ''}>${(v / 1000).toFixed(2)}</option>`).join('')}</select></div>` : ''}
-      <p class="note">Pause stops an agent acting (it still triages: its work goes to the humans). To fire an agent, revoke its grant in People — every device then refuses its writes.</p>
+    return `<div class="grid two"><div class="panel"><h3>Waiting for a person — ${q.waiting}</h3>
+      <p class="dim" style="margin:0 0 8px">${q.counts.calls} held calls · ${q.counts.customers} customers · ${q.counts.brains} brain changes. Each shows why it waits and what is at stake; no choice is made for you.</p>
+      ${human ? '' : '<p class="warn">Select a person’s device — the owner or the overseer — to decide these.</p>'}
+      <div class="row">${seg('wsort', ['risk', 'money', 'age'], ui.wsort, { risk: 'Riskiest first', money: 'Most money first', age: 'Oldest first' })}</div>
+      <div class="row">${seg('wfilter', ['all', 'customers', 'money', 'security', 'brains', 'other'], ui.wfilter, { all: 'All', customers: 'Customers', money: 'Money', security: 'Security', brains: 'Brains', other: 'Other work' })}</div>
+      ${human ? `<div class="row"><label for="bulk-l" class="dim">Accept every proposal of £</label><input id="bulk-l" value="${esc(ui.bulk)}" inputmode="decimal" style="max-width:90px" aria-label="Bulk-accept limit in pounds"><span class="dim">or less (security calls are always read one by one)</span>
+        <button class="sm" data-act="bulk" ${bulk.n ? '' : 'disabled'}>${esc(bulk.words)}</button></div>` : ''}
+      <div class="feed">${q.items.map(itemHtml).join('') || '<p class="dim">Nothing waiting here — the agents have it.</p>'}</div>
+      ${done.length ? `<h3 style="margin-top:14px">Recently decided</h3><div class="log">${done.map((i) => `<div>${esc(CHIP[i.kind] || i.kind)} · ${esc(i.customer || i.channel || '')} → ${esc(i.status)}${i.chosenBy ? ' · decided by ' + esc(i.chosenBy) : ''}${i.forged ? ' · <span class="warn">marked by a device that is not a person — ignored</span>' : ''}${i.executedBy ? ' · carried out by ' + esc(agentName(i.executedBy)) : ''}</div>`).join('')}</div>` : ''}
+    </div><div class="panel"><h3>The rules a person sets</h3>
+      <ul class="evid">${policyWords(pol).map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
+      ${human ? `<div class="row"><label for="pl-lim" class="dim">Money limit, £ (0 = none)</label><input id="pl-lim" value="${esc(pol.moneyLimit ? (pol.moneyLimit / 100).toFixed(2) : '0')}" inputmode="decimal" style="max-width:110px"></div>
+      <div class="row"><label for="pl-floor" class="dim">Confidence floor (0 to 1)</label><input id="pl-floor" value="${esc(((Number.isSafeInteger(pol.minConfidence) ? pol.minConfidence : 50) / 1000).toFixed(2))}" style="max-width:80px"></div>
+      <div class="row"><label><input type="checkbox" id="pl-pause" ${pol.autoPause === false ? '' : 'checked'}> The behaviour watch pauses an agent that stops behaving like itself</label></div>
+      <div class="row"><button class="primary" data-act="policy-save">Save the rules</button></div>` : '<p class="dim">The owner or the overseer changes these.</p>'}
+      <h3 style="margin-top:14px">Agents</h3>${ctl}
+      ${human ? `<div class="row" style="margin-top:10px"><button class="danger" data-act="pause-all">Pause every agent</button><button data-act="resume-all">Resume all</button></div>` : ''}
+      <p class="note">Pause stops an agent acting (its work waits for a person). To fire an agent, revoke its grant in People — every device then refuses its writes.</p>
       <h3 style="margin-top:14px">Quarantined unread — ${node.list('quarantine').length}</h3>
-      <div class="log">${quar.map((q) => `<div><span class="bad">${esc(q.flags)}</span> · ${esc(q.customer)} · ${esc(q.preview)}</div>`).join('') || '<span class="dim">No hostile messages yet — press "Send a hostile message".</span>'}</div>
+      <div class="log">${quar.map((x) => `<div><span class="bad">${esc(x.flags)}</span> · ${esc(x.customer)} · ${esc(x.preview)}</div>`).join('') || '<span class="dim">No hostile messages yet — press “Send a hostile message”.</span>'}</div>
+      <p class="note">A quarantined message a person thinks is genuine shows above as “a customer is waiting”: release it to its desk, and the Board counts it as a false alarm.</p>
     </div></div>
     ${immunePanel(node)}${behaviourPanel(node, human)}`;
   },
@@ -938,7 +1019,14 @@ const VIEWS = {
       ${libHtml || pubs.map((r) => `<div class="item"><span class="grow"><b>${esc(r.domain)}</b> · ${esc(agentName(r.by))} · ${esc(r.source)} <span class="mono dim">· ${esc(r.patternId)} · publisher claims ${(r.localAuc / 1000).toFixed(3)}${(() => { const mine = node.list('adopt').filter((x) => x.patternId === r.patternId && x.by === ui.sel).pop(); return mine ? ` · measured here ${(mine.localAuc / 1000).toFixed(3)} ${mine.adopted ? '✓' : '✗ refused'}` : ''; })()}</span></span></div>`).join('')}
       ${asks.length ? `<p class="note">Asked the mesh about: ${asks.map(([d, n]) => `${esc(d)} ×${n}`).join(', ')} — learns at ${LEARN_AFTER}.</p>` : ''}
       <h3 style="margin-top:14px">Adoptions, refusals and regrowths (signed, on the spine)</h3>
-      <div class="log">${adoptions.map((x) => `<div><span class="${x.adopted ? 'ok' : 'warn'}">${x.adopted ? 'ADOPTED' : 'REFUSED'}</span> ${esc(agentName(x.by))} · ${esc(x.domain)} · ${esc(x.source)}${x.from && x.from !== x.by ? ' from ' + esc(agentName(x.from)) : ''} · ${esc(x.reason)}</div>`).join('')}</div></div></div>`;
+      <div class="log">${adoptions.map((x) => `<div><span class="${x.adopted ? 'ok' : 'warn'}">${x.adopted ? 'ADOPTED' : 'REFUSED'}</span> ${esc(agentName(x.by))} · ${esc(x.domain)} · ${esc(x.source)}${x.from && x.from !== x.by ? ' from ' + esc(agentName(x.from)) : ''} · ${esc(x.reason)}</div>`).join('')}</div>
+      ${(() => {
+        const current = {};
+        for (const [id, lib] of Object.entries(co.libs)) for (const [d, p] of Object.entries(lib || {})) current[id + '/' + d] = p.patternId;
+        const hist = brainHistory(co.items(ui.sel), current);
+        const human = selIsHuman() && can(node, null);
+        return `<h3 style="margin-top:14px">Brain changes a person approved</h3><div class="log">${hist.map((h) => `<div>${esc(agentName(h.agent))} · ${esc(h.domain)} · ${h.kind === 'promote' ? 'regrown brain ' + esc(h.patternId) + ' replaced ' + esc(h.fromPattern || '—') : 'rolled back to ' + esc(h.patternId)} · ${esc(h.by)} · ${h.carried ? 'carried out' : 'waiting for the agent'}${h.rollback && human ? ` <button class="sm" data-act="rollback" data-agent="${esc(h.agent)}" data-domain="${esc(h.domain)}" data-pattern="${esc(h.fromPattern)}">Roll back to ${esc(h.fromPattern)}</button>` : ''}</div>`).join('') || '<span class="dim">None yet. A regrown brain waits on the Watch list for a person to approve it.</span>'}</div>`;
+      })()}</div></div>`;
   },
   Tasks(node) {
     const items = node.list('tasks').slice(-60).reverse();
@@ -1086,10 +1174,35 @@ async function act(a, el) {
   else if (a === 'crm-add' && val('cn')) await node.put('crm', uid(node, 'c'), { name: val('cn').slice(0, 120), contact: val('cc').slice(0, 120), stage: 'lead', value: Math.max(0, Math.round((parseFloat(val('cv')) || 0) * 100)), owner: node.name });
   else if (a === 'crm-next') { const d = node.list('crm').find((x) => x.id === el.dataset.id); const n = { lead: 'qualified', qualified: 'proposal', proposal: 'won' }[d && d.stage]; if (n) await node.put('crm', el.dataset.id, { stage: n }); }
   else if (a === 'crm-lose') await node.put('crm', el.dataset.id, { stage: 'lost' });
-  else if ((a === 'resume' && (node.list('control').find((c) => c.id === el.dataset.id) || {}).watch) || a === 'watch-clear' || a === 'watch-relearn') { if (can(node, null)) await co.clear(ui.sel, el.dataset.id, a === 'watch-relearn'); }
-  else if (a === 'pause' || a === 'resume') await setControl(el.dataset.id, a === 'pause');
+  else if ((a === 'resume' && (node.list('control').find((c) => c.id === el.dataset.id) || {}).watch) || a === 'watch-clear' || a === 'watch-relearn') { if (can(node, null)) { await co.clear(ui.sel, el.dataset.id, a === 'watch-relearn'); toast('Cleared — the ' + agentName(el.dataset.id) + ' works again' + (a === 'watch-relearn' ? ', its habits learned afresh' : ''), 'ok'); } }
+  else if (a === 'pause' || a === 'resume') { await setControl(el.dataset.id, a === 'pause'); toast((a === 'pause' ? 'Paused the ' : 'Resumed the ') + agentName(el.dataset.id)); }
   else if (a === 'pause-all' || a === 'resume-all') for (const ag of AGENTS) await setControl(ag.id, a === 'pause-all');
   else if (a === 'resolve') await co.resolve(ui.sel, el.dataset.id, el.dataset.pick);
+  else if (a === 'item') {
+    const c = el.dataset.choice;
+    const r = await co.choose(ui.sel, el.dataset.id, c, c === 'reply' || c === 'send' ? val('rp-' + el.dataset.id) : el.dataset.value);
+    toast(r.ok ? CHOICE_DONE[c] || 'Done' : 'Not done: ' + r.why, r.ok ? 'ok' : 'warn');
+  }
+  else if (a === 'wsort') ui.wsort = el.dataset.v;
+  else if (a === 'wfilter') ui.wfilter = el.dataset.v;
+  else if (a === 'bulk') {
+    ui.bulk = val('bulk-l') || '0';
+    const plan = bulkPlan(co.items(ui.sel, { now: Date.now(), seen: ui.seen }), Math.round((parseFloat(ui.bulk) || 0) * 100));
+    const n = plan.n ? await co.bulkAccept(ui.sel, plan.ids) : 0;
+    toast(n ? 'Accepted ' + n + ' proposal' + (n === 1 ? '' : 's') + ' — each agent carries out its own' : plan.words, n ? 'ok' : 'warn');
+  }
+  else if (a === 'policy-save') {
+    const f = policyForm({ limit: val('pl-lim'), floor: val('pl-floor'), autoPause: !!($('pl-pause') && $('pl-pause').checked) });
+    if (!f.ok) toast('Not saved: ' + f.why, 'warn');
+    else { const r = await co.setPolicy(ui.sel, f.fields); toast(r.ok ? 'Rules saved — every agent reads them from the spine' : 'Not saved: ' + (r.why || r.reason), r.ok ? 'ok' : 'warn'); }
+  }
+  else if (a === 'review') { const r = await co.requestReview(el.dataset.id); toast(r.ok ? 'Sent to a person — it is on the Watch list' : 'Not sent: ' + r.why, r.ok ? 'ok' : 'warn'); }
+  else if (a === 'rekey') { const r = await co.rekey(ui.sel, el.dataset.id); toast(r.ok ? 'The stolen key is fired; the ' + agentName(el.dataset.id) + ' carries on with a new one' : 'Not done: ' + r.why, r.ok ? 'ok' : 'warn'); }
+  else if (a === 'rollback') {
+    if (!can(node, null) || !selIsHuman()) toast('Only the owner or the overseer rolls a brain back', 'warn');
+    else { const r = await node.put('watch', uid(node, 'w'), { kind: 'rollback', agent: el.dataset.agent, domain: el.dataset.domain, channel: el.dataset.domain, patternId: el.dataset.pattern, status: 'approved', action: 'rollback', resolvedBy: node.name, why: 'a person asked to roll the brain back' });
+      toast(r.ok ? 'Roll-back approved — the ' + agentName(el.dataset.agent) + ' switches back on its next round' : 'Not done: ' + r.reason, r.ok ? 'ok' : 'warn'); }
+  }
   else if (a === 'revoke') {
     const max = Math.max(0, ...node.hashes().map((h) => { try { const e = JSON.parse(new TextDecoder().decode(node.bytes(h))); return e.from === el.dataset.to ? e.seq : 0; } catch { return 0; } }));
     await node.revoke(el.dataset.g, max);
@@ -1336,7 +1449,7 @@ document.addEventListener('change', async (e) => {
   if (pl.wireOwn && e.target.files) { const list = await readFiles(e.target.files); e.target.value = ''; await wire.ownFiles(list); return; }
   if (e.target.dataset && e.target.dataset.wireOs) { e.target.blur(); await wire.act('wire-os', e.target, wireRead); return; }
   if (e.target.id === 'train-target') { ui.train = { ...ui.train, target: e.target.value, result: null }; renderTrainBox(); return; }
-  if (e.target.id === 'mc') { const n = current(); if (can(n, null)) await n.put('policy', 'agents', { minConfidence: +e.target.value, by: n.name }); render(); }
+  if (e.target.id === 'stress' && co) { co.stress = !!e.target.checked; toast(co.stress ? 'Stress test on: a quarter of the work lands at the wrong agent' : 'Stress test off: every piece of work lands at its own agent'); }
 });
 document.addEventListener('input', (e) => {
   if (e.target.id === 'b-rev') { ui.biz.revenue = e.target.value; renderCase(); }
@@ -1390,10 +1503,10 @@ document.addEventListener('keydown', (e) => {
   if (map[e.target.id]) act(map[e.target.id], e.target);
 });
 $('run').onclick = () => { if (co.n >= SHIFT) co.n = 0; ui.running = !ui.running; render(); };
-$('attack').onclick = () => attack(current());
-$('hostile').onclick = () => hostile();
-$('poison').onclick = () => poison();
-$('steal').onclick = () => { co.steal('ops'); tab = 'Watch'; render(); };
+$('attack').onclick = async () => { await attack(current()); toast('Attacked this device — every forged or replayed write is refused at the gate (see Proof)', 'warn'); };
+$('hostile').onclick = async () => { await hostile(); toast('A hostile message arrived — the screen quarantines it before any AI reads it', 'warn'); };
+$('poison').onclick = async () => { await poison(); toast('A compromised agent offered a poisoned brain — each device re-tests it on its own data (see Brains)', 'warn'); };
+$('steal').onclick = () => { co.steal('ops'); tab = 'Watch'; render(); toast('A thief has the Ops agent’s key — watch the behaviour watch catch it below', 'bad'); };
 $('splitnet').onclick = () => { co.order.forEach((id, i) => { co.online[id] = i < 5; }); ui.flash = 'The network is split: the first five devices can see each other, the rest are cut off. Work and edits carry on on both sides; press Heal and every device converges to the same company.'; render(); };
 $('healnet').onclick = () => { co.order.forEach((id) => { co.online[id] = true; }); ui.flash = ''; render(); };
 
@@ -1685,12 +1798,21 @@ function rtcOpened(conn, open) {
   rtcSay('Connected directly — no server in the path. Each side is proving its device key on this link…', 'ok');
   rtcPaint();
 }
+const iceServers = () => { const r = parseIceServers(LS('se.ice') || ''); return r.ok ? r.servers : undefined; };
 async function rtcAct(a, el) {
+  if (a === 'rtc-ice') {
+    const text = $('rtc-ice') ? $('rtc-ice').value : '';
+    const r = parseIceServers(text);
+    if (!r.ok) { toast('Not saved: ' + r.why, 'warn'); return; }
+    LS('se.ice', text.trim() ? text.trim() : null);
+    toast(!r.custom ? 'Using the public lookup' : r.servers.length ? 'Saved — ' + r.servers.length + ' server' + (r.servers.length === 1 ? '' : 's') + ' of your own' : 'Saved — same network only, no server', 'ok');
+    return;
+  }
   if (a === 'rtc-host') {
     rtcCancel();
     rtcFlow('host');
     rtcSay('Making a code — asking STUN for this machine’s public address…');
-    const conn = await connectAsHost();
+    const conn = await connectAsHost({ iceServers: iceServers() });
     if (!conn.ok) { rtcSay('Cannot make a code: ' + rtcWhy(conn.reason), 'bad'); return; }
     real.rtcPending = conn;
     $('rtc-code').value = conn.code;
@@ -1703,7 +1825,7 @@ async function rtcAct(a, el) {
   } else if (a === 'rtc-reply') {
     rtcCancel();
     rtcSay('Making your reply…');
-    const conn = await connectAsGuest($('rtc-offer').value);
+    const conn = await connectAsGuest($('rtc-offer').value, { iceServers: iceServers() });
     if (!conn.ok) { rtcSay('Refused: ' + rtcWhy(conn.reason), 'bad'); return; }
     real.rtcPending = conn;
     $('rtc-code').value = conn.code;
@@ -1740,6 +1862,10 @@ function renderRtc() {
         so a code <b>contains that address</b> — do not post it publicly. Once connected, each device proves its key on that exact link, and records go
         only to devices this company has granted. On a new machine, open the invite link first, then choose “I have a code”.</p>
       <div class="row"><button class="primary" data-act="rtc-host">Host — make a code</button><button data-act="rtc-join">I have a code</button></div>
+      <details style="margin:8px 0"><summary class="dim">Use your own STUN / TURN servers instead of the public lookup</summary>
+        <p class="note" style="margin:6px 0">One per line: <span class="mono">stun:host:port</span>, or <span class="mono">turn:host:port user password</span> for a relay (traffic still encrypted end to end). <span class="mono">none</span> = machines on the same network only. Empty = the public lookup.</p>
+        <textarea id="rtc-ice" rows="2" maxlength="2400" aria-label="Your STUN or TURN servers">${esc(LS('se.ice') || '')}</textarea>
+        <div class="row"><button class="sm" data-act="rtc-ice">Save servers</button></div></details>
       <div id="rtc-flow"></div><p id="rtc-msg" class="note" aria-live="polite"></p><div id="rtc-peers"></div>`;
   }
   const admin = n.canWrite(null);
@@ -1924,5 +2050,6 @@ setInterval(async () => {
 })();
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 </body>
 </html>

@@ -437,7 +437,7 @@ export function createWire(env) {
     // running company is not filled with check-ins; checkIn writes only if what it would say has changed
     // the behaviour watch (src/watch.mjs — Behavioral Entropy Signatures, Gary W. Floyd, Lumiea Systems Research Division —
     // ThunderStruck Service, LLC): on a device that may pause agents, an agent that stops behaving like itself is paused
-    // until a person clears it — the same pass the demo's AI overseer runs (shell.mjs oversee)
+    // until a person clears it — the same pass the behaviour watch (automatic) runs in the demo (shell.mjs oversee)
     if (n.canWrite(null) && now() - ui.watchedAt >= WATCH_MS) {
       ui.watchedAt = now();
       const paused = await oversee({ node: n, agents: [...new Set(agentRoster(n).map((g) => g.agent))], by: 'the behaviour watch', log: (x) => ui.log.push(x) });

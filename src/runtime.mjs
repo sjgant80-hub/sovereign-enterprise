@@ -8,8 +8,11 @@
 //      (screen, own brain); closes the work whose replies are in (or whose deadline passed) — decide, write the
 //      decision and its effects, hand off what its grant does not cover, learn what it keeps being asked, regrow on
 //      the outcomes that come back;
-//   4. housekeeping: purchase orders posted, hand-offs honoured, the humans' watch-list choices carried out, the vault
-//      co-signed, and the behaviour watch run over every agent.
+//   4. housekeeping: purchase orders posted, hand-offs honoured, the people's watch-list choices carried out (a held call,
+//      an overturned decision, a brain change, a quarantined message released back to its desk), the vault co-signed, and
+//      the behaviour watch (automatic) run over every agent.
+// Money and security work is decided only by the agent whose job it is: another agent it lands at hands it over. What no
+// agent may decide waits on one list for a person (src/oversight.mjs reads it): the owner, or the overseer — a person.
 // Deterministic for a given seed and date: the same inputs give the same company, byte for byte — which is what lets
 // CI re-run it and check a receipt. Ground truth never goes on the spine: it stays in memory, to score the agents.
 import { createNode, pull } from './node.mjs';
@@ -23,15 +26,17 @@ import { adopt, toRecord, fromRecord, GATE_AUC, HIGH_STAKES_GATE } from './brain
 import { growPattern } from './grow.mjs';
 import { sample, shopperRows } from './streams.mjs';
 import { screen } from './screen.mjs';
-import { screenWith, makeAntibody, adoptAntibody, BENIGN_CORPUS } from './antibody.mjs';
+import { screenWith, makeAntibody, adoptAntibody, BENIGN_CORPUS, redact } from './antibody.mjs';
 import { AGENTS, HUMANS, HUB, OWNER_OF, HOSTILE_TEXT, agentName, pickEvent, openStep, afterMesh, closeStep, effects, splitEffects, invoiceEntry, payEntry, OPENING_STOCK, shouldLearn, challenge, boardKpis, REGROW_EVERY } from './company.mjs';
 import { askRecord, replyFor, repliesTo, heardFrom, pickAnswer, pickSecond } from './mesh.mjs';
-import { ACTIONS, DEFAULT_POLICY } from './agent.mjs';
-import { ask } from './model.mjs';
+import { ACTIONS, DEFAULT_POLICY, ownedOnly } from './agent.mjs';
+import { ask, checkDraft } from './model.mjs';
+import { itemOf, choiceFields, reviewItem, reviewable, ruleDiff, diffText, theftList, firstSign } from './oversight.mjs';
 import { watchAll, shouldPause, DEFAULT_POLICY as WATCH_POLICY } from './watch.mjs';
 // the one agent step, the books, the vault witness, the antibodies, hand-offs and the overseer — shared with a real agent device
 import { uid, seedFor, gateFor, policyOf, isPaused, clearsOf, vaultState, postEntry, witnessHead, witnessVault, applyEffect, publishBrain, createWork,
-  stepAgent, finishWork, askSecond, learnBrain, stockBrains, adoptAntibodiesOn, honourWork, oversee, signedAs } from './shell.mjs';
+  stepAgent, finishWork, askSecond, learnBrain, stockBrains, adoptAntibodiesOn, honourWork, oversee, signedAs, signersOf, fieldSigners, rolesOf, doorReleases } from './shell.mjs';
+import { jobEvidence, secondOpinion } from './evidence.mjs';
 
 const pad = (n, w = 6) => String(n).padStart(w, '0');
 export { seedFor };   // src/shell.mjs: the one seed a device grows its own brain with
@@ -40,6 +45,7 @@ export const AGENT_IDS = AGENTS.map((a) => a.id);
 export const WORKERS = AGENTS.filter((a) => a.domains.length).map((a) => a.id);
 export const DEVICE_IDS = [...HUMAN_IDS, HUB.id, ...AGENT_IDS];
 export const DEADLINE = 3;          // ticks an asker waits for replies before deciding on what it has
+export const OFFLINE_WAIT = 4 * DEADLINE;   // ticks money or security work waits for its own agent while it is offline, before a person decides
 export const PO_ARRIVES = 2;        // housekeeping rounds from a purchase order to the goods and the supplier's invoice
 export const PO_PAID = 3;           // rounds from the invoice to paying the supplier
 export const OPENING_CAPITAL = 10000000;   // pence
@@ -70,6 +76,13 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     screenFor: () => screen,                             // the inbound screen an agent uses (antibodies extend it)
     modelAsk: null,                                      // async (agentId, event) → { label, domain, by } | null — the model tier
     afterTick: [],                                       // async (co) → void — e.g. the behaviour watch
+    // the people's controls
+    stress: true,                                        // the stress test: a quarter of the work lands at the wrong agent (company.pickEvent)
+    autoPromote: false,                                  // the headless re-run only: its overseer approves a regrown brain at once, recorded as automatic
+    candidates: {}, history: {},                         // per agent and job: a regrown brain waiting for a person; the brains it replaced
+    doorText: new Map(),                                 // watch item → the customer's whole message, held by the door (the spine holds a preview)
+    theft: {},                                           // the steal-a-key demo: where the thief began, per agent
+    rekeys: {},                                          // agent → how many keys it has had
   };
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
   // money and security jobs need more than the plain gate before a brain is trusted with them (gateFor, src/shell.mjs)
@@ -98,13 +111,52 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
       return m.ok ? m.model : null;
     } : null;
   };
-  /** A customer's free-text message at the door: screened, routed by the model, a holding reply DRAFTED (never sent). */
-  co.message = async (text) => {
+  /**
+   * A customer's free-text message at the door: screened, routed by the model, a holding reply DRAFTED — never sent. The
+   * draft is checked (model.mjs checkDraft): one that echoes the message is refused; any other waits on the watch list
+   * with what the check flagged, for a person to edit, send or discard. A message no desk took — the model answered outside
+   * the allowed form, the call failed, or the screen quarantined it — waits there too: a customer is waiting.
+   * customer — the customer's reference if the person typing knows it. → the model call, plus { item, kind } on the list.
+   */
+  co.message = async (text, customer = '') => {
     if (!co.modelTier) return { ok: false, why: 'no model tier connected' };
-    const m = await co.modelCall('door', { type: 'route', text: String(text), departments: DESKS });
+    const raw = String(text), who = String(customer || '').replace(/[^A-Za-z0-9 _.-]/g, '').slice(0, 40);
+    const m = await co.modelCall('door', { type: 'route', text: raw, departments: DESKS });
+    const scr = screen(raw);
+    if (m.ok && m.route) return { ...m, ...(await co.draftItem(m.route, raw, who, '')) };
+    const held = !scr.ok;
+    const item = await co.doorItem({ kind: 'waiting', source: held ? 'quarantined' : /outside the allowed form/.test(m.why) ? 'unrouted' : 'failed', customer: who,
+      preview: held ? redact(raw) : scr.clean.slice(0, 600), why: held ? 'the message failed the screen (' + scr.flags.join(',') + ') — no model read it' : 'no desk took it: ' + m.why }, raw);
+    return { ...m, item, kind: 'waiting' };
+  };
+  /** A routed message's drafted reply → the watch list: a draft for a person, or — refused by the check — a customer waiting. */
+  co.draftItem = async (route, raw, who, note) => {
+    const clean = screen(raw).clean.slice(0, 600);
+    const check = checkDraft({ draft: route.reply, message: raw, department: route.department, records: co.recordsFor(who) });
+    if (!check.ok) {
+      const item = await co.doorItem({ kind: 'waiting', source: 'refused', desk: route.department, customer: who, preview: clean,
+        why: note + 'the model’s draft was refused: ' + check.refused + ' — a person replies' }, raw);
+      return { item, kind: 'waiting', check };
+    }
+    const item = await co.doorItem({ kind: 'draft', desk: route.department, draft: route.reply, flags: check.flags.map((f) => f.why).join('|'), customer: who, preview: clean,
+      why: note + 'the model drafted a holding reply — a person reads it, then sends or discards it' }, raw);
+    return { item, kind: 'draft', check };
+  };
+  /** The door lists an item on the watch list. It keeps the customer's whole message itself; the spine holds the preview. */
+  co.doorItem = async (f, text) => {
     const hub = co.nodes.hub;
-    if (m.ok && m.route) await hub.put('msg', uid(hub, 'm'), { ch: 'general', body: ('Customer message → ' + agentName(m.route.department) + '. Draft reply (held — not sent): ' + m.route.reply).slice(0, 1500), by: HUB.name });
-    return m;
+    const id = uid(hub, 'w');
+    await hub.put('watch', id, { agent: 'door', event: '', channel: '', label: -1, amount: 0, status: 'open', action: '', ...f, why: String(f.why).slice(0, 300) });
+    if (typeof text === 'string') co.doorText.set(id, text);
+    return id;
+  };
+  /** What the company's records hold for a customer that a reply might promise: a refund, a credit, an appointment. */
+  co.recordsFor = (customer) => {
+    if (!customer) return {};
+    const node = co.nodes.hub;
+    const pays = node.list('payments').filter((x) => x.customer === customer);
+    const tasks = node.list('tasks').filter((x) => String(x.title || '').includes(customer));
+    return { refund: pays.some((x) => x.status === 'refunded'), credit: false, appointment: tasks.some((x) => /service|visit|appointment|engineer/i.test(String(x.title))) };
   };
 
   co.localRows = (id, d, n = 600) => {
@@ -176,18 +228,32 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
       const title = human ? HUMANS.find((h) => h.id === id).title : id === HUB.id ? HUB.title : AGENTS.find((a) => a.id === id).job.slice(0, 160);
       await owner.put('people', 'p-' + id, { name: displayName(id), title, kind: human ? 'human' : id === HUB.id ? 'hub' : 'agent', device: co.keys[id].pub.slice(0, 16), privateSealed: '', ...extra });
     }
-    await overseer.put('policy', 'agents', { minConfidence: Math.round(DEFAULT_POLICY.minConfidence * 1000), by: 'AI overseer' });
+    await overseer.put('policy', 'agents', { minConfidence: Math.round(DEFAULT_POLICY.minConfidence * 1000), moneyLimit: 0, autoPause: true, by: overseer.name });
     await co.syncAll();
-    await owner.typeAt('docs', 'policy', 0, 'Operating policy: agents act end to end. Money and security calls need a second, independent brain. Anything no brain can confirm waits for the overseer.');
+    await owner.typeAt('docs', 'policy', 0, 'Operating policy: agents act end to end. Money and security calls are decided only by the job’s own agent, and need a second, independent brain. Anything no brain can confirm waits for a person — the owner or the overseer.');
     await co.syncAll();
     return co;
   };
 
   // ── the door: the hub writes each piece of work as an inbox record addressed to an agent it can reach ──
   co.route = (ev) => {
+    const owner = OWNER_OF[ev.domain];
+    // money and security work goes only to its own agent (a stray that lands at another agent is handed over by that agent —
+    // src/shell.mjs stepAgent). It waits for that agent while it is offline; with it paused or fired, a person decides.
+    if (ownedOnly(ev.domain)) return !co.grantLive(owner) || co.paused(owner) ? null : co.available(ev.landsAt) ? ev.landsAt : owner;
     if (co.available(ev.landsAt)) return ev.landsAt;
-    if (co.available(OWNER_OF[ev.domain])) return OWNER_OF[ev.domain];
+    if (co.available(owner)) return owner;
     return AGENTS.filter((a) => a.domains.length).map((a) => a.id).find(co.available) || null;
+  };
+  const awayWhy = (domain) => (ownedOnly(domain) ? 'only the ' + agentName(OWNER_OF[domain]) + ' decides this work, and it is paused or fired — held for a person'
+    : 'no agent available — every agent is paused, revoked or offline');
+  /** Work no agent may take: the door lists it for a person. */
+  co.doorHold = async (ev, why) => {
+    const hub = co.nodes.hub;
+    await hub.put('watch', uid(hub, 'w'), { kind: 'call', agent: 'door', event: ev.id, domain: '', action: '', label: -1, why, status: 'open', customer: ev.customer, amount: ev.amount | 0, channel: ev.domain });
+    const entry = { id: ev.id, agent: 'door', channel: ev.domain, domain: ev.domain, state: 'watch', label: null, truth: co.truthOf.get(ev.id), by: 'none' };
+    co.ledger.push(entry); co.byEvent.set(ev.id, entry);
+    return entry;
   };
   co.admit = async (ev) => {
     if (!ev) return null;
@@ -195,16 +261,10 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     co.events.set(ev.id, { features: ev.features, truth: ev.truth, domain: ev.domain });
     const to = co.route(ev);
     const hub = co.nodes.hub;
-    if (!to) {
-      const ov = co.nodes.overseer;
-      await ov.put('watch', uid(ov, 'w'), { agent: 'door', event: ev.id, domain: '', action: '', label: -1, why: 'no agent available — every agent is paused, revoked or offline', status: 'open', customer: ev.customer, amount: ev.amount | 0, channel: ev.domain });
-      const entry = { id: ev.id, agent: 'door', channel: ev.domain, domain: ev.domain, state: 'watch', label: null, truth: ev.truth, by: 'none' };
-      co.ledger.push(entry); co.byEvent.set(ev.id, entry);
-      return entry;
-    }
+    if (!to) return co.doorHold(ev, awayWhy(ev.domain));
     return hub.put('inbox', ev.id, { to, channel: ev.domain, customer: ev.customer, amount: ev.amount | 0, text: String(ev.text || '').slice(0, 1500), features: JSON.stringify(ev.features), status: 'open', ticks: co.tickN });
   };
-  co.next = () => co.admit(pickEvent(co.rnd, co.pools, co.n++));
+  co.next = () => co.admit(pickEvent(co.rnd, co.pools, co.n++, { misroute: co.stress }));
 
   // ── one agent device's tick, on its own replica — the one step every agent device runs (src/shell.mjs stepAgent):
   //    reply to the peers' asks, open the new work, close the work whose replies are in or whose deadline passed ──
@@ -268,23 +328,68 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
 
   co.regrow = async (id, domain) => {
     const node = co.nodes[id];
+    const wait = co.candidates[id] && co.candidates[id][domain];
+    if (wait) {   // one regrown brain waits for a person at a time; a refusal frees the job to regrow again
+      const w = node.list('watch').find((x) => x.id === wait.item);
+      if (!w || w.status !== 'refused') return { promote: false, why: 'a regrown brain is already waiting for a person' };
+      delete co.candidates[id][domain];
+    }
     const outs = co.outcomes[id][domain];
     const cur = co.libs[id][domain];
     const c = challenge(cur, domain, co.features[domain], co.localRows(id, domain), outs.slice(-240), seedFor(id, domain) + outs.length);
     co.regrowths.tried++;
-    await node.put('adopt', uid(node, 'a'), { domain, patternId: c.pattern ? c.pattern.patternId : (cur.patternId || ''), from: id, by: id, adopted: !!c.promote,
-      localAuc: Math.round((c.challengerAuc || 0) * 1000), currentAuc: Math.round((c.currentAuc || 0) * 1000), n: c.held | 0, reason: String(c.why).slice(0, 200), source: 'regrowth' });
+    await node.put('adopt', uid(node, 'a'), { domain, patternId: c.pattern ? c.pattern.patternId : (cur.patternId || ''), from: id, by: id, adopted: false,
+      localAuc: Math.round((c.challengerAuc || 0) * 1000), currentAuc: Math.round((c.currentAuc || 0) * 1000), n: c.held | 0,
+      reason: String(c.promote ? c.why + ' — it waits for a person to approve it' : c.why).slice(0, 200), source: 'regrowth' });
     const f3 = (x) => (typeof x === 'number' ? x.toFixed(3) : '—');
     if (c.promote) {
       c.pattern.title = (co.titles[domain] || domain) + ' (regrown by ' + agentName(id) + ')'; c.pattern.role = id;
-      co.libs[id][domain] = c.pattern;
-      co.src[id][domain] = { source: 'regrown on outcomes', localAuc: c.challengerAuc, n: c.held };
-      co.regrowths.promoted++;
-      await co.publishBrain(id, c.pattern, 'regrown', c.challengerAuc, c.held);
-      await node.put('msg', uid(node, 'm'), { ch: 'general', body: `${agentName(id)}: regrew my ${domain} brain on the outcomes that came back — it beat the old one on ${c.held} cases neither had seen (AUC ${f3(c.currentAuc)} → ${f3(c.challengerAuc)}).`, by: agentName(id) });
-      brainLog(`${agentName(id)} REGREW ${domain}: ${f3(c.currentAuc)} → ${f3(c.challengerAuc)} on ${c.held} unseen outcomes — promoted and published`);
+      // a regrown brain never replaces the one in use on its own: it waits on the watch list, rule by rule, for a person
+      const item = 'pr-' + id + '-' + domain + '-' + String(c.pattern.patternId).slice(0, 12);
+      co.candidates[id] = co.candidates[id] || {};
+      co.candidates[id][domain] = { pattern: c.pattern, currentAuc: c.currentAuc, challengerAuc: c.challengerAuc, held: c.held, item };
+      await node.put('watch', item, { kind: 'promote', agent: id, domain, channel: domain, event: '', customer: '', amount: 0, label: -1, status: 'open', action: 'promote',
+        patternId: c.pattern.patternId, fromPattern: String(cur.patternId || ''), localAuc: Math.round(c.challengerAuc * 1000), currentAuc: Math.round(c.currentAuc * 1000), n: c.held | 0,
+        diff: diffText(ruleDiff(cur, c.pattern)).slice(0, 1500), why: 'the regrown brain beat the one in use on ' + c.held + ' outcomes neither had seen — a person approves before it replaces it' });
+      brainLog(`${agentName(id)} REGREW ${domain}: ${f3(c.currentAuc)} → ${f3(c.challengerAuc)} on ${c.held} unseen outcomes — it waits for a person to approve it`);
+      if (co.autoPromote) {   // the headless re-run has no person: its overseer approves at once, and the record says so
+        const ov = co.nodes.overseer;
+        await pull(ov, node);
+        await ov.put('watch', item, { status: 'approved', action: 'promote', resolvedBy: ov.name + ' — automatic, in the headless re-run' });
+      }
     } else brainLog(`${agentName(id)} tried regrowing ${domain} — ${c.why}${c.currentAuc !== undefined ? ` (current ${f3(c.currentAuc)}${c.challengerAuc !== undefined ? ' vs ' + f3(c.challengerAuc) : ''})` : ''}`);
     return c;
+  };
+  /** A brain change a PERSON approved, carried out by the agent that holds the brain (src/shell.mjs honourWork). → { ok, why } */
+  co.brainChange = async (id, w) => {
+    const node = co.nodes[id], domain = w.domain;
+    const f3 = (x) => (typeof x === 'number' ? x.toFixed(3) : '—');
+    const hist = (co.history[id] = co.history[id] || {});
+    const cur = co.libs[id][domain];
+    let next = null, words = '';
+    if (w.kind === 'promote') {
+      const cand = co.candidates[id] && co.candidates[id][domain];
+      if (!cand || cand.pattern.patternId !== w.patternId) return { ok: false, why: 'that regrown brain is no longer held here' };
+      next = cand.pattern;
+      delete co.candidates[id][domain];
+      co.src[id][domain] = { source: 'regrown on outcomes — approved by ' + String(w.resolvedBy || 'a person'), localAuc: cand.challengerAuc, n: cand.held };
+      co.regrowths.promoted++;
+      await co.publishBrain(id, next, 'regrown', cand.challengerAuc, cand.held);
+      words = `regrew my ${domain} brain on the outcomes that came back — it beat the old one on ${cand.held} cases neither had seen (AUC ${f3(cand.currentAuc)} → ${f3(cand.challengerAuc)}), and ${String(w.resolvedBy || 'a person')} approved it.`;
+    } else {
+      next = (hist[domain] || []).find((p) => p.patternId === w.patternId) || null;
+      if (!next) return { ok: false, why: 'that brain is not in this agent’s history' };
+      co.src[id][domain] = { source: 'rolled back by ' + String(w.resolvedBy || 'a person'), localAuc: next.heldAuc, n: next.held | 0 };
+      await co.publishBrain(id, next, 'rollback', next.heldAuc, next.held | 0);
+      words = `put my earlier ${domain} brain back (${next.patternId}), as ${String(w.resolvedBy || 'a person')} asked.`;
+    }
+    if (cur) hist[domain] = [cur, ...(hist[domain] || []).filter((p) => p.patternId !== cur.patternId)].slice(0, 8);
+    co.libs[id][domain] = next;
+    await node.put('adopt', uid(node, 'a'), { domain, patternId: next.patternId, from: id, by: id, adopted: true, localAuc: 0, n: 0,
+      reason: String(w.kind === 'promote' ? 'approved by ' : 'rolled back by ').concat(String(w.resolvedBy || 'a person')).slice(0, 200), source: w.kind === 'promote' ? 'promoted' : 'rollback' });
+    await node.put('msg', uid(node, 'm'), { ch: 'general', body: agentName(id) + ': ' + words, by: agentName(id) });
+    brainLog(agentName(id) + ' ' + (w.kind === 'promote' ? 'PROMOTED' : 'ROLLED BACK') + ' ' + domain + ' — ' + String(w.resolvedBy || 'a person'));
+    return { ok: true, why: '' };
   };
 
   // ── housekeeping ──
@@ -309,14 +414,30 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
       if (!co.available(a.id)) continue;
       const node = co.nodes[a.id];
       // hand-offs addressed to it, and the held calls a person approved for it (src/shell.mjs honourWork)
-      await honourWork({ node, id: a.id, cols: a.cols, honoured: (from) => co.honoured(node, from), effect: co.doEffect });
+      await honourWork({ node, id: a.id, cols: a.cols, honoured: (from) => co.honoured(node, from), effect: co.doEffect, brain: (w) => co.brainChange(a.id, w) });
     }
-    // the door re-addresses open work whose agent is no longer reachable
+    // the door re-addresses open work whose agent is no longer reachable — or, for money and security work whose own agent
+    // is away, lists it for a person
     const hub = co.nodes.hub;
     if (co.available(HUB.id)) {
       for (const it of hub.list('inbox').filter((x) => x.status === 'open' && !co.available(x.to) && co.tickN - (x.ticks | 0) >= DEADLINE)) {
         const to = co.route({ landsAt: it.to, domain: it.channel });
+        const stale = ownedOnly(it.channel) && co.tickN - (it.ticks | 0) >= OFFLINE_WAIT;   // its own agent has been away too long
         if (to && to !== it.to) await hub.put('inbox', it.id, { to, ticks: co.tickN });
+        else if (!to || stale) {
+          await hub.put('inbox', it.id, { status: 'done', doneBy: 'door' });
+          await co.doorHold({ id: it.id, customer: it.customer, amount: it.amount, domain: it.channel }, to ? 'only the ' + agentName(OWNER_OF[it.channel]) + ' decides this work, and it has been offline too long — held for a person' : awayWhy(it.channel));
+        }
+      }
+      // a quarantined message a PERSON released goes back to its desk as new work, not screened again (src/shell.mjs)
+      for (const { item, work } of doorReleases(hub)) {
+        const id = 'e' + pad(co.n++);
+        co.truthOf.set(id, co.truthOf.get(work.id));
+        if (co.events.has(work.id)) co.events.set(id, co.events.get(work.id));
+        const to = co.route({ landsAt: OWNER_OF[work.channel], domain: work.channel });
+        if (to) await hub.put('inbox', id, { to, channel: work.channel, customer: work.customer, amount: work.amount | 0, text: work.text, features: work.features, status: 'open', ticks: co.tickN, released: item.id });
+        else await co.doorHold({ id, customer: work.customer, amount: work.amount, domain: work.channel }, awayWhy(work.channel));
+        await hub.put('watch', item.id, { status: 'executed', executedBy: 'door', newEvent: id });
       }
     }
     if (co.available('audit')) await witnessVault(co.nodes.audit);   // co-signs once ten entries have gone in since its last
@@ -343,15 +464,77 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     await co.syncAll();                                  // the last round's writes reach every device before anyone looks
   };
 
-  // ── a human on the watch list chooses an action; the agent carries it out on its next housekeeping ──
-  co.resolve = async (humanId, watchId, pick) => {
+  // ── the people's list (src/oversight.mjs): every item as a device sees it — who raised it, who chose, what it costs ──
+  co.whoOn = (node) => ({ ...rolesOf(node), names: new Map(co.order.map((x) => [co.keys[x].pub, displayName(x)])) });
+  co.items = (viewId = 'owner', opts = {}) => {
+    const node = co.nodes[viewId];
+    const sig = fieldSigners(node, 'watch'), who = co.whoOn(node);
+    return node.list('watch').map((r) => itemOf(r, sig.get(r.id) || {}, who, opts));
+  };
+  co.textOf = (event) => { const w = co.nodes.hub.list('inbox').find((x) => x.id === event); return w ? String(w.text || '') : ''; };
+  /**
+   * A person chooses on an item, on their own device (src/oversight.mjs choiceFields): a held call's act, release / reply /
+   * confirm hostile for a customer waiting, send / discard for a draft, uphold / overturn for a review, approve / refuse for
+   * a regrown brain. The agent whose work it is carries it out on its next round; what is the person's own act — a reply
+   * sent, an attack confirmed — is written here and now, signed by that person. → { ok, why }
+   */
+  co.choose = async (humanId, watchId, choice, value) => {
     const node = co.nodes[humanId];
-    const w = node.list('watch').find((x) => x.id === watchId);
-    if (!w || w.status !== 'open' || !node.canWrite(null)) return { ok: false };
-    const r = await node.put('watch', w.id, { status: 'approved', action: pick, resolvedBy: node.name });
-    const truth = co.truthOf.get(w.event);
-    if (r.ok && ACTIONS[w.channel] && (truth === 0 || truth === 1)) { co.human.done++; if (ACTIONS[w.channel][truth] === pick) co.human.right++; }
-    return r;
+    if (!node || !HUMAN_IDS.includes(humanId) || !node.canWrite(null)) return { ok: false, why: 'only a person — the owner or an admin — decides these' };
+    const rec = node.list('watch').find((x) => x.id === watchId);
+    if (!rec) return { ok: false, why: 'that item is not on this device’s list yet' };
+    const item = itemOf(rec, fieldSigners(node, 'watch').get(watchId) || {}, co.whoOn(node), {});
+    const f = choiceFields(item, choice, value, node.name);
+    if (!f) return { ok: false, why: !item.open ? 'a person has already decided it' : !item.writer.ok ? 'it was not raised by the agent it names — no choice is carried out on it' : 'that choice does not fit this item' };
+    if (choice === 'send' && f.reply !== rec.draft) f.edited = true;
+    const r = await node.put('watch', watchId, f);
+    if (!r.ok) return { ok: false, why: 'this device could not write it (' + r.reason + ')' };
+    if (choice === 'send' || choice === 'reply') await node.put('msg', uid(node, 'm'), { ch: 'general', body: ('Reply sent to ' + (rec.customer || 'the customer') + ' by ' + node.name + ': “' + f.reply + '”').slice(0, 1500), by: node.name });
+    if (choice === 'hostile') { const text = co.doorText.get(watchId) || co.textOf(rec.event); if (text) await co.confirmHostile(humanId, text, 'confirmed hostile on the watch list'); }
+    if (choice === 'choose') {
+      const truth = co.truthOf.get(rec.event);
+      if (ACTIONS[rec.channel] && (truth === 0 || truth === 1)) { co.human.done++; if (ACTIONS[rec.channel][truth] === value) co.human.right++; }
+    }
+    if (choice === 'release' && !rec.event) await co.reroute(rec, watchId, value);   // a message from the model tier: drafted again for that desk
+    return { ok: true, why: '' };
+  };
+  co.resolve = async (humanId, watchId, pick) => co.choose(humanId, watchId, 'choose', pick);
+  /** A free-text message a person released to a desk: the model drafts that desk's reply (invisible characters removed — the
+   *  person has read it); with no model, or no usable draft, it waits for a person's reply. */
+  co.reroute = async (rec, watchId, desk) => {
+    const text = co.doorText.get(watchId);
+    if (!text) return null;
+    const clean = screen(text).clean, note = 'released to the ' + agentName(desk) + ' by a person — ';
+    const m = co.modelTier ? await co.modelCall('door', { type: 'route', text: clean, departments: DESKS.filter((d) => d.id === desk) }) : { ok: false, why: 'no model is connected' };
+    if (m.ok && m.route) return co.draftItem(m.route, clean, String(rec.customer || ''), note);
+    return co.doorItem({ kind: 'waiting', source: 'released', desk, customer: String(rec.customer || ''), preview: clean.slice(0, 600), why: note + 'no draft: ' + m.why + ' — a person replies' }, text);
+  };
+  /** Accept the agents' proposals on these held calls, as one person, one item at a time. → how many were accepted. */
+  co.bulkAccept = async (humanId, ids) => {
+    let n = 0;
+    for (const id of Array.isArray(ids) ? ids : []) {
+      const rec = co.nodes[humanId].list('watch').find((x) => x.id === id);
+      if (rec && (await co.choose(humanId, id, 'choose', rec.action)).ok) n++;
+    }
+    return n;
+  };
+  /** A customer asks for a person to review a decision about them (UK GDPR Art. 22): the door lists it. → { ok, id, why } */
+  co.requestReview = async (eventId) => {
+    const hub = co.nodes.hub;
+    const d = signedAs(hub, 'decisions', (x) => x.agent).filter((x) => x.event === eventId).pop();
+    if (!d) return { ok: false, why: 'no decision its own agent signed was found for that work' };
+    const work = hub.list('inbox').find((x) => x.id === eventId);
+    const it = reviewItem(d, work ? work.amount | 0 : 0);
+    if (!it) return { ok: false, why: reviewable(d).why };
+    if (hub.list('watch').some((x) => x.id === it.id)) return { ok: false, why: 'a person has already been asked to review it' };
+    const r = await hub.put('watch', it.id, it.fields);
+    return { ok: r.ok, id: it.id, why: r.ok ? '' : String(r.reason) };
+  };
+  /** The rules a person sets (src/oversight.mjs policyForm gives the fields): only the owner or an admin may write them. */
+  co.setPolicy = async (humanId, fields) => {
+    const node = co.nodes[humanId];
+    if (!node || !HUMAN_IDS.includes(humanId) || !node.canWrite('policy')) return { ok: false, why: 'only the owner or an admin sets the rules' };
+    return node.put('policy', 'agents', { ...fields, by: node.name });
   };
   co.setControl = (humanId, agentId, paused) => co.nodes[humanId].put('control', agentId, { paused, by: co.nodes[humanId].name });
 
@@ -362,7 +545,7 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
   co.watchTick = async () => {
     const ov = co.nodes.overseer;
     if (!co.online.overseer || !ov.canWrite('control')) return [];
-    return oversee({ node: ov, agents: AGENT_IDS, policy: WATCH_POLICY, paused: co.paused, log: brainLog });   // src/shell.mjs
+    return oversee({ node: ov, agents: AGENT_IDS, paused: co.paused, log: brainLog });   // src/shell.mjs — the automatic pause, unless a person switched it off
   };
   co.clear = async (humanId, agentId, rebaseline = false) => {     // a human clears a flag: judged afresh from here on
     const node = co.nodes[humanId];
@@ -375,16 +558,68 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
   // an attack the page can launch: a thief takes an agent device's key for some ticks and answers its inbox itself
   co.stolen = {};
   co.thiefRnd = prng(99);
-  co.steal = (id, ticks = 8) => { co.stolen[id] = ticks; brainLog(`A thief has the ${agentName(id)}'s key — valid signatures, a valid grant`); };
+  co.steal = (id, ticks = 8) => {
+    co.stolen[id] = ticks;
+    // the demo staged the theft, so it knows the moment: the key's last write before the thief (the cut a re-key would make)
+    co.theft[id] = { pub: co.keys[id].pub, seq: co.nodes[id].tip().seq, from: '' };
+    brainLog(`A thief has the ${agentName(id)}'s key — valid signatures, a valid grant`);
+  };
   co.thiefTick = async (id) => {
     if (!co.available(id)) return;
     const thief = co.nodes[id];
     const all = Object.values(ACTIONS).flatMap((a) => [a[0], a[1]]);
     for (const it of thief.list('inbox').filter((x) => x.to === id && x.status === 'open')) {
-      const put = await thief.put('decisions', uid(thief, 'd'), { agent: id, event: it.id, domain: it.channel, action: all[Math.floor(co.thiefRnd() * all.length) % all.length],
+      const did = uid(thief, 'd');
+      const put = await thief.put('decisions', did, { agent: id, event: it.id, domain: it.channel, action: all[Math.floor(co.thiefRnd() * all.length) % all.length],
         state: 'done', by: 'own', cross: true, second: '', conf: 900, receipt: '', why: 'verified pattern, clear of its decision line', customer: it.customer, channel: it.channel });
+      if (put.ok && co.theft[id] && !co.theft[id].from) co.theft[id].from = did;
       if (put.ok) await thief.put('inbox', it.id, { status: 'done', doneBy: id });
     }
+  };
+  /** C9 — what an agent's key decided from where the trouble began: the staged theft's first decision in the demo, else the
+   *  first decision the behaviour watch can say did not fit its work. Read from the spine, by the key that signed each. */
+  co.theftReport = (viewId, agentId) => {
+    const node = co.nodes[viewId];
+    const pub = (co.theft[agentId] && co.theft[agentId].pub) || co.keys[agentId].pub;
+    const signer = signersOf(node, 'decisions');
+    const mine = node.list('decisions').filter((d) => d.agent === agentId && signer.get(d.id) === pub);
+    const c = co.clearsOf(node)[agentId];
+    const staged = co.theft[agentId] && co.theft[agentId].from;
+    const from = staged || firstSign(mine, c ? c.at : '');
+    return { ...theftList(mine, from), staged: !!staged, key: pub };
+  };
+  /**
+   * C9 — "Real theft": a person fires the stolen key and the agent's device makes a new one. The old grant is revoked at the
+   * key's last write before the theft — so everything the thief signed after it is refused on every device, and the work it
+   * closed opens again — then the person grants the new key as the same agent, and the agent carries on with its brains.
+   * → { ok, why, cut, grant }
+   */
+  co.rekey = async (humanId, agentId) => {
+    const person = co.nodes[humanId];
+    const a = AGENTS.find((x) => x.id === agentId);
+    if (!a || !person || !HUMAN_IDS.includes(humanId) || !person.canWrite(null)) return { ok: false, why: 'only a person — the owner or an admin — can fire a key' };
+    await co.syncAll();
+    const old = co.keys[agentId].pub, dec = new TextDecoder();
+    const envs = person.hashes().map((h) => { try { return JSON.parse(dec.decode(person.bytes(h))); } catch { return null; } }).filter((e) => e && e.from === old);
+    const report = co.theftReport(humanId, agentId);
+    const t = co.theft[agentId];
+    const first = envs.find((e) => e.op.k === 'put' && e.op.c === 'decisions' && e.op.id === report.from);
+    const cut = t && t.pub === old ? t.seq : first ? first.seq - 1 : Math.max(0, ...envs.map((e) => e.seq));
+    for (const g of person.view().roster.filter((r) => r.to === old && !r.revoked)) await person.revoke(g.grant, cut);
+    const n = (co.rekeys[agentId] || 1) + 1;
+    co.rekeys[agentId] = n;
+    const keys = await fromSeed(sha256Bytes('sovereign-enterprise/ai-company/' + agentId + '/key-' + n));
+    const node = createNode({ keys, genesis: co.keys.owner.pub, name: displayName(agentId) });
+    for (const id of co.order) if (id !== agentId) await pull(node, co.nodes[id]);
+    co.keys[agentId] = keys; co.nodes[agentId] = node;
+    co.work[agentId] = createWork(); co.asks[agentId] = {}; co.antibodySeen[agentId] = new Set(); co.antibodies[agentId] = [];
+    co.stolen[agentId] = 0; delete co.theft[agentId];
+    const grant = 'agent-' + agentId + '.' + n;
+    await person.grant(grant, keys.pub, 'agent', a.cols);
+    await person.put('control', agentId, { paused: false, cleared: '', rebaseline: false, watch: '', by: person.name, rekeyed: n });
+    await co.syncAll();
+    brainLog(`${person.name} fired the ${agentName(agentId)}'s stolen key (everything it signed after write #${cut} is refused everywhere) and granted its new key`);
+    return { ok: true, why: '', cut, grant, voided: report.n };
   };
 
   // ── antibodies (src/antibody.mjs): a confirmed attack becomes a signed record every agent re-checks on its own benign
@@ -457,6 +692,10 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
       learned: co.learned, regrowthsTried: co.regrowths.tried, regrowthsPromoted: co.regrowths.promoted,
       perAgent: Object.fromEntries(Object.entries(k.perAgent).map(([id, s]) => [id, { done: s.done, correct: s.correct, watched: s.watched, brains: Object.keys(co.libs[id] || {}).sort() }])),
       metrics: k.metrics,
+      // what the numbers prove (src/evidence.mjs): per job, the brain against doing nothing on the same calls — an exact test,
+      // p in ten-thousandths — and, on the money and security jobs, what the second brain caught, missed together, or held needlessly
+      evidence: { jobs: Object.fromEntries(Object.entries(jobEvidence(co.ledger)).map(([d, x]) => [d, { n: x.n, tp: x.tp, fp: x.fp, tn: x.tn, fn: x.fn,
+        held: x.held, p10k: Math.round(x.versus.p * 10000), verdict: x.versus.verdict }])), second: secondOpinion(co.ledger) },
       books: { entries: entries.length, income: pl.income, expense: pl.expense, profit: pl.profit, balanced: bs.balanced,
         stock: (trialBalance(entries).rows.find((r) => r.code === '1001') || { balance: 0 }).balance,
         openOrders: node.list('po').filter((p) => p.status === 'raised').length },

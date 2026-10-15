@@ -3,6 +3,9 @@
 // page's own guidance (per-tab help, start-here steps, the guided tour) and the rival + cloud numbers on the visitor's
 // own headcount (src/market.mjs). Every number comes from a kernel, never typed here.
 import * as X from '../src/explain.mjs';
+import { attribution } from '../src/oversight.mjs';
+import { signersOf } from '../src/shell.mjs';
+import { verifyDecision } from '../src/evidence.mjs';
 import { fitInput, fitPlan, formFields } from '../src/adopt.mjs';
 import { gbp0, gbpM } from '../src/office.mjs';
 import { cloudCompare, undercut } from '../src/market.mjs';
@@ -16,7 +19,7 @@ export const EXPLAIN_CSS = X.EXPLAIN_CSS;
 export const TAB_HELP = {
   Board: { demo: '<b>The board.</b> What the company has done and how often it was right — every agent decision is scored against the real outcome, which the agent never saw when it decided. Click any device card above to see the company from that device. At the bottom: connect a language model for free text — reading what customers write, routing it, drafting replies.' },
   Agents: { demo: '<b>Every decision, live.</b> Each line is a signed record: which agent decided, what it did, whose brain answered, who confirmed it, and its receipt. Press <b>Trace</b> on any line to see that exact decision traced step by step.' },
-  Watch: { demo: '<b>The people\'s list.</b> Anything no brain could confirm waits here. Select the <b>AI overseer</b> device in the bar above to clear an item — the agent then carries out your choice. You can pause any agent here. Below: <b>the immune system</b> — send a new kind of attack, confirm it once, and watch every agent become immune — and <b>the behaviour watch</b>, which pauses an agent that stops behaving like itself.' },
+  Watch: { demo: '<b>The people\'s list.</b> Anything no brain could confirm waits here. Select the <b>overseer (a person)</b> device in the bar above to clear an item — the agent then carries out your choice. You can pause any agent here. Below: <b>the immune system</b> — send a new kind of attack, confirm it once, and watch every agent become immune — and <b>the behaviour watch</b>, which pauses an agent that stops behaving like itself.' },
   Brains: { demo: '<b>The brains.</b> Who answered, taught and confirmed whom — over signed records, never shared memory. Select an agent device to read its brain rule by rule and the data it was grown on. Try <b>Poison a brain</b> and watch every device refuse it.' },
   Tasks: { demo: '<b>Tasks the agents created</b> — retention offers sent, restocks raised, machines booked for service. Select a person\'s device to add your own.', run: '<b>Your company\'s tasks.</b> Add one; every device that joins sees it.' },
   Chat: { demo: '<b>The company channel.</b> Agents post what matters — a payment held, an intrusion quarantined, a brain regrown. People can post too.', run: '<b>Your company channel.</b> Messages are signed by your device and sync to every teammate.' },
@@ -24,7 +27,7 @@ export const TAB_HELP = {
   Docs: { demo: '<b>A live shared document.</b> Edit it on two devices — even with the network split — and both edits survive, in one order, everywhere.', run: '<b>A shared document.</b> Every teammate edits the same text live.' },
   Books: { demo: '<b>Double-entry books kept by the Finance agent.</b> Every card sale and purchase order is posted; anything that doesn\'t balance is refused.', run: '<b>Your books.</b> Debits must equal credits or the entry is refused.' },
   Vault: { demo: '<b>The one true record.</b> Every posting is sealed into an append-only log; the Audit agent co-signs it. Below: send your auditor a signed checkpoint, prove one entry, or prove the books only grew — they check it on their own computer, without trusting you.', run: '<b>Your vault.</b> Postings sealed into a log anyone can verify — send your auditor a signed checkpoint from here.' },
-  People: { demo: '<b>Who may do what.</b> Owner → AI overseer → each agent\'s scoped grant. <b>Fire</b> an agent and every device refuses its writes from that moment; its data locks itself.', run: '<b>Your people.</b> Grant a teammate by their device key; revoke at any time.' },
+  People: { demo: '<b>Who may do what.</b> Owner → overseer (a person) → each agent\'s scoped grant. <b>Fire</b> an agent and every device refuses its writes from that moment; its data locks itself.', run: '<b>Your people.</b> Grant a teammate by their device key; revoke at any time.' },
   Proof: { demo: '<b>Under the hood.</b> This device\'s copy of the company, every forged or malformed write the gate refused, every forked slot and which write was kept, the hostile-network simulation, and a re-check of an AI receipt.', run: '<b>Under the hood.</b> Your replica and the gate\'s refusals.' },
 };
 
@@ -34,10 +37,10 @@ export const START_STEPS = [
   { id: 'feed', title: 'Read any decision', text: 'On Agents, press Trace on a line to see that exact decision traced step by step through the company.', go: 'live', tab: 'Agents' },
   { id: 'brains', title: 'See the brains talk', text: 'On Brains, the map shows who answered, taught and confirmed whom — every message a signed record.', go: 'live', tab: 'Brains' },
   { id: 'attack', title: 'Attack it', text: 'Send a hostile customer message and watch it quarantined unread; poison a brain and watch every device refuse it.', go: 'live', tab: 'Watch', then: 'hostile' },
-  { id: 'steal', title: 'Steal an agent’s key', text: 'A thief with a valid key and grant starts deciding the Ops agent’s work. The behaviour watch sees it is not behaving like itself and the AI overseer pauses it; a person clears it.', go: 'live', tab: 'Watch', then: 'steal' },
+  { id: 'steal', title: 'Steal an agent’s key', text: 'A thief with a valid key and grant starts deciding the Ops agent’s work. The behaviour watch sees it is not behaving like itself and pauses it automatically; a person clears it.', go: 'live', tab: 'Watch', then: 'steal' },
   { id: 'immune', title: 'Make it immune', text: 'Send a new kind of attack that gets past the screen, confirm it once as the overseer, and watch every agent re-check it and become immune — while a mistaken confirmation is refused by all of them.', go: 'live', tab: 'Watch', then: 'immune' },
   { id: 'model', title: 'Connect a language model', text: 'On the Board, connect a model — on your own machine, in the browser, or with your own key — and write to the company as a customer: it routes the message and drafts a reply a person sends.', go: 'live', tab: 'Board', then: 'model-tier' },
-  { id: 'overseer', title: 'Be the overseer', text: 'Select the AI overseer device and clear a held call — the agent carries out your choice. Pause or fire any agent.', go: 'live', tab: 'Watch', device: 'overseer' },
+  { id: 'overseer', title: 'Be the overseer', text: 'Select the overseer’s device (a person) and clear a held call — the agent carries out your choice. Pause or fire any agent.', go: 'live', tab: 'Watch', device: 'overseer' },
   { id: 'split', title: 'Cut the network', text: 'Split the network or take devices offline: work carries on, and every device converges again when it heals.', go: 'live', tab: 'Board', then: 'splitnet' },
   { id: 'fit', title: 'Put in your own numbers', text: 'Enter your headcount and revenue: the five-year saving, the cloud comparison and the rival that could undercut you, on your figures.', go: 'business' },
   { id: 'case', title: 'Take it to your board', text: 'The full case — the saving, the cloud, the rival, security and regulation, the roll-out — printable as a PDF.', go: 'case' },
@@ -70,6 +73,18 @@ export function renderBigPicture() { return fig(X.bigPicture, ''); }
 /** Start here + try it + what each tab shows (the live company's guide panel). */
 export function renderStart() { return X.startHtml(); }
 
+/** Who signed the traced decision, and the decision re-run from the signed record alone (src/evidence.mjs). */
+function signedLine(co, rec) {
+  try {
+    const W = co.nodes.owner;
+    const who = attribution(rec.agent, signersOf(W, 'decisions').get(rec.id), co.whoOn(W));
+    const v = verifyDecision(W, rec.id);
+    return '<p class="note"><b>Who signed it:</b> ' + X.esc(who.words) + '. <b>Re-run from the signed record:</b> ' +
+      (v.ok ? '<span class="ok">✓</span> ' + X.esc(v.why) + ' (brain ' + X.esc(v.patternId) + ', signed by ' + X.esc(v.brainBy === 'owner' ? 'the owner' : 'the ' + v.brainBy + ' agent') + ').'
+        : '<span class="dim">' + X.esc(v.why) + '.</span>') + '</p>';
+  } catch { return ''; }
+}
+
 /** How it works — a real decision traced first, then the six diagrams. */
 export function renderHow({ co, trace } = {}) {
   let rec = null, led = null;
@@ -81,7 +96,7 @@ export function renderHow({ co, trace } = {}) {
   }
   return `<h2 class="sec-h">How it works</h2>
     <p class="sec-sub">${trace ? 'The decision you chose, traced step by step — then every part of the system as a diagram.' : 'A real decision this company just made, traced step by step (press Trace on any line in the live company to trace that one instead) — then every part of the system as a diagram.'}</p>
-    ${rec ? X.traceHtml(rec, led) : '<p class="dim">The company is starting up — a decision will be traced here in a moment.</p>'}
+    ${rec ? signedLine(co, rec) + X.traceHtml(rec, led) : '<p class="dim">The company is starting up — a decision will be traced here in a moment.</p>'}
     ${X.guideHtml({ pattern: co && co.factory && co.factory.shopper })}`;
 }
 

@@ -36,7 +36,7 @@ const text = (el) => (el.innerHTML || el.textContent).replace(/<[^>]*>/g, ' ').r
 test('the white paper fills every section from the kernels, and no number is missing', async () => {
   const els = await render();
   const want = ['stamp', 'hero', 'sharenote', 'vs', 'depts', 'roles', 'hw', 'cap', 'cost', 'notcounted', 'move', 'payback', 'sens',
-    'breakeven', 'cloud', 'cloudnote', 'rival', 'rivalnote', 'brains', 'run', 'runscript', 'sources'];
+    'breakeven', 'cloud', 'cloudnote', 'rival', 'rivalnote', 'brains', 'run', 'runscript', 'sources', 'proves', 'provesnote'];
   for (const id of want) {
     assert.ok(els.has(id), `the script never fills #${id}`);
     const t = text(els.get(id));

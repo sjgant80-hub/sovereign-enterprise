@@ -69,9 +69,9 @@ test('secondOpinion: agreed (and both wrong), disagreed (a catch or a false alar
   const L = [
     { channel: 'fraud', state: 'done', crossChecked: true, label: 1, truth: 1 },
     { channel: 'fraud', state: 'done', crossChecked: true, label: 0, truth: 1 },        // both wrong
-    { channel: 'credit', state: 'watch', why: 'a second brain disagreed — held for the watchers', label: 1, truth: 0 },   // the first was wrong: a catch
-    { channel: 'intrusion', state: 'watch', why: 'a second brain disagreed — held for the watchers', label: 0, truth: 0 }, // the first was right
-    { channel: 'intrusion', state: 'watch', why: 'no second brain could confirm — held for the watchers', label: 0, truth: 0 },
+    { channel: 'credit', state: 'watch', why: 'a second brain disagreed — held for a person', label: 1, truth: 0 },   // the first was wrong: a catch
+    { channel: 'intrusion', state: 'watch', why: 'a second brain disagreed — held for a person', label: 0, truth: 0 }, // the first was right
+    { channel: 'intrusion', state: 'watch', why: 'no second brain could confirm — held for a person', label: 0, truth: 0 },
     { channel: 'churn', state: 'done', crossChecked: true, label: 0, truth: 1 },       // normal stakes: not counted
     { channel: 'fraud', state: 'done', crossChecked: false, label: 0, truth: 0 },      // a high-stakes call done without a second: not counted
     { channel: 'fraud', state: 'watch', label: null, truth: 1 }, null, 'x',

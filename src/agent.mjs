@@ -33,6 +33,18 @@ export function moneyLimitOf(policy) {
   return Number.isSafeInteger(v) && v >= 1 && v <= MAX_LIMIT ? v : 0;
 }
 
+// Money and security work is decided only by the agent whose job it is: any job whose calls are high-stakes, or whose
+// acts commit the company's money. Another agent that receives such work hands it over; it never decides it.
+export const OWNED_ONLY = Object.freeze(Object.keys(ACTIONS).filter((d) => ACTIONS[d].stakes === 'high' || MONEY_ACTIONS.includes(ACTIONS[d][0]) || MONEY_ACTIONS.includes(ACTIONS[d][1])));
+/** Is this work decided only by its own agent? (false for any unknown job) */
+export const ownedOnly = (domain) => OWNED_ONLY.includes(domain);
+/** The other action of a job — what overturning `action` means. null when the job or the action is not known. */
+export function opposite(domain, action) {
+  const a = Object.prototype.hasOwnProperty.call(ACTIONS, domain) ? ACTIONS[domain] : null;
+  if (!a) return null;
+  return action === a[0] ? a[1] : action === a[1] ? a[0] : null;
+}
+
 const verified = (a) => !!a && a.verdict === 'VERIFIED' && (a.label === 0 || a.label === 1) && typeof a.domain === 'string';
 
 /** The action a label means in a domain (null if the domain is unknown). */
@@ -91,14 +103,14 @@ function choose(inputs, policy) {
       if (verified(second) && second.domain === a.domain && second.label === a.label) {
         return { state: 'done', action, label: a.label, domain: a.domain, by, crossChecked: true, why: 'a second brain agreed' };
       }
-      const why = verified(second) ? 'a second brain disagreed — held for the watchers' : 'no second brain could confirm — held for the watchers';
+      const why = verified(second) ? 'a second brain disagreed — held for a person' : 'no second brain could confirm — held for a person';
       return { state: 'watch', action, label: a.label, domain: a.domain, by, crossChecked: false, why };
     }
     if (model && (model.label === 0 || model.label === 1) && typeof model.domain === 'string') {
       const action = actionFor(model.domain, model.label);
       const high = ACTIONS[model.domain] && ACTIONS[model.domain].stakes === 'high';
       return { state: high || !action ? 'watch' : 'done', action, label: model.label, domain: model.domain, by: 'model:' + (model.by || 'model'), crossChecked: false,
-        why: high ? 'a model answered a high-stakes call — held for the watchers' : 'no verified pattern; the model tier answered' };
+        why: high ? 'a model answered a high-stakes call — held for a person' : 'no verified pattern; the model tier answered' };
     }
     return { state: 'watch', action: null, label: null, domain: null, by: 'none', crossChecked: false, why: 'no brain covered it and no model tier is connected' };
   } catch {

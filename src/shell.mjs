@@ -24,9 +24,10 @@
 import { canonical, utf8, toHex } from './canon.mjs';
 import { sha256 } from './sha256.mjs';
 import { sign as signWith, verify } from './keys.mjs';
-import { AGENTS, HUB, OWNER_OF, agentName, openStep, afterMesh, closeStep, effects, splitEffects, shouldLearn, pickEvent } from './company.mjs';
+import { AGENTS, HUB, OWNER_OF, agentName, openStep, afterMesh, closeStep, effects, splitEffects, shouldLearn, pickEvent, overturnEffects } from './company.mjs';
 import { askRecord, replyFor, repliesTo, heardFrom, pickAnswer, pickSecond } from './mesh.mjs';
-import { ACTIONS, DEFAULT_POLICY, moneyLimitOf } from './agent.mjs';
+import { ACTIONS, DEFAULT_POLICY, moneyLimitOf, ownedOnly } from './agent.mjs';
+import { CREATOR_FIELDS } from './oversight.mjs';
 import { adopt, fromRecord, toRecord, GATE_AUC, HIGH_STAKES_GATE } from './brain.mjs';
 import { growPattern } from './grow.mjs';
 import { screenWith, adoptAntibody, BENIGN_CORPUS } from './antibody.mjs';
@@ -64,13 +65,14 @@ export function gateFor(d) {
   try { return ACTIONS[d] && ACTIONS[d].stakes === 'high' ? HIGH_STAKES_GATE : GATE_AUC; } catch { return GATE_AUC; }
 }
 
-/** The agents’ policy as this device sees it on the spine (the overseer’s 'policy/agents' record), else the default. */
+/** The agents’ policy as this device sees it on the spine (the 'policy/agents' record a person writes), else the default:
+ *  { minConfidence, moneyLimit, autoPause } — autoPause is false only when a person switched the automatic pause off. */
 export function policyOf(node) {
   try {
     const p = node.list('policy').find((r) => r.id === 'agents');
-    if (!p || !Number.isSafeInteger(p.minConfidence)) return DEFAULT_POLICY;
-    return { minConfidence: p.minConfidence / 1000, moneyLimit: moneyLimitOf({ moneyLimit: p.moneyLimit }) };
-  } catch { return DEFAULT_POLICY; }
+    if (!p || !Number.isSafeInteger(p.minConfidence)) return { ...DEFAULT_POLICY, autoPause: true };
+    return { minConfidence: p.minConfidence / 1000, moneyLimit: moneyLimitOf({ moneyLimit: p.moneyLimit }), autoPause: p.autoPause !== false };
+  } catch { return { ...DEFAULT_POLICY, autoPause: true }; }
 }
 
 /** Is this agent paused, by this device’s own view of the control records? */
@@ -157,11 +159,14 @@ export function publishBrain(node, id, p, source, localAuc, n) {
 /** An agent device’s working memory: work waiting on the mesh, asks already answered, work already decided. */
 export const createWork = () => ({ pending: new Map(), replied: new Set(), done: new Set(), tick: 0 });
 
-/** An inbox record → the event an agent decides. Fields a hostile door could leave out are made safe. */
-function eventOf(it) {
+/** An inbox record → the event an agent decides. Fields a hostile door could leave out are made safe. A message a PERSON
+ *  released from quarantine (released: the id of the watch item they released it on) is not screened again: a person read
+ *  it and vouched for it. A release no person wrote is screened like any other message. */
+function eventOf(it, released) {
   let features = {};
   try { features = JSON.parse(it.features); } catch { features = {}; }
-  return { id: it.id, domain: it.channel, features, customer: typeof it.customer === 'string' ? it.customer : '', amount: it.amount | 0, text: it.text || '' };
+  const vouched = typeof it.released === 'string' && released.has(it.released);
+  return { id: it.id, domain: it.channel, features, customer: typeof it.customer === 'string' ? it.customer : '', amount: it.amount | 0, text: vouched ? '' : it.text || '', released: vouched ? it.released : '' };
 }
 
 /** Post an ask — or, after a restart, take back the one this device already posted for the same work. → its id */
@@ -197,12 +202,14 @@ export async function finishWork(ctx, event, o, gathered = {}) {
   const policy = ctx.policy();
   let model = null;
   const quarantined = o.scr && !o.scr.ok;
-  if (!quarantined && !(o.own && o.own.verdict === 'VERIFIED') && !mesh && ctx.modelAsk) {
+  if (!quarantined && !o.hold && !(o.own && o.own.verdict === 'VERIFIED') && !mesh && ctx.modelAsk) {
     try { model = await ctx.modelAsk(id, event); } catch { model = null; }
   }
-  const { decision: d, effects: fx } = closeStep({ agentId: id, event, scr: o.scr, own: o.own, mesh, second, secondBy, model, fault: o.fault, policy });
+  const { decision: d, effects: fx } = closeStep({ agentId: id, event, scr: o.scr, own: o.own, mesh, second, secondBy, model, fault: o.fault, policy, hold: o.hold });
+  // the record keeps the rules that applied (the confidence floor and the money limit a person set) and a person's release
   await node.put('decisions', uid(node, 'd'), { agent: id, event: event.id, domain: d.domain || '', action: d.action || '', state: d.state, by: d.by,
-    cross: !!d.crossChecked, second: d.secondBy || '', conf: d.conf | 0, receipt: d.receipt || '', why: String(d.why || '').slice(0, 300), customer: event.customer, channel: event.domain });
+    cross: !!d.crossChecked, second: d.secondBy || '', conf: d.conf | 0, receipt: d.receipt || '', why: String(d.why || '').slice(0, 300), customer: event.customer, channel: event.domain,
+    floor: d.floor | 0, limit: d.limit | 0, released: event.released || '' });
   const { mine, handoff } = splitEffects(fx, ctx.cols(), OWNER_OF[d.domain || event.domain]);
   for (const e of mine) await ctx.effect(node, e);
   for (const h of handoff) {
@@ -233,10 +240,18 @@ export async function stepAgent(ctx) {
     if (r) await node.put('reply', uid(node, 'r'), r);
   }
   const inbox = node.list('inbox');
+  const released = personReleased(node);
   // 2. open the new work addressed to this device
   for (const it of inbox) {
     if (it.to !== id || it.status !== 'open' || w.pending.has(it.id) || w.done.has(it.id)) continue;
-    const event = eventOf(it);
+    const owner = OWNER_OF[it.channel];
+    // money and security work is decided only by the agent whose job it is: hand it over, never decide it here
+    if (ownedOnly(it.channel) && owner !== id) {
+      if (ctx.peers().includes(owner)) { await node.put('inbox', it.id, { to: owner, handedBy: id }); continue; }
+      await finishWork(ctx, eventOf(it, released), { scr: null, own: null, hold: 'only the ' + agentName(owner) + ' decides this work, and it is not in this company — held for a person' }, {});
+      continue;
+    }
+    const event = eventOf(it, released);
     const o = openStep({ agentId: id, event, library: ctx.library(), policy, screenFn: ctx.screen });
     if (o.next === 'final') { await finishWork(ctx, event, o, {}); continue; }
     if (o.next === 'mesh') {
@@ -338,20 +353,39 @@ export async function adoptAntibodiesOn(input) {
  * key wrote (signedAs; honoured(fromId) may add a caller's own rule) — and the held calls a PERSON approved for it (the
  * owner or a live admin wrote the approval: personApproved).
  */
+export const MONEY_COLS = Object.freeze(['journal', 'vault', 'vault_head', 'payments', 'terms', 'po']);
+/** Does a hand-off carry an act that moves money? A money act is written only by the agent whose job it is: a hand-off
+ *  can never carry one (money and security work is handed over as WORK, before anyone decides it). */
+export const movesMoney = (payload) => !!payload && (!!payload.post || MONEY_COLS.includes(payload.c));
+
 export async function honourWork(input) {
   try {
-    const { node, id, cols, honoured = () => true, effect } = input;   // honoured(from): any extra rule a caller adds
+    const { node, id, cols, honoured = () => true, effect, brain = null } = input;   // honoured(from): any extra rule a caller adds
     const sent = new Set(signedAs(node, 'handoff', (x) => x.from).map((x) => x.id));   // written by the sender it names
     for (const h of node.list('handoff').filter((x) => x.to === id && x.status === 'open')) {
       let payload = null;
       try { payload = JSON.parse(h.payload); } catch { payload = null; }
-      const ok = payload && sent.has(h.id) && honoured(h.from) ? (await effect(node, payload)).ok : false;
+      const ok = payload && !movesMoney(payload) && sent.has(h.id) && honoured(h.from) ? (await effect(node, payload)).ok : false;
       await node.put('handoff', h.id, { status: ok ? 'done' : 'refused', doneBy: id });
     }
+    // what a PERSON chose, on items this agent may carry out: its own (raised by its own key), the door's for its job
+    // (raised by the hub or a person), a review of a decision in its job (raised by the door), a brain change for it
     const approved = personApproved(node, 'watch');
-    for (const w of node.list('watch').filter((x) => (x.agent === id || (x.agent === 'door' && OWNER_OF[x.channel] === id)) && x.status === 'approved' && x.action && approved.has(x.id))) {
-      const d = { state: 'done', action: w.action, domain: w.channel, crossChecked: false };   // what a person chose; effects() reads the action
-      const { mine, handoff } = splitEffects(effects(d, { id: w.event, customer: w.customer, amount: w.amount | 0, domain: w.channel }, id), cols, OWNER_OF[w.channel]);
+    const raisedBy = raisers(node);
+    for (const w of node.list('watch').filter((x) => x.status === 'approved' && x.action && approved.has(x.id))) {
+      const kind = w.kind || 'call', r = raisedBy(w.id);
+      const ev = { id: w.event, customer: w.customer, amount: w.amount | 0, domain: w.channel };
+      let fx = null;
+      if (kind === 'call' && w.agent === id && r.agent === id) fx = effects({ state: 'done', action: w.action, domain: w.channel, crossChecked: false }, ev, id);
+      else if (kind === 'call' && w.agent === 'door' && OWNER_OF[w.channel] === id && (r.role === 'hub' || r.role === 'person')) fx = effects({ state: 'done', action: w.action, domain: w.channel, crossChecked: false }, ev, id);
+      else if (kind === 'review' && OWNER_OF[w.channel] === id && r.role === 'hub') fx = overturnEffects(w.was, w.action, ev, id);
+      else if ((kind === 'promote' && r.agent === id) || (kind === 'rollback' && r.role === 'person')) {
+        if (w.agent !== id || typeof brain !== 'function') continue;   // a brain change is carried out by the agent that holds the brain
+        const b = await brain(w);
+        await node.put('watch', w.id, { status: b && b.ok ? 'executed' : 'refused', executedBy: id, why: String((b && b.why) || '').slice(0, 200) });
+        continue;
+      } else continue;
+      const { mine, handoff } = splitEffects(fx, cols, OWNER_OF[w.channel]);
       for (const e of mine) await effect(node, e);
       for (const h of handoff) await node.put('handoff', uid(node, 'h'), { from: id, to: h.to, payload: JSON.stringify(h.payload), status: 'open', event: w.event });
       await node.put('watch', w.id, { status: 'executed', executedBy: id });
@@ -360,21 +394,35 @@ export async function honourWork(input) {
   } catch { return no('fault'); }
 }
 
+/** For the door: the customer messages a PERSON released from quarantine, not yet handed back to their desk — each with the
+ *  work it came from. → [{ item, work }] (the door writes each as new work, released: item.id, and marks the item done). */
+export function doorReleases(node) {
+  try {
+    const vouched = personReleased(node);
+    const inbox = new Map(node.list('inbox').map((x) => [x.id, x]));
+    return node.list('watch').filter((w) => w.kind === 'waiting' && w.status === 'released' && vouched.has(w.id) && inbox.has(w.event))
+      .map((w) => ({ item: w, work: inbox.get(w.event) }));
+  } catch { return []; }
+}
+
 /**
  * The overseer’s pass of the behaviour watch (src/watch.mjs — Behavioral Entropy Signatures, the work of Gary W. Floyd, Lumiea
  * Systems Research Division — ThunderStruck Service, LLC): read every agent’s decisions on this
  * device and pause each agent the watch flags, until a person clears it. → the ids paused now.
  */
+export const WATCH_BY = 'the behaviour watch (automatic)';
 export async function oversee(input) {
   const out = [];
   try {
-    const { node, agents, policy = WATCH_POLICY, paused = (x) => isPaused(node, x), by = 'AI overseer', log = () => {} } = input;
+    const { node, agents, policy = null, paused = (x) => isPaused(node, x), by = WATCH_BY, log = () => {} } = input;
+    // a person may switch the automatic pause off on the spine: the watch then only flags, and a person decides
+    const rule = policy || { ...WATCH_POLICY, auto: policyOf(node).autoPause };
     const seen = watchAll(signedAs(node, 'decisions', (d) => d.agent), {}, clearsOf(node));
     for (const id of agents) {
       const r = seen[id];
-      if (!r || !shouldPause(r, policy) || paused(id)) continue;
+      if (!r || !shouldPause(r, rule) || paused(id)) continue;
       await node.put('control', id, { paused: true, by, watch: r.verdict, why: String(r.reason).slice(0, 300), flaggedAt: r.flaggedAt });
-      log('AI overseer paused the ' + agentName(id) + ' — the watch read it as ' + r.verdict + ': ' + r.reason);
+      log('The behaviour watch (automatic) paused the ' + agentName(id) + ' — it read it as ' + r.verdict + ': ' + r.reason);
       out.push(id);
     }
   } catch { /* the watch never breaks the heartbeat */ }
@@ -420,6 +468,7 @@ export const SIGNED_FIELDS = Object.freeze({
   handoff: Object.freeze(['from', 'to', 'payload', 'event']),
   decisions: Object.freeze(['agent', 'event', 'domain', 'action', 'state', 'by', 'cross', 'second', 'conf', 'receipt', 'customer', 'channel']),
   ask: Object.freeze(['item', 'from', 'kind', 'domain', 'features', 'pattern', 'exclude']),
+  watch: CREATOR_FIELDS,   // what raised the item (src/oversight.mjs) — a person's choice is status + action, read apart
 });
 export const APPROVAL_FIELDS = Object.freeze(['status', 'action']);
 
@@ -457,6 +506,51 @@ export function personApproved(node, c) {
  *  person's key (src/sow.mjs: a planted brain may be signed by the owner or an admin who planted it). */
 export function signersOf(node, c) {
   try { return writers(node, c, SIGNED_FIELDS[c]); } catch { return new Map(); }
+}
+
+/** Who wrote each field of each record of collection c: id → { field: key }. The raw reading the people's list is built
+ *  from (src/oversight.mjs itemOf): who raised an item, and who wrote its status and its action. */
+export function fieldSigners(node, c) {
+  try {
+    const col = node.view().state.cols[c];
+    const out = new Map();
+    for (const id of Object.keys(col || {})) out.set(id, Object.fromEntries(Object.entries(col[id].f).map(([k, v]) => [k, v[1]])));
+    return out;
+  } catch { return new Map(); }
+}
+
+/** Who is who, by this device's role tree: { people: Set (the owner and every live admin), agents: Map key → agent id
+ *  (every agent grant, fired ones too — their old records still name their writer), hubs: Set (live hub grants) }. */
+export function rolesOf(node) {
+  try {
+    const v = node.view();
+    const agents = new Map();
+    for (const r of v.roster) { const m = AGENT_GRANT.exec(r.grant); if (r.role === 'agent' && m) agents.set(r.to, m[1]); }
+    return { people: new Set([node.genesis, ...v.roster.filter((r) => r.role === 'admin' && !r.revoked).map((r) => r.to)]), agents,
+      hubs: new Set(v.roster.filter((r) => r.role === 'hub' && !r.revoked).map((r) => r.to)) };
+  } catch { return { people: new Set(), agents: new Map(), hubs: new Set() }; }
+}
+
+/** id → who raised a watch item: { role: 'person' | 'agent' | 'hub' | '', agent } — the one key that wrote every field that
+ *  makes it the item it is (CREATOR_FIELDS); '' when two keys did. An agent counts only while its grant is live. */
+function raisers(node) {
+  const sig = fieldSigners(node, 'watch'), who = rolesOf(node);
+  const live = new Map(agentRoster(node).map((g) => [g.pub, g.agent]));
+  return (id) => {
+    const f = sig.get(id) || {};
+    const keys = new Set(CREATOR_FIELDS.filter((k) => f[k]).map((k) => f[k]));
+    const pub = keys.size === 1 ? [...keys][0] : '';
+    const agent = live.get(pub) || '';
+    return { role: !pub ? '' : who.people.has(pub) ? 'person' : agent ? 'agent' : who.hubs.has(pub) ? 'hub' : '', agent };
+  };
+}
+
+/** The watch items a PERSON released from quarantine: the action 'release' was written by the owner or a live admin. */
+export function personReleased(node) {
+  try {
+    const people = rolesOf(node).people, sig = fieldSigners(node, 'watch');
+    return new Set(node.list('watch').filter((w) => w.action === 'release' && people.has((sig.get(w.id) || {}).action)).map((w) => w.id));
+  } catch { return new Set(); }
 }
 
 // ── the agent shell ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -518,7 +612,7 @@ export function createAgentShell(opts) {
     for (const r of ownRecords(node, 'reply')) if (r.by === agentId) work.replied.add(r.ask);
     const decided = new Set(ownRecords(node, 'decisions').filter((d) => d.agent === agentId).map((d) => d.event));
     const open = node.list('inbox').filter((x) => x.to === agentId && x.status === 'open').map((x) => x.id);
-    for (const a of ownRecords(node, 'ask')) if (a.from === agentId) resume.set(a.item + '/' + a.kind, a.id);   // its latest ask per piece of work and kind
+    for (const a of ownRecords(node, 'ask')) resume.set(a.item + '/' + a.kind, a.id);   // its own asks (this device runs one agent): the latest per piece of work and kind
     const rerun = new Set(node.list('adopt').filter((x) => x.by === agentId && x.source === 'antibody').map((x) => x.patternId));
     for (const r of node.list('antibody')) {
       if (!rerun.has(String(r.abId || '').slice(0, 64))) continue;

@@ -533,7 +533,7 @@ test('ask: a local case — prompt, call, strict parse, zero cost, a full audit 
   assert.equal(nm.model.by, 'fake');
 });
 
-test('ask: a model never takes a high-stakes act on its own — decide() holds it for the watchers', async () => {
+test('ask: a model never takes a high-stakes act on its own — decide() holds it for a person', async () => {
   const r = await ask({ adapter: ollamaWith('1'), task: { type: 'case', agent: 'finance', domain: 'fraud', features: { amount: 900, hourOfDay: 3 } }, budget: 0, spent: 0 });
   assert.equal(r.ok, true);
   const d = decide({ own: { verdict: 'ABSTAIN' }, model: r.model });

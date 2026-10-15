@@ -23,6 +23,7 @@ export async function runCompany({ events = EVENTS, seed = SEED } = {}) {
   const log = [];
   const real = Object.fromEntries(Object.entries(index).filter(([d, m]) => m.sample && d !== 'shopper').map(([d, m]) => [d, read('brains/' + m.sample)]));
   const co = createCompany({ index, patterns, shopper: read('brains/shopper.sample.json'), real }, { seed, date: () => DATE, log: (s) => log.push(s) });
+  co.autoPromote = true;   // no person sits at a headless re-run: its overseer approves each regrown brain at once, and the record says so
   await co.boot();
   const script = [];   // the scripted day: the same interventions a human can make on the page
   let hostileId = null;
@@ -50,7 +51,7 @@ export async function runCompany({ events = EVENTS, seed = SEED } = {}) {
   if (hs) hs.result = h && h.by === 'screen' ? 'quarantined' : 'NOT quarantined';
   const s = co.summary('owner');
   const sysAfter = co.ledger.filter((x) => x.agent === 'systems').length;
-  return { model: 'sovereign-enterprise/company-run/2', seed, date: DATE, events, speed: SPEED, script, summary: s, systemsDecisionsTotal: sysAfter, growthLog: log.length };
+  return { model: 'sovereign-enterprise/company-run/3', seed, date: DATE, events, speed: SPEED, script, summary: s, systemsDecisionsTotal: sysAfter, growthLog: log.length };
 }
 
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/').replace(/^\//, '')}` || process.argv[1].endsWith('run-company.mjs')) {

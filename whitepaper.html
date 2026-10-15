@@ -137,7 +137,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
     attack a person confirms becomes a signed antibody; every device re-checks it on its own genuine messages and adopts it only if it
     fires on none — caught once, refused everywhere.</p></div>
   <div class="card"><b>Watch how every agent behaves</b><p>A valid key and grant are not enough. Each agent's own habits are learned and
-    frozen; an agent doing one thing every time, keeping clockwork time, or acting off its own work is paused by the AI overseer until a
+    frozen; an agent doing one thing every time, keeping clockwork time, or acting off its own work is paused by the behaviour watch (automatic) until a
     person clears it — after Gary W. Floyd's Behavioral Entropy Signatures (Lumiea Systems Research Division — ThunderStruck Service, LLC).</p></div>
   <div class="card"><b>A language model only where no brain reaches</b><p>Free text — reading what a customer wrote, sending it to the
     right desk, drafting a reply — goes to a model the company chooses: on its own machine, in the browser, or a provider with its own key.
@@ -149,6 +149,12 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
   books — gives these results on every machine, byte for byte. Re-run it: <code>node tools/run-company.mjs --check</code>.</p>
 <div class="scroll"><table id="run"></table></div>
 <div class="callout" id="runscript"></div>
+
+<h3>What those numbers prove — and what they don’t</h3>
+<p>A job where the answer is nearly always “no” makes “right” look good even for doing nothing. So each job is set against doing
+  nothing on the same calls, with an exact test, and the second brain is judged by what it actually caught.</p>
+<div class="scroll"><table id="proves"></table></div>
+<div class="callout" id="provesnote"></div>
 
 <h2>6 · A day in the AI-native office</h2>
 <p>Six real workflows, step by step: which machine does each step, and where a person signs off.
@@ -339,6 +345,15 @@ $('run').innerHTML = [
   ['Vault: entries · audits · Audit-agent co-signatures', S.vault.size + ' · ' + (S.vault.audits ? 'yes' : 'NO') + ' · ' + S.vault.cosigned],
   ['All nine devices hold the same company', S.converged ? 'yes — digest ' + S.digest.slice(0, 16) : 'NO'],
 ].map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${esc(v)}</td></tr>`).join('');
+{
+  const ev = S.evidence || { jobs: {}, second: {} };
+  const VERDICT = { better: 'better than doing nothing', worse: 'worse than doing nothing', 'no evidence either way': 'no evidence either way yet' };
+  $('proves').innerHTML = '<tr><th>Job</th><th class="n">Calls</th><th class="n">Caught</th><th class="n">False alarms</th><th class="n">Missed</th><th>Against doing nothing</th></tr>' +
+    Object.entries(ev.jobs).map(([d, x]) => '<tr><td>' + esc((bIndex[d] && bIndex[d].title) || d) + '</td><td class="n">' + x.n + '</td><td class="n">' + x.tp + '</td><td class="n">' + x.fp + '</td><td class="n">' + x.fn + '</td><td>' + esc(VERDICT[x.verdict] || x.verdict) + ' (p ' + (x.p10k < 1 ? '< 0.0001' : (x.p10k / 10000).toFixed(4)) + ')</td></tr>').join('');
+  const s = ev.second, better = Object.values(ev.jobs).filter((x) => x.verdict === 'better').length;
+  $('provesnote').innerHTML = '<b>' + better + ' of ' + Object.keys(ev.jobs).length + ' jobs are measurably better than doing nothing on this day; the rest show no evidence either way yet</b> — a larger day, or the business’s own data, decides them. ' +
+    'The second brain, on money and security calls: asked ' + s.asked + ' times, agreed ' + s.agreed + ' (both wrong together ' + s.agreedWrong + '), disagreed ' + s.disagreed + ' — it caught the first brain’s mistake ' + s.caught + ' time' + (s.caught === 1 ? '' : 's') + ' and held a right call ' + s.falseAlarm + ' time' + (s.falseAlarm === 1 ? '' : 's') + '. On these datasets the two brains make the same mistakes; growing the second on different evidence is the next step, and this table will show whether it works.';
+}
 const say = (x) => x.act === 'hostile message' ? `a hostile customer message was <b>${esc(x.result)}</b>`
   : x.act === 'poisoned brain offered' ? `a compromised agent offered a poisoned "better" brain: <b>${x.refused} devices refused it, ${x.adopted} adopted it</b>`
     : x.act === 'overseer approved a held call' ? `the overseer chose <b>${esc(x.action)}</b> on a held ${esc(x.channel)} call, and the agent carried it out`

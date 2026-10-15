@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTIONS, actionFor, needsSecond, decide, canSpend, scorecard, DEFAULT_POLICY, MONEY_ACTIONS, MAX_LIMIT, moneyLimitOf } from '../src/agent.mjs';
+import { ACTIONS, actionFor, needsSecond, decide, canSpend, scorecard, DEFAULT_POLICY, MONEY_ACTIONS, MAX_LIMIT, moneyLimitOf, OWNED_ONLY, ownedOnly, opposite } from '../src/agent.mjs';
 import { screen, revealTags, emojiJoiner, MAX_CHARS } from '../src/screen.mjs';
 
 const V = (domain, label, confidence = 0.5) => ({ verdict: 'VERIFIED', domain, label, confidence });
@@ -194,4 +194,16 @@ test('decide: above the money limit a person set, an act that commits money is h
   // junk in the inputs never throws: it fails closed
   assert.equal(decide(null, { moneyLimit: 100 }).state, 'watch');
   assert.equal(decide({ own: own(0), second: second(0), get amount() { throw new Error('boom'); } }, { moneyLimit: 100 }).why, 'the agent failed closed');
+});
+
+test('owned-only work: every job whose calls are high-stakes or commit money is decided only by its own agent; the other act of a job', () => {
+  assert.deepEqual(OWNED_ONLY, ['fraud', 'credit', 'inventory', 'intrusion']);
+  for (const d of Object.keys(ACTIONS)) assert.equal(ownedOnly(d), ACTIONS[d].stakes === 'high' || MONEY_ACTIONS.includes(ACTIONS[d][0]) || MONEY_ACTIONS.includes(ACTIONS[d][1]), d);
+  for (const junk of ['', 'nope', null, undefined, 'constructor']) assert.equal(ownedOnly(junk), false);
+  for (const [d, a] of Object.entries(ACTIONS)) { assert.equal(opposite(d, a[0]), a[1], d); assert.equal(opposite(d, a[1]), a[0], d); }
+  assert.equal(opposite('fraud', 'retain'), null, 'an act of another job');
+  assert.equal(opposite('fraud', ''), null);
+  assert.equal(opposite('nope', 'retain'), null);
+  assert.equal(opposite('constructor', 'retain'), null);
+  assert.equal(opposite(null, null), null);
 });

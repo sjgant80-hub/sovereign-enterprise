@@ -53,5 +53,10 @@
     "mutation": "> → >=",
     "snippet": "const verdict = p >= ALPHA ? 'no evidence either way' : tp > fp ? 'better' : 'worse';",
     "reason": "equivalent: this branch is reached only when the result is significant (p < ALPHA), and a sign test with wins equal to losses gives p = 1 - so tp equals fp never reaches it; tp > fp and tp >= fp choose the same verdict on every reachable input."
+  },
+  {
+    "mutation": "> → >=",
+    "snippet": "const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);",
+    "reason": "equivalent: byId compares item ids, and every record in a collection has its own id, so two items in one list never share an id - the branch where a.id equals b.id is never reached, and > and >= order every reachable pair the same way."
   }
 ]

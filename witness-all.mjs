@@ -35,6 +35,7 @@
 //   sow.mjs    — a plan carried into a company: published by the owner's or an admin's device; each agent device reads who really
 //                signed a planted brain, refuses one its signer may not plant before reading it, and re-checks the rest on its own rows
 //   evidence.mjs — what the numbers prove: confusion matrices, intervals, the test against doing nothing, the second brain's worth, decisions re-run from the record
+//   oversight.mjs — the people's side: one list of what waits for a person, choices that count only from a person's key, the rules a person sets
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
@@ -92,6 +93,7 @@ export const PAIRS = [
   ['src/adopt.mjs', ['test/adopt.test.mjs']],
   ['src/plant.mjs', ['test/plant.test.mjs']],
   ['src/evidence.mjs', ['test/evidence.test.mjs']],
+  ['src/oversight.mjs', ['test/oversight.test.mjs']],
   ['src/receipt.mjs', ['test/receipt.test.mjs']],
   ['src/audit.mjs', ['test/audit.test.mjs']],
   ['src/exportco.mjs', ['test/exportco.test.mjs']],
