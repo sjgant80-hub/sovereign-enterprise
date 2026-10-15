@@ -648,3 +648,28 @@ test('junk never throws: every export, junk in every position', () => {
   assert.deepEqual(KINDS, ['outcomes', 'decisions', 'bank', 'crm', 'trial-balance', 'unknown']);
   assert.ok([P1, P2, P3, P4, P5, P6].every((p) => p.files.every((f) => KINDS.includes(f.kind))));
 });
+
+// ── the bridge is the one judge of a statement or a trial balance: shapes these headings alone would miss ──────────
+test('a bank statement or trial balance the bridge reads is set aside as a record, never left unknown', () => {
+  // SYNTHETIC: a statement with account details above its header
+  const statement = ['Account name,Synthetic Trading Ltd (synthetic)', 'Account number,00000000', '"Statement period","01/10/2026 to 31/10/2026"',
+    'Date,Description,Paid in,Paid out,Balance', '01/10/2026,TRANSFER FROM SAVINGS,"£2,000.00",,"£7,000.00"', '02/10/2026,"RENT, UNIT 4",,£750.00,"£6,250.00"'].join('\n');
+  // SYNTHETIC: an accounting package's own headings (N/C), and one signed balance column
+  const nc = ['N/C,Name,Debit,Credit', '1200,Bank current account,"5,000.00",', '3000,Share capital,,"5,000.00"'].join('\n');
+  const signed = 'Nominal Code,Account Name,Balance\n1200,Bank,1000.00\n3000,Capital,-1000.00\n';
+  // one row the chart knows and one it does not: still a trial balance — the bridge says what to fix
+  const half = 'N/C,Name,Debit,Credit\n1200,Bank,10.00,\n9123,Unknown,,10.00\n';
+  for (const [name, text, kind] of [['statement.csv', statement, 'bank'], ['tb.csv', nc, 'trial-balance'], ['tb-signed.csv', signed, 'trial-balance'], ['tb-half.csv', half, 'trial-balance']]) {
+    const r = classifyFile(name, text);
+    assert.equal(r.kind, kind, name);
+    assert.equal(r.domain, null, name);
+    assert.match(r.reason, kind === 'bank' ? /^A bank statement/ : /^A trial balance/, name);
+  }
+  // what neither the headings nor the bridge read stays unknown, with the headings' own reason
+  const none = classifyFile('notes.csv', 'Note,Owner\nCall the bank,Sam\nOrder paper,Alex\n');
+  assert.equal(none.kind, 'unknown');
+  assert.match(none.reason, /exactly two values/);
+  const one = classifyFile('one.csv', 'just one column\nx\ny\n');
+  assert.equal(one.kind, 'unknown');
+  assert.match(one.reason, /could not be read as a table/);
+});

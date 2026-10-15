@@ -59,6 +59,7 @@ import { AGENTS, OWNER_OF, agentName } from './company.mjs';
 import { ADOPTION } from './explain.mjs';
 import { fitPlan, fitInput, formFields } from './adopt.mjs';
 import { canonical } from './canon.mjs';
+import { parseBankCsv, parseTrialBalance } from './bridge.mjs';
 import { sha256 } from './sha256.mjs';
 
 export const PLAN_MODEL = 'sovereign-enterprise/plant/1';
@@ -145,8 +146,18 @@ function scoreJobs(features, cue, name) {
   }).sort((a, b) => b.score - a.score);
 }
 
+// What the bridges read is a record, not a case to learn from — and the bridge is the one judge of what a bank statement or
+// a trial balance is. It is asked only where these headings found nothing: a statement with account details above its
+// header, a trial balance under a package's own headings (N/C) or with one signed balance column. (A customer list still
+// needs a deal stage here: a list of names alone — a staff list — is not the CRM's to keep.)
+function bridgedKind(text) {
+  if (parseBankCsv(text).rows.length) return 'bank';
+  const tb = parseTrialBalance(text, { date: '2000-01-01' });
+  return tb.rows.length + tb.rejected.length ? 'trial-balance' : null;
+}
 const EMPTY = Object.freeze({ kind: 'unknown', domain: null, confidence: 0, reason: '', columns: [], rows: 0, target: null, decision: null, outcome: null });
 const unknown = (reason, base) => ({ ...EMPTY, ...base, reason });
+const recordOr = (text, reason, base) => { const k = bridgedKind(text); return k ? { ...EMPTY, ...base, kind: k, reason: RECORD_WHY[k] } : unknown(reason, base); };
 const list = (xs, and = ' and ') => (xs.length > 1 ? xs.slice(0, -1).join(', ') + and + xs[xs.length - 1] : xs.join(''));
 
 /**
@@ -163,7 +174,7 @@ export function classifyFile(name, text, hints) {
     const inferred = inferColumns(header, rows);
     const cols = inferred.map((c) => ({ name: c.name, kind: c.kind, distinct: c.distinct, levels: c.levels, tokens: tokensOf(c.name), flat: lower(c.name).replace(/[^a-z0-9]/g, '') }));
     const base = { columns: cols.map((c) => ({ name: c.name, kind: c.kind, distinct: c.distinct })), rows: rows.length };
-    if (cols.length < 2 || !rows.length) return unknown('It could not be read as a table — it needs a header row, two or more columns and at least one row of data.', base);
+    if (cols.length < 2 || !rows.length) return recordOr(text, 'It could not be read as a table — it needs a header row, two or more columns and at least one row of data.', base);
     const rec = recordKind(cols);
     if (rec) return { ...EMPTY, ...base, kind: rec, reason: RECORD_WHY[rec] };
     const asked = (k, auto) => (typeof h[k] === 'string' ? cols.find((c) => lower(c.name) === lower(h[k])) : auto());
@@ -179,7 +190,7 @@ export function classifyFile(name, text, hints) {
     } else {
       kind = 'outcomes';
       target = asked('target', () => cols.find((c) => binary(c) && any(c.tokens, OUTCOME_ANY)) || cols[suggestTarget(inferred)]);
-      if (!binary(target)) return unknown('There is no column with exactly two values to learn — a yes/no, churned/stayed or paid/defaulted column.', base);
+      if (!binary(target)) return recordOr(text, 'There is no column with exactly two values to learn — a yes/no, churned/stayed or paid/defaulted column.', base);
       what = 'A yes/no column to learn: ' + target.name + ' (' + target.levels.join(' / ') + ')';
     }
     const cue = target || outcome || decision;
