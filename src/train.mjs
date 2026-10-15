@@ -39,7 +39,7 @@ export function relevance(xs, ys) {
 
 /**
  * CSV text → a brain. opts: { target (column name), domain (a name for the brain), seed }.
- * → { ok, verified, why, pattern, target, positive, rows, features: [{ name, from, relevance }], dropped }
+ * → { ok, verified, why, pattern, heldBase: { n, yes } (the graded rows, and how many were the positive answer), target, positive, rows, features: [{ name, from, relevance }], dropped }
  */
 export function trainFromCsv(text, opts) {
   try {
@@ -60,7 +60,7 @@ export function trainFromCsv(text, opts) {
     const g = growPattern(domain, rows, safe, { seed });
     const features = keep.map((f, k) => ({ name: safe[k], from: f.name, relevance: Math.round(f.r * 1000) / 1000 }));
     if (!g.ok) return { ok: false, verified: false, why: g.why, target: p.targetName, positive: p.positiveLabel, rows: p.cases.length, features, dropped: ranked.length - keep.length };
-    return { ok: true, verified: g.verified, why: g.why, pattern: g.pattern, target: p.targetName, positive: p.positiveLabel, rows: p.cases.length, features, dropped: ranked.length - keep.length };
+    return { ok: true, verified: g.verified, why: g.why, pattern: g.pattern, heldBase: g.heldBase, target: p.targetName, positive: p.positiveLabel, rows: p.cases.length, features, dropped: ranked.length - keep.length };
   } catch {
     return { ok: false, verified: false, why: 'the file could not be read' };
   }

@@ -331,7 +331,7 @@ import { createNode, signEnvelope } from './src/node.mjs';
 import { connectAsHost, connectAsGuest, attachSession, isMember } from './src/rtc.mjs';
 import { GENESIS_PREV } from './src/gate.mjs';
 import { generate } from './src/keys.mjs';
-import { createKeyStore, staleDevices } from './src/store.mjs';
+import { createKeyStore, staleDevices, sealRecord, openRecord } from './src/store.mjs';
 import { split as splitCards, combine as combineCards } from './src/recovery.mjs';
 import { sha256 } from './src/sha256.mjs';
 import { canonical, utf8, toHex, fromHex } from './src/canon.mjs';
@@ -344,7 +344,7 @@ import { NOTES, REAL } from './src/streams.mjs';
 import { AGENTS, HUMANS, HUB, LEARN_AFTER, agentName, boardKpis } from './src/company.mjs';
 import { ACTIONS } from './src/agent.mjs';
 import { createCompany, HUMAN_IDS, AGENT_IDS, displayName, isAgent } from './src/runtime.mjs';
-import { queue, bulkPlan, falsePositives, policyForm, policyWords, brainHistory, attribution, reviewable } from './src/oversight.mjs';
+import { queue, bulkPlan, falsePositives, policyForm, policyWords, brainHistory, attribution, reviewable, penceOf, pounds } from './src/oversight.mjs';
 import { signersOf } from './src/shell.mjs';
 import { jobEvidence, secondOpinion } from './src/evidence.mjs';
 import { parseIceServers } from './src/rtc.mjs';
@@ -575,12 +575,19 @@ const PROVIDERS = [
 ];
 const WEBLLM_MODELS = ['Qwen2.5-1.5B-Instruct-q4f16_1-MLC', 'Llama-3.2-1B-Instruct-q4f16_1-MLC'];
 ui.model = { prov: 'none', url: 'http://localhost:11434', model: 'qwen2.5:7b', oaUrl: 'http://localhost:1234', oaModel: '', key: '', own: false,
-  aModel: 'claude-haiku-5-5', wModel: WEBLLM_MODELS[0], inPerM: '', outPerM: '', budget: '500', status: '', test: '', text: '' };
+  aModel: 'claude-haiku-5-5', wModel: WEBLLM_MODELS[0], inPerM: '', outPerM: '', budget: '5.00', status: '', test: '', text: '' };
+/** Who bills a call — read from the adapter the kernel would build (src/model.mjs), so the page and the spending check agree:
+ *  an Ollama or WebLLM model, or an OpenAI-compatible server on this machine or marked as ours, costs nothing per call. */
+function modelKind(m) {
+  if (m.prov === 'anthropic') return 'frontier';
+  if (m.prov === 'openai') return openaiCompatible({ url: String(m.oaUrl).trim(), model: String(m.oaModel).trim() || 'x', kind: m.own ? 'local' : undefined }).kind;
+  return m.prov === 'webllm' ? 'browser' : 'local';
+}
 const mf = (k, label, opts = {}) => `<label class="mdl-f">${esc(label)}<input data-mdl="${k}" value="${esc(ui.model[k])}" ${opts.type ? 'type="' + opts.type + '"' : ''} ${opts.ph ? 'placeholder="' + esc(opts.ph) + '"' : ''} autocomplete="off" spellcheck="false"></label>`;
 function modelPanel() {
   const m = ui.model;
   const on = co.modelTier;
-  const paid = m.prov === 'anthropic' || (m.prov === 'openai' && !m.own);
+  const paid = m.prov !== 'none' && modelKind(m) === 'frontier';
   const fields = m.prov === 'ollama' ? mf('url', 'Ollama address') + mf('model', 'Model', { ph: 'qwen2.5:7b' })
     : m.prov === 'webllm' ? `<label class="mdl-f">Model<select data-mdl="wModel">${WEBLLM_MODELS.map((x) => `<option ${x === m.wModel ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>`
     : m.prov === 'openai' ? mf('oaUrl', 'Server address') + mf('oaModel', 'Model', { ph: 'the model name the server lists' }) + mf('key', 'API key (optional)', { type: 'password' }) +
@@ -593,10 +600,11 @@ function modelPanel() {
       right desk, drafting a holding reply. Connect one here. It is used only where no verified brain answers, it never acts alone on money or security,
       its replies are drafts a person sends, and every call — made or refused — is written to the spine as an audit record (never the key).</p>
     <div class="mdl-grid"><label class="mdl-f">Where the model runs<select data-mdl="prov">${PROVIDERS.map(([v, l]) => `<option value="${v}" ${v === m.prov ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
-      ${fields}${price}${m.prov !== 'none' ? mf('budget', 'Spending limit for this session (pence)', { ph: '500' }) : ''}</div>
+      ${fields}${price}${paid ? mf('budget', 'Spending limit for this session (£)', { ph: '5.00' }) : ''}</div>
+    ${m.prov !== 'none' && !paid ? '<p class="note">This model runs on a machine you own, so a call costs nothing and no spending limit is needed.</p>' : ''}
     <div class="row">${m.prov !== 'none' ? '<button class="primary sm" data-act="model-connect">Connect</button>' : ''}
       ${on ? '<button class="sm" data-act="model-off">Disconnect</button><button class="sm" data-act="model-test">Test it on a real case</button>' : ''}
-      <span class="dim">${on ? 'Connected: <b>' + esc(on.adapter.name) + (on.adapter.model ? ' · ' + esc(on.adapter.model) : '') + '</b> (' + esc(on.adapter.kind) + ') · spent ' + co.modelSpent + 'p of ' + on.budget + 'p' : 'Not connected.'}</span></div>
+      <span class="dim">${on ? 'Connected: <b>' + esc(on.adapter.name) + (on.adapter.model ? ' · ' + esc(on.adapter.model) : '') + '</b> (' + esc(on.adapter.kind) + ')' + (on.adapter.kind === 'frontier' ? ' · spent ' + pounds(co.modelSpent) + ' of ' + pounds(on.budget) : ' · no per-call bill') : 'Not connected.'}</span></div>
     ${m.status ? `<p class="flash" id="mdl-status">${esc(m.status)}</p>` : '<p id="mdl-status" class="hide"></p>'}
     ${m.test ? `<p class="note">${m.test}</p>` : ''}
     ${on ? `<div class="row"><textarea data-mdl="text" rows="2" placeholder="Write as a customer — e.g. “I was charged twice for order 4471, can I get a refund?”" aria-label="A customer message">${esc(m.text)}</textarea></div>
@@ -604,15 +612,16 @@ function modelPanel() {
     ${m.prov === 'ollama' ? `<p class="note">Ollama on this computer: a page on github.io may call it only if you allow that origin — set <span class="mono">OLLAMA_ORIGINS=https://sjgant80-hub.github.io</span>
       and restart Ollama (on Windows: <span class="mono">setx OLLAMA_ORIGINS "https://sjgant80-hub.github.io"</span>, then quit and reopen Ollama). A copy of this page served from localhost needs nothing.</p>` : ''}
     ${paid ? '<p class="note">Your key stays in this tab’s memory only — never stored, never written to the spine or to any record. A paid call is made only when the spending limit covers its worst case.</p>' : ''}
-    ${audits.length ? `<div class="tablewrap"><table><tr><th>Model call</th><th>Task</th><th>Result</th><th class="n">Pence</th><th class="n">ms</th></tr>${audits.map((a) => `<tr><td>${esc(a.provider)}${a.model ? ' · ' + esc(a.model) : ''}</td><td>${esc(a.task)}${a.domain ? ' · ' + esc(a.domain) : ''}</td><td class="${a.ok ? 'ok' : 'warn'}">${esc(a.ok ? a.answer : a.why)}</td><td class="n">${a.pence}</td><td class="n">${a.ms}</td></tr>`).join('')}</table></div>
+    ${audits.length ? `<div class="tablewrap"><table><tr><th>Model call</th><th>Task</th><th>Result</th><th class="n">Cost</th><th class="n">ms</th></tr>${audits.map((a) => `<tr><td>${esc(a.provider)}${a.model ? ' · ' + esc(a.model) : ''}</td><td>${esc(a.task)}${a.domain ? ' · ' + esc(a.domain) : ''}</td><td class="${a.ok ? 'ok' : 'warn'}">${esc(a.ok ? a.answer : a.why)}</td><td class="n">${pounds(a.pence | 0)}</td><td class="n">${a.ms}</td></tr>`).join('')}</table></div>
       <p class="note">Each row is a signed record on the spine, written by the office hub: every device holds the same audit of every model call.</p>` : ''}
   </div>`;
 }
 const mdlStatus = (t) => { ui.model.status = t; const el = $('mdl-status'); if (el) { el.textContent = t; el.className = t ? 'flash' : 'hide'; } };
 async function modelConnect() {
   const m = ui.model;
-  const budget = Number(String(m.budget).trim());
-  if (!Number.isSafeInteger(budget) || budget < 0) { mdlStatus('The spending limit must be a whole number of pence, 0 or more.'); render(); return; }
+  const paid = modelKind(m) === 'frontier';
+  const budget = paid ? penceOf(m.budget) : 0;   // a call on a machine you own costs 0, and 0 is a valid limit for it
+  if (budget === null || !Number.isSafeInteger(budget)) { mdlStatus('The spending limit is in pounds — for example 5 or 5.00.'); render(); return; }
   let adapter = null, price;
   if (m.prov === 'ollama') adapter = ollama({ url: m.url.trim(), model: m.model.trim(), timeoutMs: 120000 });   // a cold 7B load on a CPU takes a while; a local call costs nothing
   else if (m.prov === 'openai') adapter = openaiCompatible({ url: m.oaUrl.trim(), model: m.oaModel.trim(), key: m.key.trim() || undefined, kind: m.own ? 'local' : undefined });
@@ -626,7 +635,7 @@ async function modelConnect() {
       adapter = webllm({ engine, model: m.wModel, timeoutMs: 120000 });
     } catch (e) { mdlStatus('The model could not be loaded in this browser: ' + (e && e.message ? e.message : 'unknown error')); render(); return; }
   }
-  if (m.prov === 'anthropic' || (m.prov === 'openai' && !m.own)) {
+  if (paid) {
     const i = Number(m.inPerM), o = Number(m.outPerM);
     if (!(Number.isFinite(i) && i >= 0 && Number.isFinite(o) && o >= 0) || String(m.inPerM).trim() === '' || String(m.outPerM).trim() === '') { mdlStatus('Enter your provider’s price per million tokens, in and out, in pounds — a paid call is only made when the limit covers its worst case.'); render(); return; }
     price = { inPerM: i, outPerM: o, fx: 100 };
@@ -643,7 +652,8 @@ async function modelTest() {
   const r = await co.modelCall('owner', { type: 'case', domain: 'churn', features: ev.features });
   const led = co.byEvent.get(ev.id);
   const truth = co.truthOf.get(ev.id);
-  ui.model.test = r.ok ? `On case <b>${esc(ev.id)}</b> (will this customer leave?) the model said <b>${r.label ? 'yes' : 'no'}</b>; the outcome was <b>${truth ? 'yes' : 'no'}</b>${led && (led.label === 0 || led.label === 1) ? `; the verified brain said <b>${led.label ? 'yes' : 'no'}</b>` : ''}. Cost: ${r.pence}p.`
+  const yn = (x) => (x ? 'yes' : 'no'), rw = (x) => (!!x === !!truth ? 'right' : 'wrong');
+  ui.model.test = r.ok ? `On case <b>${esc(ev.id)}</b> — will this customer leave? The real outcome: <b>${yn(truth)}</b>. The model said <b>${yn(r.label)}</b> (${rw(r.label)})${led && (led.label === 0 || led.label === 1) ? `; the verified brain said <b>${yn(led.label)}</b> (${rw(led.label)})` : ''}. One case proves little either way — the brains are judged on hundreds. Cost: ${r.pence ? pounds(r.pence) : 'nothing — it ran on a machine you own'}.`
     : 'The model call did not give a usable answer: ' + esc(r.why) + (r.why === 'network' && ui.model.prov === 'ollama' ? ' — if Ollama is running, allow this page’s origin (see below).' : '');
   mdlStatus('');
   render();
@@ -903,6 +913,40 @@ async function downloadBrain(summary) {
 }
 
 const can = (node, c) => node.canWrite(c);
+
+// ── D4: a customer's contact, sealed under that customer's own key ───────────────────────────────────────────────────
+// The contact a person types — a name, an email, a phone number — is sealed before it is written, so every device and
+// every backup holds only ciphertext. The key stays on the device that took the details down: in Run your own a
+// non-extractable key in this device's key store (src/store.mjs subjectKey); in the live demo, the demo's key ring.
+// Erase destroys the key for good and writes a signed erasure: every sealed copy goes dark, while the deal, its value
+// and the books keep the customer's id (the books are kept six years for HMRC; the person's details are not in them).
+const AES_GCM = { name: 'AES-GCM', length: 256 };
+ui.contacts = new Map();   // record id → the opened contact (string), null while opening, false when its key is gone
+async function custodyKey(subject) {
+  if (mode === 'demo') { const hex = await ui.ring.keyFor(subject); return hex ? crypto.subtle.importKey('raw', fromHex(hex), AES_GCM, false, ['encrypt', 'decrypt']) : null; }
+  const r = await KS.subjectKey(devNs, subject);
+  return r.ok ? r.key : null;
+}
+async function custodyForget(subject) { if (mode === 'demo') ui.ring.shred(subject); else await KS.forget(devNs, subject); }
+async function openContact(d) {
+  let text = false;
+  try {
+    const key = await custodyKey('c-' + d.id);
+    const r = key && await openRecord({ subtle: crypto.subtle, key, sealed: fromHex(d.contactSealed), aad: utf8('crm/' + d.id) });
+    if (r && r.ok) text = new TextDecoder().decode(r.bytes);
+  } catch { /* unreadable stays dark */ }
+  ui.contacts.set(d.id, text);
+}
+/** What a CRM card shows for the contact, as this device holds it. */
+function contactHtml(node, d) {
+  if (d.erased) return '<span class="dim">details erased ' + esc(d.erased) + ' — key destroyed</span>';
+  if (!d.contactSealed) return esc(d.contact || '');   // an agent's fast-tracked web session carries no personal details
+  if (d.sealedOn !== node.pub) return '<span class="dim">contact sealed — readable on ' + esc(nameOfPub(d.sealedOn)) + '’s device</span>';
+  const c = ui.contacts.get(d.id);
+  if (c === undefined) { ui.contacts.set(d.id, null); openContact(d).then(() => render()); }
+  return typeof c === 'string' ? esc(c) + ' <span class="chip done" title="Sealed under this customer’s own key, held on this device">sealed</span>'
+    : c === false ? '<span class="dim">sealed — this device no longer holds its key</span>' : '<span class="dim">opening…</span>';
+}
 const readonlyNote = (node) => (mode === 'demo' && !HUMAN_IDS.includes(ui.sel) ? `<p class="dim">This is the ${esc(displayName(ui.sel))}'s device — it writes here; you watch.</p>` : '');
 const outcomeMark = (x) => (x.state !== 'done' || (x.label !== 0 && x.label !== 1) ? '' : x.label === x.truth ? '<span class="ok" title="matched the outcome">✓</span>' : '<span class="bad" title="the outcome went the other way">✗</span>');
 const ruleText = (r) => `${r.w > 0 ? '+' : ''}${r.w} if ${esc(r.feat)} ${r.op === '>' ? '>' : '≤'} ${+r.v.toFixed(3)}`;
@@ -1071,9 +1115,11 @@ const VIEWS = {
     const stages = ['lead', 'qualified', 'proposal', 'won', 'lost'];
     const pipe = deals.filter((d) => d.stage !== 'lost' && d.stage !== 'won').reduce((s, d) => s + (d.value || 0), 0);
     return `<div class="panel"><h3>Pipeline — ${gbp(pipe)} open · ${gbp(deals.filter((d) => d.stage === 'won').reduce((s, d) => s + (d.value || 0), 0))} won</h3>${readonlyNote(node)}
-      ${w ? `<div class="row"><input id="cn" placeholder="Company" maxlength="120" aria-label="Company"><input id="cc" placeholder="Contact" maxlength="120" aria-label="Contact"><input id="cv" placeholder="Value £" inputmode="numeric" style="max-width:120px" aria-label="Value"><button class="primary" data-act="crm-add">Add lead</button></div>` : ''}
+      <p class="note" style="margin-top:0">A contact is sealed under that customer’s own key before it is written: every device and every backup holds only ciphertext, and only the device that took it down can open it. Erase destroys the key — every copy goes dark — while the deal and the books keep the customer’s id.</p>
+      ${w ? `<div class="row"><input id="cn" placeholder="Company or deal" maxlength="120" aria-label="Company or deal (not a person’s name)"><input id="cc" placeholder="Contact — sealed" maxlength="120" aria-label="Contact: a person’s name, email or phone — sealed under this customer’s own key"><input id="cv" placeholder="Value £" inputmode="numeric" style="max-width:120px" aria-label="Value"><button class="primary" data-act="crm-add">Add lead</button></div>` : ''}
       <div class="grid cols">${stages.map((s) => `<div class="stage"><h4>${s} · ${deals.filter((d) => d.stage === s).length}</h4>${deals.filter((d) => d.stage === s).slice(-30).reverse().map((d) => `
-        <div class="card"><b>${esc(d.name)}</b><br><span class="dim">${esc(d.contact || '')} · ${esc(d.owner || '')}</span><br><span class="v">${gbp(d.value || 0)}</span>
+        <div class="card"><b>${esc(d.name)}</b><br><span class="dim">${contactHtml(node, d)} · ${esc(d.owner || '')}</span><br><span class="v">${gbp(d.value || 0)}</span>
+        ${w && d.contactSealed && d.sealedOn === node.pub && !d.erased ? `<div class="row" style="margin:6px 0 0"><button class="sm danger" data-act="crm-erase" data-id="${esc(d.id)}">Erase their details</button></div>` : ''}
         ${w && s !== 'won' && s !== 'lost' ? `<div class="row" style="margin:6px 0 0"><button class="sm" data-act="crm-next" data-id="${esc(d.id)}">Advance</button><button class="sm danger" data-act="crm-lose" data-id="${esc(d.id)}">Lost</button></div>` : ''}</div>`).join('')}</div>`).join('')}</div>
     </div>`;
   },
@@ -1211,7 +1257,27 @@ async function act(a, el) {
   else if (a === 'task-cycle') { const t = node.list('tasks').find((x) => x.id === el.dataset.id); const n = { todo: 'doing', doing: 'done', done: 'todo' }[t && t.status] || 'doing'; await node.put('tasks', el.dataset.id, { status: n }); }
   else if (a === 'task-del') await node.del('tasks', el.dataset.id);
   else if (a === 'msg-send' && val('mt')) await node.put('msg', uid(node, 'm'), { ch: 'general', body: val('mt').slice(0, 1500), by: node.name });
-  else if (a === 'crm-add' && val('cn')) await node.put('crm', uid(node, 'c'), { name: val('cn').slice(0, 120), contact: val('cc').slice(0, 120), stage: 'lead', value: Math.max(0, Math.round((parseFloat(val('cv')) || 0) * 100)), owner: node.name });
+  else if (a === 'crm-add' && val('cn')) {
+    const id = uid(node, 'c'), contact = val('cc').slice(0, 120);
+    let sealed = {};
+    if (contact) {
+      const key = await custodyKey('c-' + id);
+      const r = key && await sealRecord({ subtle: crypto.subtle, key, bytes: utf8(contact), aad: utf8('crm/' + id) });
+      sealed = r && r.ok ? { contactSealed: toHex(r.sealed), sealedOn: node.pub } : null;
+      if (sealed) ui.contacts.set(id, contact);
+    }
+    if (!sealed) toast('Not added: the contact could not be sealed on this device, so it was not written', 'bad');
+    else { await node.put('crm', id, { name: val('cn').slice(0, 120), ...sealed, stage: 'lead', value: Math.max(0, Math.round((parseFloat(val('cv')) || 0) * 100)), owner: node.name }); toast(contact ? 'Added — the contact is sealed under this customer’s own key, held on this device' : 'Added', 'ok'); }
+  }
+  else if (a === 'crm-erase') {
+    const d = node.list('crm').find((x) => x.id === el.dataset.id);
+    if (d && d.contactSealed && d.sealedOn === node.pub && !d.erased && (mode === 'demo' || confirm('Erase this customer’s contact for good? Their key is destroyed and no device can read it again.'))) {
+      await custodyForget('c-' + d.id);
+      ui.contacts.set(d.id, false);
+      await node.put('crm', d.id, { erased: new Date().toISOString().slice(0, 10), contactSealed: '' });
+      toast('Erased — this customer’s key is destroyed: every sealed copy of their contact, on every device and in every backup, is unreadable. The deal stays in the books under its id.', 'ok');
+    }
+  }
   else if (a === 'crm-next') { const d = node.list('crm').find((x) => x.id === el.dataset.id); const n = { lead: 'qualified', qualified: 'proposal', proposal: 'won' }[d && d.stage]; if (n) await node.put('crm', el.dataset.id, { stage: n }); }
   else if (a === 'crm-lose') await node.put('crm', el.dataset.id, { stage: 'lost' });
   else if ((a === 'resume' && (node.list('control').find((c) => c.id === el.dataset.id) || {}).watch) || a === 'watch-clear' || a === 'watch-relearn') { if (can(node, null)) { await co.clear(ui.sel, el.dataset.id, a === 'watch-relearn'); toast('Cleared — the ' + agentName(el.dataset.id) + ' works again' + (a === 'watch-relearn' ? ', its habits learned afresh' : ''), 'ok'); } }
@@ -1488,7 +1554,7 @@ document.addEventListener('input', async (e) => {
   if (added) await node.typeAt('docs', 'policy', p, added);
 });
 document.addEventListener('change', async (e) => {
-  if (e.target.dataset && e.target.dataset.mdl) { const k = e.target.dataset.mdl; ui.model[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; if (k === 'prov' || k === 'own') { ui.model.status = ''; ui.model.test = ''; render(); } return; }
+  if (e.target.dataset && e.target.dataset.mdl) { const k = e.target.dataset.mdl; ui.model[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; if (k === 'prov' || k === 'own' || k === 'oaUrl') { ui.model.status = ''; ui.model.test = ''; render(); } return; }
   if (e.target.id === 'train-file' && e.target.files && e.target.files[0]) {
     const f = e.target.files[0];
     if (f.size > 20 * 1024 * 1024) { ui.train = { error: 'That file is over 20 MB — try a sample of it.' }; renderTrainBox(); return; }

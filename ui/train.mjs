@@ -31,6 +31,19 @@ export function brainFile(state, summary = true) {
   return b.ok ? b.body : null;
 }
 
+/** Accuracy means little without the base rate: on rows that are 90% “no”, answering “no” every time is right 90% of the time.
+ *  So the held-out accuracy is set beside that, on the very rows it was graded on (src/grow.mjs heldBase). */
+function baseRate(r) {
+  const b = r.heldBase;
+  if (!b || !(b.n > 0)) return '';
+  const pct = (x) => (x * 100).toFixed(1) + '%';
+  const major = Math.max(b.yes, b.n - b.yes) / b.n, acc = r.pattern.heldAcc;
+  const verdict = acc > major ? `it is right ${pct(acc)} — ${((acc - major) * 100).toFixed(1)} points better than that.`
+    : `its accuracy is no better than that, so on this file its worth is in the ranking the AUC measures, not in a yes/no cut-off: use its score to put the likeliest cases first.`;
+  return `<p><b>Against the base rate:</b> of the ${b.n} rows it was graded on, ${b.yes} were “${esc(r.positive)}” (${pct(b.yes / b.n)}). Always giving the commoner answer would be right ${pct(major)} of the time; ${verdict}
+    AUC does not move with the base rate: it is the chance the brain scores a real “${esc(r.positive)}” above a real “not”.</p>`;
+}
+
 export function renderTrain(state = {}) {
   const r = state.result;
   const names = r && r.features ? Object.fromEntries(r.features.map((f) => [f.name, f.from])) : {};
@@ -49,8 +62,9 @@ export function renderTrain(state = {}) {
     <button class="primary" data-act="train-go">Grow the brain</button></div>` : ''}
   ${r ? `<div class="panel">
     ${r.ok && r.verified ? `<h3 class="ok">✓ A verified brain — it predicts “${esc(r.target)} = ${esc(r.positive)}”</h3>
-      <p>Grown on ${Math.round(r.rows * 0.7)} of your ${r.rows} rows and graded on the other ${r.rows - Math.round(r.rows * 0.7)} it never saw: held-out AUC <b>${r.pattern.heldAuc.toFixed(3)}</b>
+      <p>Grown on ${r.pattern.train} of your ${r.rows} rows and graded on the other ${r.pattern.held} it never saw — 3 rows in every 10, set aside before it grew: held-out AUC <b>${r.pattern.heldAuc.toFixed(3)}</b>
         (0.5 is a coin toss; the gate is 0.6), accuracy ${(r.pattern.heldAcc * 100).toFixed(1)}%. It reads the ${r.features.length} columns most related to the outcome${r.dropped ? ` (${r.dropped} more were left out)` : ''}.</p>
+      ${baseRate(r)}
       <p class="dim">Its rules, in full — add up the weights of the rules that fire; above ${+r.pattern.threshold.toFixed(3)} means “${esc(r.positive)}”:</p>
       <ul class="rules">${r.pattern.rules.map((x) => `<li>${rule(x)}</li>`).join('')}</ul>
       <div class="row"><button data-act="train-download">Download your brain, signed (.json)</button><button data-act="train-download-bare">Download without the data summary</button></div>
@@ -63,7 +77,10 @@ export function renderTrain(state = {}) {
         leaves that out, and the device that loads it rebuilds one from its own records. The rules’ cut-off values come from your data in both.</p>
       <p class="note"><b>Where it goes next:</b> into a pilot. When the company is rolled out, the agent for this job is given the file, checks the signature,
         and re-checks the brain on its own records — the same adoption check that refuses a poisoned brain in the live company — answering from it only if
-        it clears the gate there too.</p>`
-      : `<h3 class="warn">✗ No brain this time</h3><p>${esc(r.why)}</p><p class="dim">That is the gate working: a brain that can't predict cases it never saw is refused, never shipped.</p>`}
+        it clears the gate there too.</p>
+      <p class="note"><b>Your next step:</b> download it signed, then drop the file on <a href="verify.html" target="_blank" rel="noopener">the checker</a> and watch the
+        signature check out. To do this for a whole business — one brain per job, grown from its own files — use <a href="#plant" data-view="plant">Plant it</a>.</p>`
+      : `<h3 class="warn">✗ No brain this time</h3><p>${esc(r.why)}</p><p class="dim">That is the gate working: a brain that can't predict cases it never saw is refused, never shipped.</p>
+      <p class="note"><b>Your next step:</b> pick another column to predict, or bring more rows — the more cases with a known outcome, the more a real signal can show.</p>`}
   </div>` : ''}`;
 }

@@ -15,6 +15,12 @@ test('a real CSV becomes a verified brain on the device — same shape as the sh
   assert.equal(t.target, 'Purchased');
   assert.equal(t.positive, 'yes');
   assert.equal(t.rows, 1182);
+  // the base rate on the graded rows, counted from the file itself: 3 rows in every 10 are held out
+  const [head, ...lines] = csv.trim().split('\n'); const col = head.split(',').indexOf('Purchased');
+  const held = lines.filter((_, i) => i % 10 < 3);
+  assert.deepEqual(t.heldBase, { n: 356, yes: held.filter((l) => l.split(',')[col] === 'yes').length });
+  assert.equal(held.length, 356);
+  assert.ok(t.heldBase.yes > 0 && t.heldBase.yes < 356);
   assert.ok(t.pattern.heldAuc >= GATE_AUC);
   assert.equal(validPattern(t.pattern), true);
   assert.equal(t.pattern.domain, 'my-shop');

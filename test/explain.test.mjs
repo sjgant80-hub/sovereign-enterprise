@@ -672,6 +672,13 @@ test('the roll-out is the white paper’s §9, phase for phase; every agent is s
   assert.deepEqual([...on].sort(), AGENTS.map((a) => a.id).sort());
   assert.ok(X.ROLLOUT.every((p) => p.why.length > 30));
   assert.ok(X.ROLLOUT.findIndex((p) => p.agents.includes('audit')) <= X.ROLLOUT.findIndex((p) => p.agents.includes('finance')), 'the second brain is live before money calls are automated');
+  // every phase has a gate it must pass before its old process ends, and the brochure prints those gates from here, not a copy
+  assert.ok(X.ROLLOUT.every((p) => typeof p.gate === 'string' && p.gate.length > 20), 'a gate for every phase');
+  assert.equal(new Set(X.ROLLOUT.map((p) => p.gate)).size, X.ROLLOUT.length);
+  const bro = read('ui/brochure.mjs');
+  assert.ok(bro.includes('${ROLLOUT.map(') && !X.ROLLOUT.some((p) => bro.includes(p.gate)), 'the brochure reads the gates from ROLLOUT');
+  // no phase names an agent the company does not have
+  assert.doesNotMatch(JSON.stringify(X.ROLLOUT) + sec, /people agent|HR agent/i);
 });
 
 test('adoption: five or more kinds of business, each covering every agent, the twelve weeks and what to measure', () => {
@@ -691,6 +698,17 @@ test('adoption: five or more kinds of business, each covering every agent, the t
   assert.equal((html.match(/<span class="kind ai">AI<\/span>/g) || []).length, AGENTS.length * X.ADOPTION.length);
   assert.ok(html.includes('Switches on: Systems agent, Audit agent'));
   assert.ok(html.includes('Switches on: Sales agent, Service agent'));
+});
+
+test('what it connects to: every integration named with its direction, its carrier and what happens — and the Xero door is the true one', async () => {
+  const { INTEGRATIONS } = await import('../ui/brochure.mjs');
+  assert.ok(INTEGRATIONS.length >= 8);
+  for (const x of INTEGRATIONS) for (const k of ['system', 'way', 'how', 'does']) assert.ok(typeof x[k] === 'string' && x[k].length > 1, x.system + ' ' + k);
+  assert.equal(new Set(INTEGRATIONS.map((x) => x.system)).size, INTEGRATIONS.length);
+  for (const want of ['Your bank', 'Sage Accounting (UK)', 'Xero', 'A language model', 'Your other machines', 'Your auditor']) assert.ok(INTEGRATIONS.some((x) => x.system === want), want);
+  assert.match(INTEGRATIONS.find((x) => x.system === 'Xero').does, /refuses manual journals to bank, receivable and payable accounts/);
+  assert.doesNotMatch(JSON.stringify(INTEGRATIONS), /[£$€]|\bprice|not (yet|written)/i);
+  assert.ok(read('ui/brochure.mjs').includes('${INTEGRATIONS.map('), 'the Case prints the list itself');
 });
 
 test('no pricing and no figures typed into the words: the content carries no currency', () => {
@@ -821,7 +839,7 @@ const GOLDEN = {
   'spine/wide': 'f827a1fe4040dcdf', 'spine/narrow': 'c763b2ba29d40647', 'brain/wide': 'a85d3f7c0e19593a', 'brain/narrow': 'a1201af739ed62f7',
   'brainFraud/wide': '4c671d96513b2d3d', 'brainFraud/narrow': '76f821fc70598546', 'mycelium/wide': '4353087be268e8bc', 'mycelium/narrow': '404a9cd89a3ca033',
   'trust/wide': 'ff3bb281c0b16dd2', 'trust/narrow': '0bdfff1a18934ccf', start: 'f6a26e4a885c6eea', guide: '57ae5c1a4a5e5145',
-  blueprint: '4ced59451a890ff6', adoption: 'f870ed3bc26adc17', fit: '52794550ab9f2a35', trace: 'f08f623def5faf0b',
+  blueprint: '99707b267e78d8ff', adoption: 'e9b08abacac201d5', fit: '52794550ab9f2a35', trace: 'f08f623def5faf0b',
 };
 test('golden: every picture and view is byte-stable', () => {
   const rec = { agent: 'sales', event: 'e000043', domain: 'fraud', action: 'release-payment', state: 'done', by: 'mesh:finance', cross: true, second: 'audit', conf: 300, receipt: 'aa11bb22cc33dd44', why: 'a second brain agreed', customer: 'C1000', channel: 'fraud' };

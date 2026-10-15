@@ -311,7 +311,7 @@ function bridgeHtml(s) {
       return '<div class="pl-job"><h4><span class="mono">' + esc(f.name) + '</span> — ' + esc(KIND_WORDS[f.cls.kind]) + '</h4>' + body +
         (b && b.receipt && b.receipt.ok ? '<p class="note">Fingerprint: the file <span class="mono">' + esc(b.receipt.inputHash.slice(0, 16)) + '…</span> → what came out <span class="mono">' + esc(b.receipt.outputHash.slice(0, 16)) + '…</span> — it goes on the receipt.</p>' : '') + '</div>';
     }).join('') +
-    '<p class="note">Nothing is posted into the company’s books from here: the Finance agent’s device sequences every posting into the vault, and the journal goes to the accountant’s own Sage as it is. Xero is not written yet — its import layout sits behind a login and could not be checked against Xero’s own words, so no guessed file is made.</p>';
+    '<p class="note">Nothing is posted into the company’s books from here: the Finance agent’s device sequences every posting into the vault, and the journal goes to the accountant’s own Sage as it is. An accountant on Xero takes the files the other way: Xero refuses manual journals to bank, receivable and payable accounts (<a href="https://developer.xero.com/documentation/api/accounting/manualjournals" target="_blank" rel="noopener">Xero’s developer documentation</a>), so the bank statement goes into Xero as the statement file itself, through Xero’s own bank import, and the trial balance through Xero’s conversion balances.</p>';
 }
 
 function devicesHtml(s) {

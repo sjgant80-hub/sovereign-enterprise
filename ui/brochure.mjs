@@ -3,6 +3,7 @@
 // cloudCompare + undercut) from data/basis.json and the business the visitor entered in "For your business"; the
 // "working day" figures are read from receipts/company.json — the run CI re-executes byte for byte. Nothing typed.
 import { gbp0, gbpM } from '../src/office.mjs';
+import { ROLLOUT } from '../src/explain.mjs';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pct = (x, d = 0) => (x * 100).toFixed(d) + '%';
@@ -30,6 +31,21 @@ export const DATA_FLOWS = Object.freeze([
   { what: 'Voice on the phone line', where: 'A per-use voice service (the white paper costs ElevenLabs)', receives: 'The audio of the calls you route to it', off: 'Optional — leave it out and people take the calls' },
   { what: 'Connecting machines on different networks', where: 'A STUN server (Google’s public one by default, or your own)', receives: 'Each machine’s public network address, to find a direct path', off: 'Same-network use needs none; set your own STUN/TURN server' },
   { what: 'This demonstration page', where: 'GitHub Pages', receives: 'The page request', off: 'In production your hub serves the page on your network' },
+]);
+
+/** What it connects to — each one named, which way the data goes, and the file or call that carries it. Only what the code does
+ *  and its tests prove: the bridges (src/bridge.mjs), the model adapters (src/model.mjs), the direct links (src/rtc.mjs) and the
+ *  exports (src/exportco.mjs, src/audit.mjs). */
+export const INTEGRATIONS = Object.freeze([
+  { system: 'Your bank', way: 'In', how: 'The statement your online banking exports as CSV — one amount column, paid in and paid out, or debit and credit', does: 'Read to the penny and reconciled against the running balance; each line posted by a rule, and a line no rule knows waits in suspense for a person' },
+  { system: 'Your accountant’s trial balance', way: 'In', how: 'A trial balance exported as CSV from the accounting package', does: 'The opening balances, refused unless they balance' },
+  { system: 'Your customer list or pipeline', way: 'In and out', how: 'The CSV your CRM or spreadsheet exports — name, company or contact columns, deal stage and value', does: 'Read column by column into the CRM; out again as a spreadsheet any CRM imports' },
+  { system: 'Sage Accounting (UK)', way: 'Out and back', how: 'Sage’s journal import file', does: 'The books as journals your accountant imports; their adjusted file reads straight back' },
+  { system: 'Xero', way: 'In to Xero', how: 'Xero’s own bank import and conversion balances', does: 'Xero refuses manual journals to bank, receivable and payable accounts, so the statement goes in as the statement file and the opening balances as conversion balances' },
+  { system: 'A language model', way: 'Calls out, only when asked', how: 'Ollama on your machine; LM Studio, vLLM or llama.cpp through their OpenAI-compatible server; WebLLM in the browser; or Anthropic with your own key', does: 'Reads, routes and drafts the free text no brain covers, within a spending limit; every call written to the record' },
+  { system: 'Your other machines', way: 'Both ways', how: 'A direct encrypted WebRTC link; your own STUN/TURN server if you set one', does: 'Every device holds the same company, with no server in the path' },
+  { system: 'Your auditor', way: 'Out', how: 'The record’s signed checkpoint and a standalone checker page', does: 'Proves the books only ever grew, without access to anything else' },
+  { system: 'A backup, or a move', way: 'Out and back', how: 'The signed company file plus every list as CSV', does: 'A new device restores the very same company; the spreadsheets open anywhere' },
 ]);
 
 /** ctx = { fit (adopt.fitPlan + transition + payback), rows (sensitivity), be (breakEven), basis, receipt, revenue, margin,
@@ -172,6 +188,14 @@ export function renderBrochure(ctx) {
 </section>
 
 <section class="b-sec">
+  <h3>What it connects to</h3>
+  <div class="tablewrap"><table>
+    <tr><th>System</th><th>Which way</th><th>How</th><th>What happens</th></tr>
+    ${INTEGRATIONS.map((x) => `<tr><td><b>${esc(x.system)}</b></td><td>${esc(x.way)}</td><td>${esc(x.how)}</td><td>${esc(x.does)}</td></tr>`).join('')}
+  </table></div>
+</section>
+
+<section class="b-sec">
   <h3>Security, data protection and oversight — built in</h3>
   <div class="b-grid">
     <div><h4>Every write signed and checked</h4><p>Each device signs what it writes with its own key; every other device checks the signature, the form and the sender's grant before reading it. Forged, altered, replayed or malformed writes are refused.</p></div>
@@ -192,11 +216,11 @@ export function renderBrochure(ctx) {
     <dt>What if someone attacks it?</dt><dd>Hostile messages are quarantined before any AI reads them. Once a person confirms a new attack, every device becomes immune to it. An AI update is adopted only if it does at least as well as the brain it replaces on each device's own records. Forged writes are refused at the door. An agent behaving unlike itself is paused automatically until a person clears it.</dd>
     <dt>What if a laptop is stolen?</dt><dd>Revoke its grant and every device refuses its writes from that moment. Nobody can rewrite what that device already wrote: every write names the one before it, so a forged version of the past is flagged with a proof on every device. Then issue the person a new device key. Each device's key is held by its browser in a form no web page can export and its copy of the company is stored sealed, so with full-disk encryption on and the screen locked, a thief with the laptop gets nothing. The owner's device is the one key that cannot be revoked; any two of the three recovery cards printed when the company was founded bring it back on a new machine.</dd>
     <dt>What if the internet goes down?</dt><dd>It keeps working. Devices sync with each other directly; when they reconnect, every device converges to the identical company.</dd>
-    <dt>Do we have to rip out our systems?</dt><dd>No. Your bank statement (one amount column, paid in and paid out, or debit and credit), your accountant’s trial balance and your customer list come in as the files those systems already export: every line is checked, money is read to the penny, the running balances are reconciled, and a line no rule recognises waits in a suspense account for a person. The books go back out as a Sage Accounting journal import, and the customers as a spreadsheet any CRM imports. Xero is not written yet: its import layout could not be checked against Xero’s own documentation, and a guessed file is not shipped. Your old systems keep running beside the agents until each department passes its go/no-go gate.</dd>
+    <dt>Do we have to rip out our systems?</dt><dd>No. Your bank statement (one amount column, paid in and paid out, or debit and credit), your accountant’s trial balance and your customer list come in as the files those systems already export: every line is checked, money is read to the penny, the running balances are reconciled, and a line no rule recognises waits in a suspense account for a person. The books go back out as a Sage Accounting journal import, and the customers as a spreadsheet any CRM imports. On Xero, the bank statement goes in as the statement itself through Xero’s own bank import and the opening balances as its conversion balances — Xero refuses manual journals to bank, receivable and payable accounts, so that is the door it keeps. Your old systems keep running beside the agents until each department passes its go/no-go gate.</dd>
     <dt>Who supplies it, and are we locked in?</dt><dd>AI Native Solutions (<a href="https://www.ai-nativesolutions.com" target="_blank" rel="noopener">ai-nativesolutions.com</a>) plants and supports it. The software is MIT-licensed — no licence fee — and you own the machines, the data and the brains, so it keeps running if you stop working with us. Support, response times, warranty and liability are set in each deployment's agreement.</dd>
     <dt>Is this proven or a promise?</dt><dd>The software is proven: its full test suite, a mutation gate that checks the tests catch every deliberate fault, and two byte-for-byte re-runs run on GitHub's servers on every change — and you can run them yourself. The business result on this page is modelled from sourced figures; your pilot measures it on your own records, and its receipt is yours to keep.</dd>
     <dt>What happens to our people?</dt><dd>${leads} AI-native roles direct the agents${kept ? ` and ${kept} kept people keep the client and on-site work` : ''}. Roles that go follow the statutory process — consultation, notice inside the dual-running months, redundancy pay — and the people who know the work best help train the agents before the old process is switched off.</dd>
-    <dt>How long do we keep records, if people can be erased?</dt><dd>The books keep every transaction for as long as the law requires (six years for HMRC) against a customer number; the person's name and contact details are sealed separately, so erasing them leaves the books complete.</dd>
+    <dt>How long do we keep records, if people can be erased?</dt><dd>The books keep every transaction for as long as the law requires (six years for HMRC) against a customer number; a person's details — a member of staff's, or a customer's name, email and phone — are sealed under that person's own key before they are written, so erasing them destroys the key, every copy goes dark, and the books stay complete.</dd>
   </dl>
 </section>
 
@@ -215,12 +239,7 @@ export function renderBrochure(ctx) {
   <h3>How it's delivered: twelve weeks, gated</h3>
   <div class="tablewrap"><table>
     <tr><th>Weeks</th><th>What goes live</th><th>Go / no-go before the old process ends</th></tr>
-    <tr><td>1–2</td><td>The hub and the AI boxes; every device on the company record; owner, leads and roles</td><td>Every device shows the same company</td></tr>
-    <tr><td>3–4</td><td>Chat, tasks and documents on every device; the Ops agent proposes</td><td>Two weeks with nothing lost and every device converged</td></tr>
-    <tr><td>5–6</td><td>CRM plus the service and sales agents, proposing beside your people</td><td>The agents agree with your people's decisions on your own history at the level you set, and the Watch list fits the leads' time</td></tr>
-    <tr><td>7–8</td><td>The books, the record and the finance agent, every money call confirmed by the Audit agent</td><td>The books reconcile to your bank to the penny for two weeks</td></tr>
-    <tr><td>9–10</td><td>People records, sealed per person; the people lead takes HR admin</td><td>Every personal detail sealed; an erasure tested end to end</td></tr>
-    <tr><td>11–12</td><td>Cut-over; the old seats end</td><td>Every department through its gate; if one isn't, it stays in dual running — its agent goes back to proposing while people decide</td></tr>
+    ${ROLLOUT.map((r) => `<tr><td>${esc(r.weeks)}</td><td>${esc(r.live)}</td><td>${esc(r.gate)}</td></tr>`).join('')}
   </table></div>
   <p>The hardware: the laptops your leads already have; one hub (${esc(basis.hub.product)}); ${p.capacity.boxes} AI boxes
     (${esc(box.product)}) — one carries the load at ${pct(p.capacity.decodeUtilisation)} busy, the second is the spare.</p>

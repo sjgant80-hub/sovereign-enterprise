@@ -309,6 +309,10 @@ test('policyForm and policyWords: the money limit (£ → pence), the confidence
   // called directly: the helper's default would turn undefined into true
   for (const bad of ['on', 1, null, undefined]) assert.deepEqual(O.policyForm({ limit: '5', floor: '0.1', autoPause: bad }), { ok: false, field: 'pause', why: 'the automatic pause is on or off' }, String(bad));
   assert.deepEqual(O.policyForm(null), { ok: false, field: 'limit', why: O.POLICY_WHY.limit });
+  // the same reading of a typed amount, for every money field on the page (the model tier's spending limit too)
+  assert.deepEqual(['5', '5.5', '5.05', '£5.10', ' £ 0.01 ', '0', '1,234,567.89', '999999999999'].map(O.penceOf), [500, 550, 505, 510, 1, 0, 123456789, 99999999999900]);
+  for (const bad of ['', '£', '-5', '5.123', '1,00', '5k', '1e3', '.5', null, 5, undefined]) assert.equal(O.penceOf(bad), null, String(bad));
+  assert.ok(!Number.isSafeInteger(O.penceOf('9' + ',999'.repeat(6))), 'a figure past the safe range comes back unsafe for its caller to refuse');
   // what a person reads back
   assert.deepEqual(O.policyWords({ moneyLimit: 50000, minConfidence: 100, autoPause: true }), [
     'Money limit £500: above it, a person decides any act that commits money — letting a payment through, standard credit terms, a purchase order.',

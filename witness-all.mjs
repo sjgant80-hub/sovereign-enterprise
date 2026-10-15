@@ -105,6 +105,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
 
 function main() {
 const only = process.argv.slice(2);
+// a name that matches no kernel judges nothing — and nothing judged must never print CLEAN
+const unknown = only.filter((o) => !PAIRS.some(([src]) => src === o));
+if (unknown.length) { console.log(`WITNESS NOT RUN — no kernel named ${unknown.join(', ')} (name it as its path, e.g. src/oversight.mjs)`); process.exit(1); }
 let allClean = true; const rows = [];
 for (const [src, tests] of PAIRS) {
   if (only.length && !only.includes(src)) continue;

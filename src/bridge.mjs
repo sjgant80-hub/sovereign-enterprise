@@ -475,7 +475,9 @@ const REF = /^[A-Za-z0-9][A-Za-z0-9 _.:\/-]{0,74}$/;
 export function journalToCsv(entries, format) {
   const zero = { entries: 0, lines: 0, debit: 0, credit: 0 };
   try {
-    if (format === 'xero') return no('a Xero file is not written: Xero’s own manual-journal import layout could not be checked against Xero’s documentation, and a guessed layout is not shipped', { format, text: '', rows: 0, rejected: [], totals: zero });
+    // Xero refuses manual journals to bank, receivable and payable accounts (developer.xero.com, Accounting API · Manual Journals),
+    // so a statement's journal could never import there: Xero takes the statement itself, and opening balances as conversion balances.
+    if (format === 'xero') return no('Xero takes the bank statement itself through its own bank import, and opening balances as conversion balances — it refuses manual journals to bank, receivable and payable accounts, so no journal file is written for it', { format, text: '', rows: 0, rejected: [], totals: zero });
     if (format !== 'sage') return no('the layouts are: sage', { format: '', text: '', rows: 0, rejected: [], totals: zero });
     if (!Array.isArray(entries) || tooMany(entries.length)) return no('there are no journal entries to write', { format, text: '', rows: 0, rejected: [], totals: zero });
     const out = [], rejected = [], seen = new Set();

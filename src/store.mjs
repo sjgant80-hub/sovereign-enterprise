@@ -17,6 +17,11 @@
 //     device persists is sealed under it (sealRecord: a fresh 96-bit IV, the namespace bound in as associated data) —
 //     what sits in IndexedDB is ciphertext. wipe() deletes the replica key with the log: crypto-shredding, so any copy
 //     of a record the browser's storage engine left behind on disk is unreadable too.
+//   · SUBJECT KEYS (D4). One AES-GCM-256 key per person or customer whose details this device took down, made on first
+//     ask, NON-extractable, kept in IndexedDB (subjectKey). Their details are sealed under it before they are written to the
+//     company, so every device holds only ciphertext. forget() is the erasure: the key is deleted and a tombstone kept, so no
+//     key is ever made again for that subject — every sealed copy, on every device and in every backup, stays unreadable,
+//     while the record, its history and the books still verify. wipe() deletes a namespace's subject keys with it.
 //   · THE LOG is append-only and bounded. RETENTION RULE: per device, the newest LOG_MAX (20,000) envelopes are kept,
 //     oldest dropped first — except grants and revokes (the role tree), which go to a lane of their own and are kept
 //     regardless of age, up to PIN_MAX (5,000; past that they share the bounded lane). A dropped envelope is not lost to
@@ -69,7 +74,9 @@ const b64urlToBytes = (s) => { const b = s.replace(/-/g, '+').replace(/_/g, '/')
 const okNs = (ns) => typeof ns === 'string' && NS.test(ns);
 const range = (a, b) => Array.from({ length: Math.max(0, b - a) }, (_, j) => a + j);
 const aadOf = (ns) => utf8('se-log-v1|' + ns);
-const K = { dev: (ns) => 'dev|' + ns, aes: (ns) => 'aes|' + ns, meta: (ns) => 'log|' + ns, rec: (ns, i) => 'rec|' + ns + '|' + i, pin: (ns, i) => 'pin|' + ns + '|' + i };
+const SUBJECT = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
+const okSubject = (x) => typeof x === 'string' && SUBJECT.test(x);
+const K = { subj: (ns, x) => 'subj|' + ns + '|' + x, gone: (ns, x) => 'gone|' + ns + '|' + x, subjects: (ns) => 'subjs|' + ns, dev: (ns) => 'dev|' + ns, aes: (ns) => 'aes|' + ns, meta: (ns) => 'log|' + ns, rec: (ns, i) => 'rec|' + ns + '|' + i, pin: (ns, i) => 'pin|' + ns + '|' + i };
 
 /** Is this envelope a grant or a revoke (a write of the role tree)? Total: anything unreadable is not. */
 export function isRoleWrite(bytes) {
@@ -217,7 +224,11 @@ export function createKeyStore(opts) {
     g.onsuccess = () => {
       for (const k of recordKeys(ns, metaOf(g.result))) s.delete(k);
       s.delete(K.meta(ns));
-      if (!keepKeys) { s.delete(K.dev(ns)); s.delete(K.aes(ns)); }
+      if (!keepKeys) {
+        s.delete(K.dev(ns)); s.delete(K.aes(ns));
+        const l = s.get(K.subjects(ns));   // every subject key this device made goes with it (wipe is a crypto-shred)
+        l.onsuccess = () => { for (const x of Array.isArray(l.result) ? l.result : []) if (okSubject(x)) { s.delete(K.subj(ns, x)); s.delete(K.gone(ns, x)); } s.delete(K.subjects(ns)); };
+      }
       if (dev) s.put(dev, K.dev(ns));
     };
     return () => true;
@@ -393,6 +404,30 @@ export function createKeyStore(opts) {
 
     /** Drop everything held for ns: device key, replica key (crypto-shred), log. */
     wipe: (ns) => guard(ns, async () => { await drop(ns, false); return { ok: true }; }),
+    /** The key for one subject's details on this device: AES-GCM-256, NON-extractable, made on first ask.
+     *  → { ok: true, key, fresh } | { ok: false, reason: 'subject' | 'erased' | … } — never a key for a forgotten subject. */
+    subjectKey: (ns, subject) => guard(ns, async () => {
+      if (!okSubject(subject)) return refuse('subject');
+      if ((await read(K.gone(ns, subject))) === true) return refuse('erased');
+      const have = await read(K.subj(ns, subject));
+      if (have && have.type === 'secret') return { ok: true, key: have, fresh: false };
+      const key = await subtle.generateKey(AES, false, ['encrypt', 'decrypt']);
+      await tx('readwrite', (st) => {
+        st.put(key, K.subj(ns, subject));
+        const l = st.get(K.subjects(ns));
+        l.onsuccess = () => { const list = Array.isArray(l.result) ? l.result : []; if (!list.includes(subject)) st.put([...list, subject], K.subjects(ns)); };
+        return () => true;
+      });
+      return { ok: true, key, fresh: true };
+    }),
+    /** Erase one subject: its key is deleted and a tombstone kept in the same transaction. → { ok: true } */
+    forget: (ns, subject) => guard(ns, async () => {
+      if (!okSubject(subject)) return refuse('subject');
+      await tx('readwrite', (st) => { st.delete(K.subj(ns, subject)); st.put(true, K.gone(ns, subject)); return () => true; });
+      return { ok: true };
+    }),
+    /** Has this subject been forgotten here? → { ok: true, erased } */
+    erased: (ns, subject) => guard(ns, async () => (okSubject(subject) ? { ok: true, erased: (await read(K.gone(ns, subject))) === true } : refuse('subject'))),
 
     /** Mark ns as opened now (the tab-device retention rule counts from here). → { ok, seen } — seen null if ns holds no key */
     touch: (ns) => guard(ns, async () => {

@@ -60,7 +60,9 @@ export function growPattern(domain, rows, features, { seed = 1, grow = GROW, gro
     };
     pattern.patternId = sha256(JSON.stringify({ d: domain, s: seedStr, r: pattern.rules })).slice(0, 16);
     if (!validPattern(pattern)) return { ok: false, verified: false, why: 'the grown pattern is malformed' };
-    return { ok: true, pattern, verified: pattern.verified, why: pattern.verified ? 'grew and passed held-out (AUC ' + g.heldAuc + ')' : 'grew but failed held-out (AUC ' + g.heldAuc + ' < ' + GATE_AUC + ') — CUT' };
+    // the base rate on the very rows heldAcc was graded on — beside the pattern, not in it, so brain files are unchanged
+    const heldBase = { n: ds.heldRows.length, yes: ds.heldRows.filter((i) => ds.y[i] === 1).length };
+    return { ok: true, pattern, heldBase, verified: pattern.verified, why: pattern.verified ? 'grew and passed held-out (AUC ' + g.heldAuc + ')' : 'grew but failed held-out (AUC ' + g.heldAuc + ' < ' + GATE_AUC + ') — CUT' };
   } catch {
     return { ok: false, verified: false, why: 'growth failed closed' };
   }

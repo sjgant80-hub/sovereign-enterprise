@@ -38,7 +38,8 @@ Source: https://github.com/sjgant80-hub/sovereign-enterprise
   grown from the business's own records (graded on rows it never grew on), the shipped brain, or a person; a decision log is re-grown
   and checked against the old decisions and what really happened.
 - Bridges: a bank statement reconciled to the penny, a trial balance as the opening entry, a customer list; out as a Sage Accounting
-  journal import and a CRM spreadsheet. Xero is not written (its layout could not be checked against Xero's own documentation).
+  journal import and a CRM spreadsheet. On Xero the statement goes in through Xero's own bank import and the opening
+  balances as conversion balances: Xero refuses manual journals to bank, receivable and payable accounts (Xero developer docs).
 - The planter's device (the owner's or an admin's — on site, or remote after joining by the invite link) signs the plan into the
   company. Each agent device reads which key really wrote a planted brain, takes it only from the owner, an admin or the agent that runs
   that job, and only if it re-checks on its own records at least as well as the brain it has.

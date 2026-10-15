@@ -568,3 +568,62 @@ test('total: no IndexedDB, a failing one, bad namespaces, junk arguments — ref
   assert.deepEqual(await ks.close(), { ok: true });
   assert.equal((await ks.device('owner')).ok, true, 'a closed store reopens on the next call');
 });
+
+test('subject keys (D4): one non-extractable key per customer, the same on every reload; forget() erases it for good', async () => {
+  const { fake, ks } = fresh();
+  const a = await ks.subjectKey('owner', 'c-7');
+  assert.equal(a.ok, true);
+  assert.equal(a.fresh, true);
+  await notExtractable(a.key);
+  assert.deepEqual(a.key.algorithm, { name: 'AES-GCM', length: 256 });
+  // the same key again — here, and from a second store over the same database (a reload)
+  const b = await ks.subjectKey('owner', 'c-7');
+  assert.equal(b.fresh, false);
+  const again = await mk(fake).subjectKey('owner', 'c-7');
+  assert.equal(again.ok, true);
+  assert.equal(again.fresh, false);
+  const sealed = await sealRecord({ subtle, key: a.key, bytes: bytesOf('jane@example.com'), aad: bytesOf('crm/c-7') });
+  assert.equal(new TextDecoder().decode((await openRecord({ subtle, key: again.key, sealed: sealed.sealed, aad: bytesOf('crm/c-7') })).bytes), 'jane@example.com');
+  // another subject, another key: one customer's key never opens another's details
+  const other = await ks.subjectKey('owner', 'c-8');
+  assert.equal(other.fresh, true);
+  assert.deepEqual(await openRecord({ subtle, key: other.key, sealed: sealed.sealed, aad: bytesOf('crm/c-7') }), { ok: false, reason: 'open' });
+  // namespaces keep devices apart: the same subject on another device namespace is a different key
+  const elsewhere = await ks.subjectKey('tab.abc', 'c-7');
+  assert.equal(elsewhere.fresh, true);
+  assert.deepEqual(await openRecord({ subtle, key: elsewhere.key, sealed: sealed.sealed, aad: bytesOf('crm/c-7') }), { ok: false, reason: 'open' });
+  // erase: the key is gone and never made again — the sealed copy stays dark
+  assert.deepEqual(await ks.erased('owner', 'c-7'), { ok: true, erased: false });
+  assert.deepEqual(await ks.forget('owner', 'c-7'), { ok: true });
+  assert.deepEqual(await ks.erased('owner', 'c-7'), { ok: true, erased: true });
+  assert.deepEqual(await ks.subjectKey('owner', 'c-7'), { ok: false, reason: 'erased' });
+  assert.deepEqual(await mk(fake).subjectKey('owner', 'c-7'), { ok: false, reason: 'erased' }, 'after a reload too');
+  assert.ok(![...fake.raw('se-test').keys()].includes('subj|owner|c-7'), 'the key itself is deleted, not just hidden');
+  assert.equal((await ks.subjectKey('owner', 'c-8')).fresh, false, 'forgetting one customer leaves the others');
+  assert.deepEqual(await ks.erased('owner', 'c-8'), { ok: true, erased: false });
+  // forgetting a subject never asked for still leaves a tombstone: no key can be made for it later
+  assert.deepEqual(await ks.forget('owner', 'c-9'), { ok: true });
+  assert.deepEqual(await ks.subjectKey('owner', 'c-9'), { ok: false, reason: 'erased' });
+});
+
+test('subject keys: wipe() takes every one of a namespace’s subject keys with it; bad subjects and namespaces are refused', async () => {
+  const { fake, ks } = fresh();
+  await ks.device('owner');
+  for (const x of ['c-1', 'c-2', 'p-owner']) assert.equal((await ks.subjectKey('owner', x)).ok, true);
+  await ks.forget('owner', 'c-2');
+  assert.equal((await ks.subjectKey('tab.keep', 'c-1')).ok, true);
+  assert.deepEqual(await ks.wipe('owner'), { ok: true });
+  const left = [...fake.raw('se-test').keys()];
+  assert.deepEqual(left.filter((k) => k.includes('|owner')), [], 'nothing of the wiped device is left');
+  assert.ok(left.includes('subj|tab.keep|c-1'), 'another device keeps its own');
+  assert.equal((await ks.subjectKey('owner', 'c-1')).fresh, true, 'a wiped device starts again from nothing');
+  for (const bad of ['', '-x', 'a b', 'a|b', 'x'.repeat(65), null, 7, undefined, {}]) {
+    assert.deepEqual(await ks.subjectKey('owner', bad), { ok: false, reason: 'subject' }, String(bad));
+    assert.deepEqual(await ks.forget('owner', bad), { ok: false, reason: 'subject' }, String(bad));
+    assert.deepEqual(await ks.erased('owner', bad), { ok: false, reason: 'subject' }, String(bad));
+  }
+  assert.equal((await ks.subjectKey('owner', 'x'.repeat(64))).ok, true, 'exactly the longest name');
+  assert.equal((await ks.subjectKey('owner', 'A.b_c-9')).ok, true);
+  assert.equal((await ks.subjectKey('no such ns!', 'c-1')).reason, 'ns');
+  assert.equal((await createKeyStore({ idb: null, subtle }).subjectKey('owner', 'c-1')).reason, 'no-store');
+});

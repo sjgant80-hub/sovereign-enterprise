@@ -487,7 +487,7 @@ test('Sage import: what Sage would refuse is listed and left out, never half-wri
   assert.deepEqual(r.totals, { entries: 4, lines: 8, debit: 9999999903, credit: 9999999903 });
   const x = journalToCsv([ok], 'xero');
   assert.deepEqual([x.ok, x.text], [false, '']);
-  assert.match(x.why, /^a Xero file is not written: Xero’s own manual-journal import layout could not be checked/);
+  assert.match(x.why, /^Xero takes the bank statement itself through its own bank import, and opening balances as conversion balances — it refuses manual journals to bank, receivable and payable accounts/);
   assert.equal(journalToCsv([ok], 'quickbooks').why, 'the layouts are: sage');
   assert.equal(journalToCsv([ok]).why, 'the layouts are: sage');
   assert.equal(journalToCsv('x', 'sage').why, 'there are no journal entries to write');

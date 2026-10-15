@@ -17,6 +17,11 @@ test('a node grows a verified fraud pattern from its own sample, and it holds on
   assert.equal(g.pattern.held, 210);                 // 3 in 10 held out
   assert.equal(g.pattern.train, 490);
   assert.equal(g.pattern.grownBy, 'audit');
+  // the base rate on those same held-out rows, counted here independently: 3 rows in every 10, how many were fraud
+  const yes = mine.filter((r, i) => i % 10 < 3 && r.y === 1).length;
+  assert.deepEqual(g.heldBase, { n: 210, yes });
+  assert.ok(yes > 0 && yes < 210);
+  assert.equal(g.pattern.heldBase, undefined, 'not inside the pattern: brain files are unchanged');
   assert.ok(g.pattern.heldAuc >= GATE_AUC);
   assert.match(g.pattern.patternId, /^[0-9a-f]{16}$/);
   const fresh = sample('fraud', 999, 600).rows;      // another device's data

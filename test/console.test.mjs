@@ -66,7 +66,7 @@ test('the demo business: the real samples as a business’s exports, a decision 
   assert.equal(bank.out.totals.net, 787367 - 1248000);
   assert.deepEqual(bank.out.suspense.map((x) => x.desc), ['CARD TAKINGS', 'CARD TAKINGS', 'SUPPLIER 0042', 'CARD TAKINGS', 'CARD TAKINGS'], 'what no rule knows waits for a person');
   assert.equal(parseJournalCsv(bank.sage.text).entries.length, 12, 'the Sage journal reads back, every entry');
-  assert.match(bank.xero, /^a Xero file is not written/);
+  assert.match(bank.xero, /^Xero takes the bank statement itself through its own bank import/);
   assert.equal(bank.receipt.ok, true);
   // the opening books balance, and agree with the statement's opening balance
   const tb = U.bridgeOf('trial-balance', files.find((f) => f.name === 'example-trial-balance.csv').text, { date: '2026-08-31' });

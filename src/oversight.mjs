@@ -285,13 +285,18 @@ export const POLICY_WHY = Object.freeze({
   floor: 'the confidence floor is a number from 0 to 1, like 0.10',
   pause: 'the automatic pause is on or off',
 });
+/** Pounds and pence as a person types them — '500', '5.5', '£1,250.50' — → whole pence; null when it is not that.
+ *  A very long figure comes back too large to be a safe integer: each caller sets its own ceiling. */
+export function penceOf(text) {
+  const m = MONEY.exec(typeof text === 'string' ? text : '');
+  return m ? Number(m[1].replace(/,/g, '')) * 100 + Number((m[2] || '').padEnd(2, '0')) : null;
+}
 /** The Policies panel's three fields → { ok, fields: { moneyLimit (pence), minConfidence (permille), autoPause } } | { ok:false, why }. */
 export function policyForm(input) {
   try {
     const { limit, floor, autoPause } = input;
-    const m = MONEY.exec(typeof limit === 'string' ? limit : '');
-    if (!m) return { ok: false, field: 'limit', why: POLICY_WHY.limit };
-    const pence = Number(m[1].replace(/,/g, '')) * 100 + Number((m[2] || '').padEnd(2, '0'));
+    const pence = penceOf(limit);
+    if (pence === null) return { ok: false, field: 'limit', why: POLICY_WHY.limit };
     if (!Number.isSafeInteger(pence) || pence > MAX_LIMIT) return { ok: false, field: 'limit', why: POLICY_WHY['limit-size'] };
     const f = FLOOR.exec(typeof floor === 'string' ? floor : '');
     if (!f) return { ok: false, field: 'floor', why: POLICY_WHY.floor };
