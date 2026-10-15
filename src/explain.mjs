@@ -28,7 +28,7 @@ const CTRL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
 
 /** Escape for HTML / SVG text and attribute values (control characters dropped). Total. */
 export function esc(s) {
-  try { return String(s ?? '').replace(CTRL, '').replace(/[&<>"']/g, (c) => ENT[c]); } catch { return ''; }
+  try { return String(s ?? '').replace(CTRL, '').replace(/[&<>\x22\x27]/g, (c) => ENT[c]); } catch { return ''; }
 }
 
 /** Word-wrap to at most `max` characters a line (a word longer than a line is split). Total. */

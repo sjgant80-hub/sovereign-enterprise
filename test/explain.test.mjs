@@ -778,6 +778,42 @@ test('fit it to your business: the form, and the white paper’s own numbers bac
   assert.equal(X.fitHtml(null, BASIS).includes('the modelled office is missing') || X.fitHtml(null, BASIS) === '', true);
 });
 
+test('fit result: the move, the payback and the 50/70/90 table read right at every edge', () => {
+  const P = plan(OFFICE, BASIS);
+  const T = { leavers: 3, redundancyWeeks: 6, redundancy: 13518, noticeWeeks: 5, consultationDays: 0, dualRunWeeks: 13, dualRun: 50000, training: 2000, contingency: 1000, total: 66518 };
+  const Y = { paybackMonths: 7.6, npv: 900000, net: 1000000 };
+  const base = { ok: true, added: 0, plan: P, transition: T, payback: Y };
+  const head = ' over ' + P.years + ' years';
+  // a saving of exactly nothing is still "before the move" — not "the move would add"
+  const zero = X.fitResultHtml({ ...base, plan: { ...P, saving: 0, savingPct: 0 } });
+  assert.ok(zero.includes('saves £0 (0%) before the move. The one-off move costs ' + gbp0(T.total) + ', so the net saving is ' + gbp0(Y.net) + '.'));
+  // a payback of exactly one month is "1 month"; under one is "under a month"
+  assert.ok(X.fitResultHtml({ ...base, payback: { ...Y, paybackMonths: 1 } }).includes('It pays back in <b>1 month</b>'));
+  assert.ok(X.fitResultHtml({ ...base, payback: { ...Y, paybackMonths: 0.5 } }).includes('It pays back in <b>under a month</b>'));
+  // nobody leaves → no move table, but the saving still reads "before the move"
+  const none = X.fitResultHtml({ ...base, transition: { ...T, leavers: 0 } });
+  assert.ok(none.includes('before the move') && !none.includes('The move, one-off'));
+  // a transition without a payback, or neither, still renders the comparison and claims nothing about the move
+  const noY = X.fitResultHtml({ ...base, payback: null });
+  assert.ok(noY.includes(head) && !noY.includes('before the move') && !noY.includes('The move, one-off'));
+  const noT = X.fitResultHtml({ ...base, transition: null, payback: null });
+  assert.ok(noT.includes(head) && !noT.includes('The move, one-off'));
+  // no extra → the move but no table
+  const bare = X.fitResultHtml(base);
+  assert.ok(bare.includes('The move, one-off') && !bare.includes('The assumption under every number'));
+  // rows with no break-even → the table and no note; a never-paying row reads "never"
+  const row = { ok: true, share: 0.7, team: 6, net: 123456, paybackMonths: Infinity };
+  const noBe = X.fitResultHtml(base, { rows: [row] });
+  assert.ok(noBe.includes('<td>70% of the work</td><td class="n">6</td><td class="n">' + gbp0(123456) + '</td><td class="n">never</td>'));
+  assert.ok(!noBe.includes('It stops paying') && !noBe.includes('It pays even'));
+  // a row the model could not compute is left out, never shown
+  const mixed = X.fitResultHtml(base, { rows: [row, { ...row, ok: false, share: 0.9 }, null] });
+  assert.ok(mixed.includes('<td>70% of the work</td>') && !mixed.includes('90% of the work'));
+  // a break-even that failed adds no note
+  assert.ok(!X.fitResultHtml(base, { rows: [row], be: { ok: false } }).includes('It stops paying'));
+  assert.ok(X.fitResultHtml(base, { rows: [row], be: { ok: true, share: 0.4123 } }).includes('It stops paying below <b>41.2%</b>'));
+});
+
 // ── golden: the pictures and views are byte-stable — any change is a reviewed change ────────────────────────────
 // Re-pin after reviewing the rendered output: EXPLAIN_PIN=1 node --test test/explain.test.mjs prints the new hashes.
 const GOLDEN = {

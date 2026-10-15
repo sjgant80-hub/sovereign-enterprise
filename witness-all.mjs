@@ -25,10 +25,33 @@
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** Where the witness would hide REAL code: its masker reads '…' / "…" as strings and does not stop at a newline, so a
+ *  stray quote inside a regex or a backtick template blanks code up to the next matching quote — and those operators are
+ *  never mutated (a false clean). A JS string cannot span lines unescaped, so any quoted run that crosses one is a span
+ *  of hidden code. Returns [first line, last line] for each. */
+export function hiddenSpans(src) {
+  const spans = [];
+  let state = 'code', start = -1, line = 1, startLine = 1;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i], d = src[i + 1];
+    if (c === '\n') line++;
+    if (state === 'code') {
+      if (c === '/' && d === '/') { i++; state = 'line'; }
+      else if (c === '/' && d === '*') { i++; state = 'block'; }
+      else if (c === "'" || c === '"') { state = c; start = i; startLine = line; }
+    } else if (state === 'line') { if (c === '\n') state = 'code'; }
+    else if (state === 'block') { if (c === '*' && d === '/') { i++; state = 'code'; } }
+    else if (c === '\\') { if (src[i + 1] === '\n') line++; i++; }
+    else if (c === state) { if (line > startLine) spans.push([startLine, line]); state = 'code'; }
+  }
+  if (state === "'" || state === '"') spans.push([startLine, line]);
+  return spans;
+}
 export const PAIRS = [
   ['src/crdt.mjs', ['test/crdt.test.mjs', 'test/fuzz.test.mjs', 'test/spine.fuzz.test.mjs']],
   ['src/gate.mjs', ['test/gate.test.mjs', 'test/fuzz.test.mjs', 'test/spine.fuzz.test.mjs']],
@@ -52,12 +75,23 @@ export const PAIRS = [
   ['src/explain.mjs', ['test/explain.test.mjs']],
   ['src/adopt.mjs', ['test/adopt.test.mjs']],
 ];
+// imported (by the tests) it only lends hiddenSpans and PAIRS; run directly, it is the gate
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();
+
+function main() {
 const only = process.argv.slice(2);
 let allClean = true; const rows = [];
 for (const [src, tests] of PAIRS) {
   if (only.length && !only.includes(src)) continue;
   if (!existsSync(join(HERE, src))) continue;
   const t0 = Date.now();
+  // code the masker would hide is never mutated — refuse to judge rather than report a clean that skipped it
+  const hidden = hiddenSpans(readFileSync(join(HERE, src), 'utf8'));
+  if (hidden.length) {
+    console.log(`✗ ${src.padEnd(16)} HIDDEN CODE — a stray quote hides lines ${hidden.map(([a, b]) => a + '–' + b).join(', ')} from mutation; write it as \\x22 / \\x27`);
+    allClean = false;
+    continue;
+  }
   // a red suite kills every mutant and reads as CLEAN — so the unmutated code must pass its tests first, or nothing is judged
   const base = spawnSync(process.execPath, ['--test', ...tests], { cwd: HERE, encoding: 'utf8', timeout: 300000 });
   if (base.status !== 0) {
@@ -74,3 +108,4 @@ for (const [src, tests] of PAIRS) {
 const k = rows.reduce((a, r) => a + r.killed, 0), n = rows.reduce((a, r) => a + r.total, 0);
 console.log(`\n${allClean ? 'WITNESS CLEAN' : 'WITNESS NOT CLEAN'} — ${k}/${n} mutants killed`);
 process.exit(allClean ? 0 : 1);
+}
