@@ -5,7 +5,7 @@
 // spine with its own key, a scoped grant and a brain. Work lands at a door that does not know who handles it, so an
 // agent that cannot answer asks the mesh; an agent asked about the same kind of work again and again LEARNS it —
 // adopts the published pattern, but only once it re-verifies on that agent's own data. High-stakes calls need a
-// second, independent brain. Outcomes come back, and an agent regrows its brain on them — the new brain replaces the
+// second brain, grown separately. Outcomes come back, and an agent regrows its brain on them — the new brain replaces the
 // old only if it beats it on cases neither saw. What no brain can confirm goes to the watch list for a human.
 import { answer, verifyOn } from './brain.mjs';
 import { decide, needsSecond, DEFAULT_POLICY, ACTIONS, scorecard, moneyLimitOf, opposite } from './agent.mjs';
@@ -20,7 +20,7 @@ export const AGENTS = Object.freeze([
   { id: 'finance', name: 'Finance agent', domains: ['fraud', 'credit'], cols: [...COMMON, 'journal', 'vault', 'vault_head', 'payments', 'terms', 'po'], job: 'Clears card payments, sets credit terms, keeps the books and sequences them into the vault.' },
   { id: 'ops', name: 'Ops agent', domains: ['inventory', 'maintenance', 'energy'], cols: [...COMMON, 'tasks', 'po'], job: 'Raises purchase orders before stock-outs, books machine services, sheds load before overloads.' },
   { id: 'systems', name: 'Systems agent', domains: ['intrusion'], cols: [...COMMON, 'tasks', 'security'], job: 'Watches every connection and quarantines intrusions.' },
-  { id: 'audit', name: 'Audit agent', domains: [], grows: ['fraud', 'credit', 'intrusion'], cols: ['brain', 'adopt', 'vault_cosig', 'msg', 'reply', 'alert'], job: 'Grows its own independent brains for every high-stakes call — the second brain that must agree — and witnesses the vault.' },
+  { id: 'audit', name: 'Audit agent', domains: [], grows: ['fraud', 'credit', 'intrusion'], cols: ['brain', 'adopt', 'vault_cosig', 'msg', 'reply', 'alert'], job: 'Grows its own brains, separately, for every high-stakes call — the second brain that must agree — and witnesses the vault.' },
 ]);
 // the door writes the work, and lists what it cannot hand to anyone — a customer waiting, a drafted reply — on the watch list
 export const HUB = Object.freeze({ id: 'hub', name: 'Office hub', title: 'The door: mail, web, payments and telemetry arrive here', cols: ['inbox', 'msg', 'model', 'watch'] });
@@ -149,7 +149,9 @@ const gbpText = (p) => '£' + (p / 100).toFixed(2);
 export function effects(d, ev, agentId, scr) {
   const out = [];
   const by = agentName(agentId);
-  const rec = (c, f) => out.push({ c, f });
+  // a record that holds the STATE of this work (a payment, terms, an order, a quarantine, a lead, a service visit) is keyed to
+  // the work, so a person's overturn replaces it — one payment, one order — and its history keeps what was there before
+  const rec = (c, f, kind) => { const id = workKey(kind, ev); out.push(id ? { c, id, f } : { c, f }); };
   if (!d || !ev) return out;
   if (d.state === 'watch') {
     if (d.by === 'screen') {
@@ -167,29 +169,35 @@ export function effects(d, ev, agentId, scr) {
   const vat = Math.round(ev.amount / 6);   // a VAT-inclusive gross at 20% → VAT is one sixth
   const cost = Math.round((ev.amount - vat) * COST_OF_SALES);   // the goods leave stock at cost when they are sold
   switch (d.action) {
-    case 'fast-track': rec('crm', { name: 'Web visitor ' + ev.customer, contact: 'web session', stage: 'qualified', value: ev.amount | 0, owner: by }); break;
+    case 'fast-track': rec('crm', { name: 'Web visitor ' + ev.customer, contact: 'web session', stage: 'qualified', value: ev.amount | 0, owner: by }, 'lead'); break;
     case 'retain':
       rec('tasks', { title: 'Retention offer sent to ' + ev.customer, owner: by, status: 'done' });
       rec('msg', { ch: 'general', body: by + ': ' + ev.customer + ' is at risk of leaving — retention offer sent.', by }); break;
     case 'release-payment':
       out.push({ post: { memo: 'Card sale ' + ev.customer, lines: [['1200', ev.amount, 0], ['4000', 0, ev.amount - vat], ['2200', 0, vat], ['5000', cost, 0], ['1001', 0, cost]] } });
-      rec('payments', { customer: ev.customer, amount: ev.amount, status: 'released', by }); break;
+      rec('payments', { customer: ev.customer, amount: ev.amount, status: 'released', by }, 'pay'); break;
     case 'hold-payment':
-      rec('payments', { customer: ev.customer, amount: ev.amount, status: 'held', by });
+      rec('payments', { customer: ev.customer, amount: ev.amount, status: 'held', by }, 'pay');
       rec('msg', { ch: 'general', body: by + ': held a ' + gbpText(ev.amount) + ' card payment from ' + ev.customer + ' — it looks fraudulent' + (d.crossChecked ? ' (a second brain agreed).' : '.'), by }); break;
     case 'upfront-terms': case 'standard-terms':
-      rec('terms', { customer: ev.customer, terms: d.action === 'upfront-terms' ? 'payment up front' : '30 days', by }); break;
+      rec('terms', { customer: ev.customer, terms: d.action === 'upfront-terms' ? 'payment up front' : '30 days', by }, 'terms'); break;
     case 'raise-po':
-      rec('po', { supplier: 'Supplier for ' + ev.customer, net: ev.amount, status: 'raised', by });
+      rec('po', { supplier: 'Supplier for ' + ev.customer, net: ev.amount, status: 'raised', by }, 'po');
       rec('tasks', { title: 'Restock ' + ev.customer + ' before it runs out (PO raised)', owner: by, status: 'doing' }); break;
-    case 'schedule-service': rec('tasks', { title: 'Service ' + ev.customer + ' before it fails', owner: by, status: 'todo' }); break;
+    case 'schedule-service': rec('tasks', { title: 'Service ' + ev.customer + ' before it fails', owner: by, status: 'todo' }, 'svc'); break;
     case 'shed-load': rec('msg', { ch: 'general', body: by + ': shedding non-critical load — an overload is predicted.', by }); break;
     case 'quarantine':
-      rec('security', { host: ev.customer, action: 'quarantined', by });
+      rec('security', { host: ev.customer, action: 'quarantined', by }, 'sec');
       rec('msg', { ch: 'general', body: by + ': quarantined ' + ev.customer + ' — the connection looks like an intrusion' + (d.crossChecked ? ' (a second brain agreed).' : '.'), by }); break;
     default: break;   // nurture, standard-reply, no-reorder, keep-running, normal-load, allow: the decision record is the whole act
   }
   return out;
+}
+
+/** The id of the record that holds a piece of work's state: kind + '-' + the work's id ('pay-e000042'); null when there is no
+ *  kind or the work's id is not a plain id — then the record gets an id of its own, as any other write. */
+export function workKey(kind, ev) {
+  return typeof kind === 'string' && ev && typeof ev.id === 'string' && /^[A-Za-z0-9_.-]{1,60}$/.test(ev.id) ? kind + '-' + ev.id : null;
 }
 
 /** Split a decision's writes into those this agent's grant covers and those it must hand to the scoped owner. */
@@ -208,22 +216,34 @@ export function splitEffects(list, cols, fallbackOwner) {
 // What a person's overturn of a finished customer decision says, in Chat: the new state of things.
 const OVERTURNED = Object.freeze({ retain: 'a retention offer is sent', 'standard-reply': 'the standard reply stands', 'release-payment': 'the card payment is released',
   'hold-payment': 'the card payment is held and the sale reversed', 'upfront-terms': 'the terms are now payment up front', 'standard-terms': 'the terms are now 30 days',
-  'fast-track': 'the visitor is fast-tracked into the CRM', nurture: 'the visitor stays on the normal path' });
+  'fast-track': 'the visitor is fast-tracked into the CRM', nurture: 'the visitor stays on the normal path', 'raise-po': 'a purchase order is raised',
+  'no-reorder': 'the purchase order is cancelled', 'schedule-service': 'a service visit is booked', 'keep-running': 'the service visit is stood down',
+  'shed-load': 'non-critical load is shed', 'normal-load': 'normal load is restored', quarantine: 'the host is quarantined', allow: 'the quarantine is lifted' });
 /**
- * A person reviewed a finished customer decision and overturned it (UK GDPR Art. 22: the right to a person's review).
- * → the writes that carry out the other action: its records, never its chat line (one plain line says what changed) —
- * and when a released card payment is overturned to a hold, the card sale is reversed in the books first: the money
- * goes back to the customer and the goods back into stock. [] for anything that is not an overturn of a customer job.
+ * A person reviewed a finished decision and overturned it (for a decision about a customer, UK GDPR Art. 22: the right to
+ * a person's review). → the writes that carry out the other action, its chat line apart (one plain line says what changed):
+ * the state records keyed to the work are REPLACED (one payment, one order, one quarantine), and where the other action
+ * writes nothing of its own, the old state is undone for real — the order cancelled, the quarantine lifted, the lead back
+ * on the normal path, the service visit stood down. A released card payment overturned to a hold reverses the card sale in
+ * the books first. current(collection, id) reads a record as the agent's device holds it: a purchase order is cancelled only
+ * while it is still only raised (once the goods are in, sending them back is a new decision), and a record is undone only if
+ * one keyed to this work is there. [] when it cannot be carried out.
  */
-export function overturnEffects(from, to, ev, agentId) {
+export function overturnEffects(from, to, ev, agentId, current = null) {
   try {
-    if (!CUSTOMER_JOBS.includes(ev.domain) || opposite(ev.domain, from) !== to) return [];   // only the other action of that job
+    if (opposite(ev.domain, from) !== to) return [];   // only the other action of that job
+    const now = (c, kind) => { try { return typeof current === 'function' ? current(c, workKey(kind, ev)) || null : null; } catch { return null; } };
+    if (from === 'raise-po' && (now('po', 'po') || {}).status !== 'raised') return [];
     const out = effects({ state: 'done', action: to, domain: ev.domain, crossChecked: false }, ev, agentId, null).filter((e) => e.c !== 'msg');
+    const by = agentName(agentId);
+    const undo = { 'raise-po': ['po', 'po', { status: 'cancelled', by }], quarantine: ['security', 'sec', { host: ev.customer, action: 'allowed', by }],
+      'fast-track': ['crm', 'lead', { stage: 'lead' }], 'schedule-service': ['tasks', 'svc', { status: 'done', title: 'Service ' + ev.customer + ' — stood down: a person overturned it' }] }[from];
+    if (undo && !now(undo[0], undo[1])) return [];   // no record keyed to this work on this device: nothing it can undo
+    if (undo) out.push({ c: undo[0], id: workKey(undo[1], ev), f: undo[2] });
     if (from === 'release-payment') {
       const vat = Math.round(ev.amount / 6), cost = Math.round((ev.amount - vat) * COST_OF_SALES);
       out.unshift({ post: { memo: 'Card sale reversed ' + ev.customer, lines: [['1200', 0, ev.amount], ['4000', ev.amount - vat, 0], ['2200', vat, 0], ['5000', 0, cost], ['1001', cost, 0]] } });
     }
-    const by = agentName(agentId);
     out.push({ c: 'msg', f: { ch: 'general', body: by + ': a person reviewed the decision on ' + ev.customer + ' and overturned it — ' + OVERTURNED[to] + '.', by } });
     return out;
   } catch { return []; }

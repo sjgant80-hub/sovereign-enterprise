@@ -88,7 +88,9 @@ export function jobEvidence(ledger) {
     const mine = L.filter((x) => (x.channel || x.domain) === domain);
     if (!mine.length) continue;
     const c = confusion(mine);
-    out[domain] = { job: JOBS[domain], ...c, held: mine.filter((x) => x.state === 'watch').length, versus: versusNothing(c) };
+    const stakes = ACTIONS[domain] ? ACTIONS[domain].stakes : 'normal';
+    out[domain] = { job: JOBS[domain], ...c, held: mine.filter((x) => x.state === 'watch').length, versus: versusNothing(c), stakes,
+      accept: acceptance(c, stakes), breakEven: costWeighed(c).breakEven };
   }
   return out;
 }
@@ -110,6 +112,51 @@ export function secondOpinion(ledger) {
     } else if (x.state === 'watch') out.noSecond++;
   }
   return out;
+}
+
+// ── may a job run unattended, and is it worth it ────────────────────────────────────────────────────────────────────
+/** The floors a job must clear before it runs unattended (the review asked for per-job acceptance criteria). Every job
+ *  must beat doing nothing on its own finished calls; a money or security job must also catch enough of the real cases
+ *  (recall) and be right often enough when it flags one (precision) — each judged on the LOWER end of its 95% interval,
+ *  so a handful of lucky calls cannot pass. A business may raise them; these are the defaults. */
+export const FLOORS = Object.freeze({ high: Object.freeze({ recall: 0.5, precision: 0.5 }), normal: Object.freeze({ recall: 0, precision: 0 }) });
+const rate = (k, n) => ({ k, n, ...wilson(k, n) });
+/**
+ * acceptance(c, stakes, floors) → { pass, why: [reasons it fails], versus, recall, precision } for one job's confusion
+ * matrix. A job that does not pass runs in proposal mode: its agent proposes and a person decides each call.
+ */
+export function acceptance(c, stakes, floors = FLOORS) {
+  const m = c && typeof c === 'object' ? c : {};
+  const tp = m.tp | 0, fp = m.fp | 0, fn = m.fn | 0;
+  const kind = stakes === 'high' ? 'high' : 'normal';
+  const f = (floors && floors[kind]) || FLOORS[kind];
+  const versus = versusNothing(m);
+  const recall = rate(tp, tp + fn), precision = rate(tp, tp + fp);
+  const why = [];
+  if (versus.verdict !== 'better') why.push(versus.verdict === 'worse' ? 'worse than doing nothing' : 'not yet shown better than doing nothing');
+  if (recall.lo < f.recall) why.push('catches too few of the real cases to be sure (at least ' + Math.round(f.recall * 100) + '% needed; as low as ' + Math.round(recall.lo * 100) + '% on this evidence)');
+  if (precision.lo < f.precision) why.push('too many of its flags could be false (at least ' + Math.round(f.precision * 100) + '% right needed; as low as ' + Math.round(precision.lo * 100) + '% on this evidence)');
+  return { pass: why.length === 0, why, versus, recall, precision };
+}
+
+/**
+ * costWeighed(c, costs) — the calls weighed by what a mistake costs, not counted. Against doing nothing, the agents avoid
+ * a missed case with every catch (tp) and add a false alarm with every false flag (fp): they come out ahead whenever a
+ * missed case costs more than fp / tp false alarms. That BREAK-EVEN ratio needs no price: breakEven = fp / tp (0 when it
+ * never raised a false alarm; null when it caught nothing — then no cost ratio makes it worth it). Given costs
+ * { miss, falseAlarm } in whole pence, it also prices the agents, doing nothing and flagging everything on these calls.
+ * → { tp, fp, fn, tn, breakEven, priced: null | { agents, nothing, everything, saving } }
+ */
+export function costWeighed(c, costs) {
+  const m = c && typeof c === 'object' ? c : {};
+  const tp = m.tp | 0, fp = m.fp | 0, fn = m.fn | 0, tn = m.tn | 0;
+  const breakEven = tp > 0 ? fp / tp : null;
+  const k = costs && typeof costs === 'object' ? costs : {};
+  const ok = (x) => Number.isSafeInteger(x) && x >= 0;
+  const priced = ok(k.miss) && ok(k.falseAlarm)
+    ? { agents: fn * k.miss + fp * k.falseAlarm, nothing: (tp + fn) * k.miss, everything: (fp + tn) * k.falseAlarm, saving: tp * k.miss - fp * k.falseAlarm }
+    : null;
+  return { tp, fp, fn, tn, breakEven, priced };
 }
 
 // ── re-run a decision from the signed record ───────────────────────────────────────────────────────────────────────

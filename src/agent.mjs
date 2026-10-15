@@ -53,6 +53,15 @@ export function actionFor(domain, label) {
   return a ? a[label === 1 ? 1 : 0] : null;
 }
 
+/** The jobs a person has put into proposal mode (policy.propose — a list, or the comma-separated text a policy record holds,
+ *  since a record's fields are single values): the company's own job names only, each once. In proposal mode the agent still
+ *  decides, but a person makes every call of that job — the fallback for a job below its acceptance floor. */
+export function proposeOf(policy) {
+  const x = policy ? policy.propose : null;
+  const p = Array.isArray(x) ? x : typeof x === 'string' ? x.split(',') : [];
+  return [...new Set(p.filter((d) => typeof d === 'string' && Object.prototype.hasOwnProperty.call(ACTIONS, d)))];
+}
+
 /** Does this call need a second brain? High-stakes domains always; any call below the confidence floor too. */
 export function needsSecond(domain, confidence, policy) {
   const a = ACTIONS[domain];
@@ -74,6 +83,7 @@ export function needsSecond(domain, confidence, policy) {
 export function decide(inputs, policy = DEFAULT_POLICY) {
   const d = choose(inputs, policy);
   try {
+    if (d.state === 'done' && proposeOf(policy).includes(d.domain)) return { ...d, state: 'watch', why: 'proposal mode — a person decides each call of this job until it clears its acceptance floor' };
     const limit = moneyLimitOf(policy);
     if (!limit || d.state !== 'done' || !MONEY_ACTIONS.includes(d.action)) return d;
     const amount = inputs.amount, known = Number.isSafeInteger(amount) && amount >= 0;

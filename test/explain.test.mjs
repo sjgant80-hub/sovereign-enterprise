@@ -307,7 +307,7 @@ test('trace: a money call cross-checked by the Audit agent’s independent brain
   assert.deepEqual(t.narrative.slice(0, 5), [
     'A card payment (' + f.ev.customer + ') arrived at the door (the office hub) and was passed to the Finance agent.',
     'The Finance agent’s own brain answered from a verified pattern' + paren(f.rec) + '.',
-    'Because it was a money call, a second, independent brain — a different pattern on another device, asked on the spine — had to agree. The Audit agent’s brain agreed.',
+    'Because it was a money call, a second brain — a different pattern on another device, grown separately and asked on the spine — had to agree. The Audit agent’s brain agreed.',
     'Then it acted: it released the card payment.',
     'It wrote a journal posting (sequenced into the vault) and a payment marked released.',
   ]);
@@ -322,7 +322,7 @@ test('trace: held for a person because the second brain disagreed', () => {
   const does = f.rec.action === 'hold-payment' ? 'hold the card payment as fraud' : 'release the card payment';
   assert.deepEqual(t.narrative.slice(1), [
     'The Finance agent’s own brain answered from a verified pattern' + paren(f.rec) + '.',
-    'Because it was a money call, it asked the other devices for a second opinion from an independent brain — and that brain disagreed.',
+    'Because it was a money call, it asked the other devices for a second opinion from a different brain — and that brain disagreed.',
     'So nothing was done: it waits on the Watch list for a person to choose. The agent proposes to ' + does + '.',
     'Later the real outcome came back: ' + (f.ev.truth ? 'the payment was fraud' : 'the payment was genuine') + '. Nothing was acted on here, so it is not scored. No agent saw the outcome when deciding.',
   ]);
@@ -334,12 +334,12 @@ test('trace: held because no second brain could confirm (the Audit agent offline
   const f = find('fraud', 'finance', lib('fraud', 'credit'), peersBut('finance', 'audit'), (d) => d.state === 'watch');
   const t = X.traceDecision(f.rec);
   assert.deepEqual(takenOf(t), ['door', 'own', 'second', 'watch']);
-  assert.equal(t.narrative[2], 'Because it was a money call, a second, independent brain had to agree — but no other device replied with an independent verified answer (a copy of the same brain does not count).');
+  assert.equal(t.narrative[2], 'Because it was a money call, a second brain had to agree — but no other device replied with a verified answer from a different brain (a copy of the same brain does not count).');
   assert.match(t.narrative[3], /^So nothing was done: it waits on the Watch list for a person to choose\. The agent proposes to (hold the card payment as fraud|release the card payment)\.$/);
   assert.equal(stepOf(t, 'second').detail, 'none could confirm');
   // an unsure normal-stakes call held the same way says so
   const u = find('churn', 'service', lib('churn'), peersBut('service'), (d) => d.state === 'watch', 'All good, just checking my usage.');
-  assert.equal(X.traceDecision(u.rec).narrative[3], 'Because it was an unsure call (below the confidence floor the overseer set), a second, independent brain had to agree — but no other device replied with an independent verified answer (a copy of the same brain does not count).');
+  assert.equal(X.traceDecision(u.rec).narrative[3], 'Because it was an unsure call (below the confidence floor the overseer set), a second brain had to agree — but no other device replied with a verified answer from a different brain (a copy of the same brain does not count).');
 });
 
 test('trace: answered by another device’s brain through the mesh — and what the agent had to hand on', () => {
@@ -835,11 +835,11 @@ test('fit result: the move, the payback and the 50/70/90 table read right at eve
 // ── golden: the pictures and views are byte-stable — any change is a reviewed change ────────────────────────────
 // Re-pin after reviewing the rendered output: EXPLAIN_PIN=1 node --test test/explain.test.mjs prints the new hashes.
 const GOLDEN = {
-  'bigPicture/wide': '12888ba7ddac6662', 'bigPicture/narrow': 'ad4a5bac1c46a232', 'workPath/wide': 'd91ec3f46f379c75', 'workPath/narrow': '65700c1e2d39425b',
+  'bigPicture/wide': '12888ba7ddac6662', 'bigPicture/narrow': 'ad4a5bac1c46a232', 'workPath/wide': '4919dd1b37fe3dce', 'workPath/narrow': '3b356095b71c0365',
   'spine/wide': 'f827a1fe4040dcdf', 'spine/narrow': 'c763b2ba29d40647', 'brain/wide': 'a85d3f7c0e19593a', 'brain/narrow': 'a1201af739ed62f7',
   'brainFraud/wide': '4c671d96513b2d3d', 'brainFraud/narrow': '76f821fc70598546', 'mycelium/wide': '4353087be268e8bc', 'mycelium/narrow': '404a9cd89a3ca033',
-  'trust/wide': 'ff3bb281c0b16dd2', 'trust/narrow': '0bdfff1a18934ccf', start: 'f6a26e4a885c6eea', guide: '57ae5c1a4a5e5145',
-  blueprint: '05f4fbc560dbbd99', adoption: 'e9b08abacac201d5', fit: '52794550ab9f2a35', trace: 'f08f623def5faf0b',
+  'trust/wide': 'ff3bb281c0b16dd2', 'trust/narrow': '0bdfff1a18934ccf', start: 'c53ba0bee083941e', guide: '01c74ae5b0cf2e5b',
+  blueprint: '143523f43734ff82', adoption: '7eedce513b900fe0', fit: '52794550ab9f2a35', trace: '1c8f0b3a54b65d14',
 };
 test('golden: every picture and view is byte-stable', () => {
   const rec = { agent: 'sales', event: 'e000043', domain: 'fraud', action: 'release-payment', state: 'done', by: 'mesh:finance', cross: true, second: 'audit', conf: 300, receipt: 'aa11bb22cc33dd44', why: 'a second brain agreed', customer: 'C1000', channel: 'fraud' };

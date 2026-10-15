@@ -583,23 +583,30 @@ test('uid, seedFor, gateFor, createWork: the ids, seeds and gates every device u
 test('policyOf, isPaused, clearsOf: read from the device’s own view of the spine', async () => {
   const o = await office({ agents: ['ops'] });
   const n = o.nodes.ops;
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0, autoPause: true });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0, autoPause: true, propose: [] });
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 200 });
   await o.nodes.owner.put('policy', 'other', { minConfidence: 900 });
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0, autoPause: true });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0, autoPause: true, propose: [] });
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, moneyLimit: 250000 });   // a person sets a £2,500 limit
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 250000, autoPause: true });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 250000, autoPause: true, propose: [] });
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, moneyLimit: -1, autoPause: false });   // … and switches the automatic pause off
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0, autoPause: false }, 'a limit that is not a whole number of pence is no limit');
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.2, moneyLimit: 0, autoPause: false, propose: [] }, 'a limit that is not a whole number of pence is no limit');
+  // proposal mode: the company's own jobs only, each once; anything else is ignored
+  await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, propose: 'fraud,nope,fraud,maintenance,__proto__,' });
+  await o.sync();
+  assert.deepEqual(S.policyOf(n).propose, ['fraud', 'maintenance']);
+  await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, propose: 7 });
+  await o.sync();
+  assert.deepEqual(S.policyOf(n).propose, [], 'not a list of jobs: no job in proposal mode');
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 200, autoPause: 'off' });
   await o.sync();
   assert.equal(S.policyOf(n).autoPause, true, 'only false switches it off');
   await o.nodes.owner.put('policy', 'agents', { minConfidence: 'high' });
   await o.sync();
-  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0, autoPause: true });
+  assert.deepEqual(S.policyOf(n), { minConfidence: 0.05, moneyLimit: 0, autoPause: true, propose: [] });
   assert.equal(S.isPaused(n, 'ops'), false);
   await o.nodes.owner.put('control', 'sales', { paused: true });
   await o.sync();
@@ -611,7 +618,7 @@ test('policyOf, isPaused, clearsOf: read from the device’s own view of the spi
   await o.sync();
   assert.equal(S.isPaused(n, 'sales'), false);
   assert.deepEqual(S.clearsOf(n), { ops: { at: 'd0007', rebaseline: false }, sales: { at: 'd0042', rebaseline: true } });
-  for (const junk of [null, {}, 7]) { assert.deepEqual(S.policyOf(junk), { minConfidence: 0.05, moneyLimit: 0, autoPause: true }); assert.equal(S.isPaused(junk, 'ops'), false); assert.deepEqual(S.clearsOf(junk), {}); }
+  for (const junk of [null, {}, 7]) { assert.deepEqual(S.policyOf(junk), { minConfidence: 0.05, moneyLimit: 0, autoPause: true, propose: [] }); assert.equal(S.isPaused(junk, 'ops'), false); assert.deepEqual(S.clearsOf(junk), {}); }
 });
 
 test('the books and the vault: an entry is posted and sequenced; a device without the whole scope refuses; the witness co-signs only a log that audits', async () => {
@@ -1496,8 +1503,8 @@ test('a brain change is carried out by the agent that holds the brain — a prom
   const brain = async (w) => { asked.push(w.id); return w.id === 'rb1' ? { ok: false, why: 'that brain is not in this agent’s history' } : { ok: true, why: '' }; };
   await S.honourWork({ node: F, id: 'finance', cols: agentCols('finance'), effect: (n, e) => S.applyEffect(n, e, '2026-10-15'), brain });
   assert.deepEqual(asked.sort(), ['pr1', 'rb1']);
-  assert.deepEqual(['pr1', 'pr2', 'pr3', 'pr4', 'rb1', 'rb2'].map((id) => rec(F, 'watch', id).status), ['executed', 'approved', 'approved', 'refused', 'refused', 'approved']);
-  assert.equal(rec(F, 'watch', 'rb1').why, 'that brain is not in this agent’s history');
+  assert.deepEqual(['pr1', 'pr2', 'pr3', 'pr4', 'rb1', 'rb2'].map((id) => rec(F, 'watch', id).status), ['executed', 'approved', 'approved', 'refused', 'failed', 'approved']);
+  assert.equal(rec(F, 'watch', 'rb1').outcome, 'that brain is not in this agent’s history');
   // without a brain to change (a device with no regrowth), it leaves the approved change for the device that can
   await promo(F, 'pr5');
   await o.sync();
@@ -1549,4 +1556,58 @@ test('rolesOf: only an agent grant with an agent’s name is an agent — a staf
   assert.equal(r.agents.has(o.k.odd.pub), false);
   assert.equal(r.people.has(o.k.owner.pub), true);
   assert.equal(r.hubs.has(o.k.hub.pub), true);
+});
+
+test('rollback on a device: a state record is written under the key of its work; a hand-off may create one, never overwrite it; an overturn that cannot be carried out is refused — never "executed" for doing nothing', async () => {
+  const o = await office({ agents: ['finance', 'ops', 'systems', 'sales'], extra: ['overseer'] });
+  await o.nodes.owner.grant('admin-overseer', o.k.overseer.pub, 'admin', ['*']);
+  await o.sync();
+  const H = o.nodes.hub, V = o.nodes.overseer, OPS = o.nodes.ops, SYS = o.nodes.systems, SAL = o.nodes.sales;
+  const fx = (n, e) => S.applyEffect(n, e, '2026-10-15');
+  // applyEffect: a work key is the record's id; anything else gets an id of its own
+  await fx(SYS, { c: 'security', id: 'sec-e1', f: { host: 'h1', action: 'quarantined', by: 'Systems agent' } });
+  assert.equal(rec(SYS, 'security', 'sec-e1').action, 'quarantined');
+  for (const id of ['x-e1', 'sec-e 1', 'sec-', 7, 'pay-e1|x']) {
+    const before = SYS.list('security').length;
+    await fx(SYS, { c: 'security', id, f: { host: 'h2', action: 'quarantined' } });
+    assert.equal(SYS.list('security').length, before + 1, String(id));
+    assert.ok(!SYS.list('security').some((r) => r.id === id), 'not written under ' + String(id));
+  }
+  // a hand-off may CREATE the record keyed to its work…
+  const handoff = (id, payload) => OPS.put('handoff', id, { from: 'ops', to: 'sales', payload: JSON.stringify(payload), status: 'open', event: 'e7' });
+  await handoff('h1', { c: 'crm', id: 'lead-e7', f: { name: 'Web visitor V7', stage: 'qualified', value: 900 } });
+  await o.sync();
+  await S.honourWork({ node: SAL, id: 'sales', cols: agentCols('sales'), effect: fx });
+  assert.equal(rec(SAL, 'crm', 'lead-e7').stage, 'qualified');
+  // …never overwrite one: a second hand-off naming the same key is written under an id of its own
+  await o.sync();
+  await handoff('h2', { c: 'crm', id: 'lead-e7', f: { name: 'Web visitor V7', stage: 'lost', value: 0 } });
+  await o.sync();
+  await S.honourWork({ node: SAL, id: 'sales', cols: agentCols('sales'), effect: fx });
+  assert.equal(rec(SAL, 'crm', 'lead-e7').stage, 'qualified', 'the lead is not overwritten by a hand-off');
+  assert.equal(SAL.list('crm').filter((c) => c.stage === 'lost').length, 1, 'what it handed over is written as a record of its own');
+  assert.deepEqual([rec(SAL, 'handoff', 'h1').status, rec(SAL, 'handoff', 'h2').status], ['done', 'done']);
+  // a quarantine cannot be lifted by a hand-off: the Systems agent's quarantine stands
+  await SAL.put('handoff', 'h3', { from: 'sales', to: 'systems', payload: JSON.stringify({ c: 'security', id: 'sec-e1', f: { action: 'allowed' } }), status: 'open', event: 'e1' });
+  await o.sync();
+  await S.honourWork({ node: SYS, id: 'systems', cols: agentCols('systems'), effect: fx });
+  assert.equal(rec(SYS, 'security', 'sec-e1').action, 'quarantined');
+  // an overturn with nothing it can undo on this device is REFUSED, with the reason a person reads
+  const review = (id, f) => H.put('watch', id, { kind: 'review', agent: 'door', event: 'e-' + id, label: -1, customer: 'C' + id, amount: 0, why: 'asked', status: 'open', action: '', ...f });
+  await review('rv-po', { decidedBy: 'ops', domain: 'inventory', channel: 'inventory', was: 'raise-po' });                 // no order on the device
+  await review('rv-sec', { decidedBy: 'systems', domain: 'intrusion', channel: 'intrusion', was: 'quarantine' });          // no quarantine keyed to it
+  await review('rv-ok', { decidedBy: 'systems', domain: 'intrusion', channel: 'intrusion', was: 'quarantine', event: 'e1' });   // the one above
+  await o.sync();
+  await V.put('watch', 'rv-po', { status: 'approved', action: 'no-reorder', resolvedBy: 'Overseer' });
+  await V.put('watch', 'rv-sec', { status: 'approved', action: 'allow', resolvedBy: 'Overseer' });
+  await V.put('watch', 'rv-ok', { status: 'approved', action: 'allow', resolvedBy: 'Overseer' });
+  await o.sync();
+  await S.honourWork({ node: OPS, id: 'ops', cols: agentCols('ops'), effect: fx });
+  await S.honourWork({ node: SYS, id: 'systems', cols: agentCols('systems'), effect: fx });
+  assert.deepEqual([rec(OPS, 'watch', 'rv-po').status, rec(OPS, 'watch', 'rv-po').outcome], ['failed', 'the goods have already arrived — sending them back is a new purchase decision']);
+  assert.deepEqual([rec(SYS, 'watch', 'rv-sec').status, rec(SYS, 'watch', 'rv-sec').outcome], ['failed', 'it can no longer be undone']);
+  assert.deepEqual([rec(SYS, 'watch', 'rv-sec').why, rec(OPS, 'watch', 'rv-po').why], ['asked', 'asked'], 'the raiser’s words are left as they were');
+  assert.equal(rec(SYS, 'watch', 'rv-ok').status, 'executed');
+  assert.equal(rec(SYS, 'security', 'sec-e1').action, 'allowed', 'lifted by the Systems agent, on a person’s choice');
+  assert.deepEqual([...new Set(signers(SYS, 'security', (op) => op.id === 'sec-e1'))], [o.k.systems.pub], 'only the Systems agent ever wrote it');
 });

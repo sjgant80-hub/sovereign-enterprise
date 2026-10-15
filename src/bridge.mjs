@@ -231,8 +231,41 @@ function ruleSet(rules) {
 }
 const ruleFor = (list, desc, pence) => list.find((r) => words(desc).includes(r.phrase) && (r.sign === 0 || r.sign === Math.sign(pence))) ?? null;
 
-const REASON = Object.freeze({ date: 'the date is not a date', amount: 'the amount is not a whole number of pence within range', 'one-side': 'no money moved on this row', account: 'the nominal code is not in the chart of accounts' });
+const REASON = Object.freeze({ date: 'the date is not a date', amount: 'the amount is not a whole number of pence within range', 'one-side': 'no money moved on this row', account: 'the nominal code is not in the chart of accounts', unbalanced: 'the debits do not equal the credits — an entry that does not balance is not posted' });
 const reasonFor = (v) => REASON[v.reason] ?? 'the entry would not balance (' + v.reason + ')';
+
+export const MANUAL_LINES = 32;   // the most lines one typed journal may have
+/**
+ * One journal a person types: { date, memo, lines } where lines has one row per line — "account debit credit", the
+ * cells apart by spaces, a tab, a semicolon or a bar (a comma straight after a cell is dropped, so "7100, 250.00, 0" reads
+ * too), amounts in pounds (1,250.00 or £1250 or 0), a blank side as 0. → { ok, why, entry: { date, memo, lines:
+ * [[account, debit, credit]] } } — checked exactly as every posting is (books.mjs validEntry: known accounts, one side
+ * per line, debits = credits), refused in plain words, never thrown. Nothing is posted here.
+ */
+export function manualJournal(input) {
+  try {
+    const { date, memo, lines } = plain(input) ? input : {};
+    const day = dateOf(date);
+    if (!day) return no('the date is not a day — for example 15/10/2026 or 2026-10-15');
+    const what = clean(memo, 200);
+    if (!what) return no('say what the entry is for');
+    const rows = (typeof lines === 'string' ? lines : '').split(/\r?\n/).map((r) => r.trim()).filter((r) => r.length > 0);
+    if (rows.length < 2) return no('a journal needs at least two lines — one debited, one credited');
+    if (rows.length > MANUAL_LINES) return no('a journal has at most ' + MANUAL_LINES + ' lines');
+    const out = [];
+    for (const [i, row] of rows.entries()) {
+      const cells = row.split(/[\s;|]+/).map((c) => c.replace(/,$/, '')).filter((c) => c.length > 0);
+      if (cells.length < 2 || cells.length > 3) return no('line ' + (i + 1) + ' is not "account, debit, credit": ' + shown(row));
+      const dr = moneyOf(cells[1]), cr = cells.length === 3 ? moneyOf(cells[2]) : 0;
+      if (dr === null || cr === null || dr < 0 || cr < 0) return no('line ' + (i + 1) + ' has an amount that is not pounds and pence: ' + shown(row));
+      if ((dr === 0) === (cr === 0)) return no('line ' + (i + 1) + ' must be a debit or a credit, not both or neither: ' + shown(row));
+      out.push([cells[0], dr, cr]);
+    }
+    const entry = { date: day, memo: what, lines: out };
+    const v = validEntry(entry);
+    return v.ok ? { ok: true, why: 'ready to post', entry } : no(reasonFor(v), { entry });
+  } catch { return no('the entry could not be read'); }
+}
 
 /** Is every row's running balance the one before it plus the row's own amount — in the file's order (oldest first), or
  *  read from the bottom up (newest first)? The order is the one the balances agree with; on a tie, the dates decide. */

@@ -26,7 +26,7 @@ import { sha256 } from './sha256.mjs';
 import { sign as signWith, verify } from './keys.mjs';
 import { AGENTS, HUB, OWNER_OF, agentName, openStep, afterMesh, closeStep, effects, splitEffects, shouldLearn, pickEvent, overturnEffects } from './company.mjs';
 import { askRecord, replyFor, repliesTo, heardFrom, pickAnswer, pickSecond } from './mesh.mjs';
-import { ACTIONS, DEFAULT_POLICY, moneyLimitOf, ownedOnly } from './agent.mjs';
+import { ACTIONS, DEFAULT_POLICY, moneyLimitOf, ownedOnly, proposeOf } from './agent.mjs';
 import { CREATOR_FIELDS } from './oversight.mjs';
 import { adopt, fromRecord, toRecord, GATE_AUC, HIGH_STAKES_GATE } from './brain.mjs';
 import { growPattern } from './grow.mjs';
@@ -70,9 +70,9 @@ export function gateFor(d) {
 export function policyOf(node) {
   try {
     const p = node.list('policy').find((r) => r.id === 'agents');
-    if (!p || !Number.isSafeInteger(p.minConfidence)) return { ...DEFAULT_POLICY, autoPause: true };
-    return { minConfidence: p.minConfidence / 1000, moneyLimit: moneyLimitOf({ moneyLimit: p.moneyLimit }), autoPause: p.autoPause !== false };
-  } catch { return { ...DEFAULT_POLICY, autoPause: true }; }
+    if (!p || !Number.isSafeInteger(p.minConfidence)) return { ...DEFAULT_POLICY, autoPause: true, propose: [] };
+    return { minConfidence: p.minConfidence / 1000, moneyLimit: moneyLimitOf({ moneyLimit: p.moneyLimit }), autoPause: p.autoPause !== false, propose: proposeOf({ propose: p.propose }) };
+  } catch { return { ...DEFAULT_POLICY, autoPause: true, propose: [] }; }
 }
 
 /** Is this agent paused, by this device’s own view of the control records? */
@@ -142,10 +142,12 @@ export async function witnessVault(node) {
 }
 
 /** Carry out one effect of a decision: { post } → the books + vault; { c, f } → a new record. date: string or () → string. */
+const WORK_KEY = /^(pay|terms|po|sec|lead|svc)-[A-Za-z0-9_.-]{1,60}$/;
 export async function applyEffect(node, e, date) {
   try {
     if (e && e.post) return await postEntry(node, { date: typeof date === 'function' ? date() : date, ...e.post });
-    if (e && e.c && e.f) return await node.put(e.c, uid(node, e.c.slice(0, 2)), e.f);
+    // a record keyed to its work (company.mjs workKey) is written under that key — an overturn replaces it; any other gets its own id
+    if (e && e.c && e.f) return await node.put(e.c, typeof e.id === 'string' && WORK_KEY.test(e.id) ? e.id : uid(node, e.c.slice(0, 2)), e.f);
     return { ok: false };
   } catch { return no('fault'); }
 }
@@ -365,7 +367,9 @@ export async function honourWork(input) {
     for (const h of node.list('handoff').filter((x) => x.to === id && x.status === 'open')) {
       let payload = null;
       try { payload = JSON.parse(h.payload); } catch { payload = null; }
-      const ok = payload && !movesMoney(payload) && sent.has(h.id) && honoured(h.from) ? (await effect(node, payload)).ok : false;
+      // a hand-off may create the record keyed to its work, never overwrite one: an existing key is written under an id of its own
+      const fresh = payload && typeof payload.id === 'string' && !node.list(payload.c).some((x) => x.id === payload.id);
+      const ok = payload && !movesMoney(payload) && sent.has(h.id) && honoured(h.from) ? (await effect(node, fresh ? { c: payload.c, id: payload.id, f: payload.f } : { c: payload.c, f: payload.f })).ok : false;
       await node.put('handoff', h.id, { status: ok ? 'done' : 'refused', doneBy: id });
     }
     // what a PERSON chose, on items this agent may carry out: its own (raised by its own key), the door's for its job
@@ -378,11 +382,18 @@ export async function honourWork(input) {
       let fx = null;
       if (kind === 'call' && w.agent === id && r.agent === id) fx = effects({ state: 'done', action: w.action, domain: w.channel, crossChecked: false }, ev, id);
       else if (kind === 'call' && w.agent === 'door' && OWNER_OF[w.channel] === id && (r.role === 'hub' || r.role === 'person')) fx = effects({ state: 'done', action: w.action, domain: w.channel, crossChecked: false }, ev, id);
-      else if (kind === 'review' && OWNER_OF[w.channel] === id && r.role === 'hub') fx = overturnEffects(w.was, w.action, ev, id);
+      else if (kind === 'review' && OWNER_OF[w.channel] === id && r.role === 'hub') {
+        fx = overturnEffects(w.was, w.action, ev, id, (c, key) => node.list(c).find((x) => x.id === key));
+        if (!fx.length) {   // never marked done for doing nothing: a person sees why it was not carried out
+          await node.put('watch', w.id, { status: 'failed', executedBy: id, outcome: w.was === 'raise-po' ? 'the goods have already arrived — sending them back is a new purchase decision' : 'it can no longer be undone' });
+          continue;
+        }
+      }
       else if ((kind === 'promote' && r.agent === id) || (kind === 'rollback' && r.role === 'person')) {
         if (w.agent !== id || typeof brain !== 'function') continue;   // a brain change is carried out by the agent that holds the brain
         const b = await brain(w);
-        await node.put('watch', w.id, { status: b && b.ok ? 'executed' : 'refused', executedBy: id, why: String((b && b.why) || '').slice(0, 200) });
+        // what became of it goes in a field of the agent's own: the raiser's fields (why, …) stay one writer's, so the item stays trusted
+        await node.put('watch', w.id, { status: b && b.ok ? 'executed' : 'failed', executedBy: id, outcome: String((b && b.why) || '').slice(0, 200) });
         continue;
       } else continue;
       const { mine, handoff } = splitEffects(fx, cols, OWNER_OF[w.channel]);

@@ -110,8 +110,9 @@ function wireHtml(s) {
   const intro = '<div class="wr-grid"><div class="panel"><h3>What you are building</h3>' + officeSvg() + '</div><div class="panel"><h3>Before you start</h3><ul class="b-list">' +
     '<li><b>Machines:</b> the owner’s laptop; an always-on PC for the office hub; a PC for the AI agents (the AI box — it can be the hub’s machine); each person’s own laptop or phone. Chrome or Edge on each.</li>' +
     '<li><b>A printer</b> for the owner’s three recovery cards.</li>' +
-    '<li><b>About ' + minutesFor(s) + ' minutes</b> of your time by our estimate (not yet timed with a stranger), plus the model download if you add one.</li>' +
+    '<li><b>About ' + minutesFor(s) + ' minutes</b> of your time, by our step-by-step estimate, plus the model download if you add one.</li>' +
     '<li><b>What only a person can do:</b> print and store the recovery cards; carry each connection code between two machines once each way; decide who gets which role; keep the hub and the AI box windows open. After a machine restarts, its connection is made again by hand — this page uses no server to find other machines.</li>' +
+    '<li><b>Stuck?</b> AI Native Solutions plants and supports it — start at <a href="https://www.ai-nativesolutions.com" target="_blank" rel="noopener">ai-nativesolutions.com</a>; the support terms are agreed per deployment.</li>' +
     '</ul><div class="row" style="margin-top:8px"><button class="primary" data-act="wire-print">Print the install sheet</button></div></div></div>';
   if (!s.hasNode) {
     return head + intro + '<div class="panel"><h3>No company on this device yet</h3><p>Wiring starts on the <b>owner’s laptop</b>: open <a href="#run" data-view="run">Run your own</a> and press “Found a company on this device”, then come back here.</p>' +

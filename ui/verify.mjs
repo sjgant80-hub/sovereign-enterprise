@@ -121,5 +121,16 @@ export async function standalone(html, load) {
   const page = m[1].replace(IMPORT, (_, n, spec) => destructure(n, resolvePath('verify.html', spec)));
   const script = '\nconst __m = Object.create(null);\nglobalThis.__STANDALONE = true;\n' + order.join('') + page;
   const abs = (s) => s.replace(/href=\x22(index\.html|whitepaper\.html)([^\x22]*)\x22/g, (_, f, rest) => 'href="' + SITE + f + rest + '"');
-  return abs(html.slice(0, m.index)) + '<script type="module">' + script.replace(/<\/script/gi, '<\\/script') + '</script>' + abs(html.slice(m.index + m[0].length));
+  const body = script.replace(/<\/script/gi, '<\\/script');
+  // the page's Content-Security-Policy pins its scripts by hash: the one file carries ONE script now, so it pins that one
+  const pin = "'sha256-" + (await sha256Base64(body)) + "'";
+  const csp = (s) => s.replace(/(<meta http-equiv=\x22Content-Security-Policy\x22 content=\x22[^\x22]*?script-src 'self' )(?:'sha256-[^']+' ?)+/, (_, head) => head + pin + ' ');
+  return csp(abs(html.slice(0, m.index))) + '<script type="module">' + body + '</script>' + abs(html.slice(m.index + m[0].length));
+}
+/** SHA-256 of a string's UTF-8 bytes, base64 — the form a Content-Security-Policy hash takes. */
+async function sha256Base64(text) {
+  const d = new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
+  let s = '';
+  for (const b of d) s += String.fromCharCode(b);
+  return btoa(s);
 }

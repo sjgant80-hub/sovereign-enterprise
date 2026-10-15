@@ -475,7 +475,7 @@ test('Sage import: what Sage would refuse is listed and left out, never half-wri
     { ...ok, id: 'c', lines: [['1200', B.SAGE_MAX, 0], ['4000', 0, B.SAGE_MAX]] }, { ...ok, id: 'bad ref!' }, { ...ok, id: undefined }, null,
     { date: '2026-10-01', get lines() { throw new Error('x'); } }, { id: 't', date: '2026-10-01', lines: ok.lines, get memo() { throw new Error('x'); } }], 'sage');
   assert.deepEqual(r.rejected, [
-    { index: 1, why: 'the entry would not balance (unbalanced)' },
+    { index: 1, why: 'the debits do not equal the credits — an entry that does not balance is not posted' },
     { index: 2, why: 'the reference a is already used by another entry — Sage would merge them' },
     { index: 3, why: 'a line is over 99,999,999.00, the most the Sage import takes' },
     { index: 7, why: 'the entry would not balance (not-an-entry)' },
@@ -541,7 +541,7 @@ test('fuzz: no export throws on junk in any position, and every refusal says why
   const JUNK = [undefined, null, 0, -1, NaN, '', 'x', '\u0000"', [], {}, [null], [[]], toxic, [toxic], 1n, () => 1, Symbol('s')];
   const HUGE = ['x'.repeat(200000), '1,'.repeat(100000), new Array(200000).fill(0)];
   const fns = Object.entries(B).filter(([, v]) => typeof v === 'function');
-  assert.deepEqual(fns.map(([k]) => k).sort(), ['bankToJournal', 'bridgeReceipt', 'crmToCsv', 'dateOf', 'journalToCsv', 'moneyOf', 'parseBankCsv', 'parseCrmCsv', 'parseJournalCsv', 'parseTrialBalance']);
+  assert.deepEqual(fns.map(([k]) => k).sort(), ['bankToJournal', 'bridgeReceipt', 'crmToCsv', 'dateOf', 'journalToCsv', 'manualJournal', 'moneyOf', 'parseBankCsv', 'parseCrmCsv', 'parseJournalCsv', 'parseTrialBalance']);
   const call = (name, fn, a, b) => {
     let out;
     assert.doesNotThrow(() => { out = fn(a, b); }, name);
@@ -625,4 +625,41 @@ test('on the real spine: bridged entries go in through the runtime’s posting p
   const receipts = [bridgeReceipt({ kind: 'trial-balance', inputText: TRIAL, result: tb }), bridgeReceipt({ kind: 'bank', inputText: STATEMENT_A, result: j }),
     bridgeReceipt({ kind: 'crm', inputText: DEALS, result: crm })];
   assert.deepEqual(receipts.map((r) => [r.kind, r.rows, r.rejected]), [['trial-balance', 7, 0], ['bank', 8, 0], ['crm', 6, 4]]);
+});
+
+test('manualJournal: one journal as a person types it — read the way people write it, checked the way every posting is', () => {
+  const j = (lines, date = '15/10/2026', memo = 'October rent') => B.manualJournal({ date, memo, lines });
+  const rent = j('7100, 1,250.00, 0\n1200 0 £1250');
+  assert.deepEqual(rent, { ok: true, why: 'ready to post', entry: { date: '2026-10-15', memo: 'October rent', lines: [['7100', 125000, 0], ['1200', 0, 125000]] } });
+  assert.equal(validEntry(rent.entry).ok, true);
+  // tabs, semicolons, bars and blank rows all read; two cells mean a debit
+  assert.deepEqual(j('\n7900\t4.50\t0\n\n1200; 0; 4.50 \n').entry.lines, [['7900', 450, 0], ['1200', 0, 450]]);
+  assert.deepEqual(j('7900 4.50\n1200|0|4.50').entry.lines, [['7900', 450, 0], ['1200', 0, 450]]);
+  assert.equal(j('7100 10 0\n1200 0 10', '2026-10-01').entry.date, '2026-10-01');
+  // refusals, in a person's words
+  assert.deepEqual(j('7100 10 0\n1200 0 10', '31/02/2026'), { ok: false, why: 'the date is not a day — for example 15/10/2026 or 2026-10-15' });
+  assert.equal(j('7100 10 0\n1200 0 10', '15/10/2026', '   ').why, 'say what the entry is for');
+  assert.equal(j('7100 10 0').why, 'a journal needs at least two lines — one debited, one credited');
+  assert.equal(j(Array.from({ length: B.MANUAL_LINES + 1 }, () => '7100 1 0').join('\n')).why, 'a journal has at most ' + B.MANUAL_LINES + ' lines');
+  assert.equal(j(Array.from({ length: B.MANUAL_LINES - 1 }, () => '7100 0.01 0').join('\n') + '\n1200 0 ' + (B.MANUAL_LINES - 1) / 100).ok, true, 'exactly the most lines');
+  assert.equal(j('7100\n1200 0 10').why, 'line 1 is not "account, debit, credit": “7100”');
+  assert.equal(j('7100 1 2 3\n1200 0 10').why, 'line 1 is not "account, debit, credit": “7100 1 2 3”');
+  assert.equal(j('7100 ten 0\n1200 0 10').why, 'line 1 has an amount that is not pounds and pence: “7100 ten 0”');
+  // a separator standing alone, or a comma on its own, is not a cell
+  assert.deepEqual(j('7100 , 10 , 0\n;1200; 0; 10').entry.lines, [['7100', 1000, 0], ['1200', 0, 1000]]);
+  // either side unreadable, or either side below zero, is refused for what it is
+  assert.equal(j('7100 10 ten\n1200 0 10').why, 'line 1 has an amount that is not pounds and pence: “7100 10 ten”');
+  assert.equal(j('7100 -10 0\n1200 0 10').why, 'line 1 has an amount that is not pounds and pence: “7100 -10 0”');
+  assert.equal(j('7100 ten ten\n1200 0 10').why, 'line 1 has an amount that is not pounds and pence: “7100 ten ten”');
+  assert.equal(j('7100 10 0\n1200 0 -10').why, 'line 2 has an amount that is not pounds and pence: “1200 0 -10”');
+  assert.equal(j('7100 10 0\n1200 0 (10)').why, 'line 2 has an amount that is not pounds and pence: “1200 0 (10)”');
+  assert.equal(j('7100 10 10\n1200 0 10').why, 'line 1 must be a debit or a credit, not both or neither: “7100 10 10”');
+  assert.equal(j('7100 0 0\n1200 0 10').why, 'line 1 must be a debit or a credit, not both or neither: “7100 0 0”');
+  const off = j('7100 10 0\n1200 0 9.99');
+  assert.equal(off.ok, false);
+  assert.equal(off.why, 'the debits do not equal the credits — an entry that does not balance is not posted');
+  assert.deepEqual(off.entry.lines, [['7100', 1000, 0], ['1200', 0, 999]], 'what was read is shown back');
+  assert.equal(j('7101 10 0\n1200 0 10').why, 'the nominal code is not in the chart of accounts');
+  for (const junk of [null, undefined, 7, 'x', { date: 1 }, { date: '15/10/2026', memo: 'm', lines: 7 }]) assert.equal(B.manualJournal(junk).ok, false, JSON.stringify(junk));
+  assert.equal(B.manualJournal({ get date() { throw new Error('x'); } }).why, 'the entry could not be read');
 });

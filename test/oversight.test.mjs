@@ -187,6 +187,21 @@ test('itemOf — a customer waiting, a drafted reply, a review, a regrown brain,
   assert.deepEqual(item({ ...R, was: 'nope' }, sig(HUB)).actions, []);
   assert.equal(item({ ...R, was: 'nope' }, sig(HUB)).evidence[0], 'The Finance agent decided: not known.');
   assert.equal(item(R, sig(OPS)).writer.ok, false);
+  // a review of a decision that is not about a person: no customer asked, no Art. 22 — the same overturn
+  const RP = { ...R, decidedBy: 'ops', was: 'raise-po', channel: 'inventory', domain: 'inventory', customer: 'sku-7' };
+  const rp = item(RP, sig(HUB, { decidedBy: HUB, was: HUB }));
+  assert.equal(rp.title, 'A person asked for a decision to be reviewed — and undone if it was wrong');
+  assert.deepEqual(rp.evidence, ['The Ops agent decided: Raise a £9.99 purchase order to restock.', 'About: sku-7 · £9.99 at stake']);
+  assert.deepEqual(rp.actions.map((a) => a.value), ['raise-po', 'no-reorder']);
+  // a person chose; the job's agent could not carry it out — it is DONE, with the reason, never "forged" or open again
+  const failed = item({ ...RP, status: 'failed', action: 'no-reorder', outcome: 'the goods have already arrived — sending them back is a new purchase decision' },
+    sig(HUB, { decidedBy: HUB, was: HUB, status: OPS, action: P, outcome: OPS }));
+  assert.deepEqual([failed.open, failed.forged, failed.chosenBy, failed.note], [false, false, 'Owner', '']);
+  assert.equal(failed.evidence[1], 'It could not be carried out: the goods have already arrived — sending them back is a new purchase decision.');
+  assert.equal(item({ ...RP, status: 'failed', action: 'no-reorder' }, sig(HUB, { decidedBy: HUB, was: HUB, status: OPS, action: P })).evidence[1], 'It could not be carried out: no reason given.');
+  // "failed" counts only on a PERSON's choice: an agent that marks its own unchosen item failed is ignored
+  const self = item({ ...RP, status: 'failed', action: 'no-reorder' }, sig(HUB, { decidedBy: HUB, was: HUB, status: OPS, action: OPS }));
+  assert.deepEqual([self.open, self.forged], [true, true]);
   // a regrown brain
   const B = { kind: 'promote', agent: 'finance', domain: 'fraud', channel: 'fraud', patternId: 'p2', fromPattern: 'p1', localAuc: 812, currentAuc: 790, n: 80, diff: 'adds +1 if V4 > 1.153', status: 'open', action: 'promote', why: 'beat it' };
   const b = item(B, sig(FIN, { domain: FIN, patternId: FIN, fromPattern: FIN, localAuc: FIN, currentAuc: FIN, n: FIN, diff: FIN }));
@@ -295,10 +310,14 @@ test('falsePositives: of the messages the screen quarantined, the share a person
 
 test('policyForm and policyWords: the money limit (£ → pence), the confidence floor, the automatic pause — refusals in words', () => {
   const ok = (limit, floor = '0.05', autoPause = true) => O.policyForm({ limit, floor, autoPause });
-  assert.deepEqual(ok('500'), { ok: true, fields: { moneyLimit: 50000, minConfidence: 50, autoPause: true } });
-  assert.deepEqual(ok('£1,250.50', '0.1', false), { ok: true, fields: { moneyLimit: 125050, minConfidence: 100, autoPause: false } });
-  assert.deepEqual(ok(' £ 12.5 ', '.35').fields, { moneyLimit: 1250, minConfidence: 350, autoPause: true });
-  assert.deepEqual(ok('0', '0').fields, { moneyLimit: 0, minConfidence: 0, autoPause: true });
+  assert.deepEqual(ok('500'), { ok: true, fields: { moneyLimit: 50000, minConfidence: 50, autoPause: true, propose: '' } });
+  assert.deepEqual(ok('£1,250.50', '0.1', false), { ok: true, fields: { moneyLimit: 125050, minConfidence: 100, autoPause: false, propose: '' } });
+  assert.deepEqual(ok(' £ 12.5 ', '.35').fields, { moneyLimit: 1250, minConfidence: 350, autoPause: true, propose: '' });
+  assert.deepEqual(ok('0', '0').fields, { moneyLimit: 0, minConfidence: 0, autoPause: true, propose: '' });
+  // proposal mode: the jobs ticked, as the text a record holds — the company's own jobs only, each once
+  assert.equal(O.policyForm({ limit: '5', floor: '0.1', autoPause: true, propose: ['maintenance', 'fraud', 'maintenance', 'nope', 7] }).fields.propose, 'maintenance,fraud');
+  assert.equal(O.policyForm({ limit: '5', floor: '0.1', autoPause: true, propose: [] }).fields.propose, '');
+  for (const bad of ['fraud', 7, null, {}]) assert.deepEqual(O.policyForm({ limit: '5', floor: '0.1', autoPause: true, propose: bad }), { ok: false, field: 'propose', why: 'proposal mode is a list of the company’s jobs' }, String(bad));
   assert.deepEqual(ok('7', '1').fields.minConfidence, 1000);
   assert.deepEqual(ok('7', '1.000').fields.minConfidence, 1000);
   assert.deepEqual(ok('1000000000').fields.moneyLimit, 1e11, 'exactly the largest limit');
@@ -324,6 +343,9 @@ test('policyForm and policyWords: the money limit (£ → pence), the confidence
     'The behaviour watch (automatic) only flags an agent; a person decides whether to pause it.']);
   assert.deepEqual(O.policyWords({ moneyLimit: 1, minConfidence: -1 }).slice(0, 2).map((s) => s.split(':')[0]), ['Money limit £0.01', 'Confidence floor 0.050']);
   for (const junk of [null, 7, 'x', { moneyLimit: 1.5, minConfidence: 'x' }]) assert.deepEqual(O.policyWords(junk).map((s) => s.split(':')[0]), ['No money limit', 'Confidence floor 0.050', 'The behaviour watch (automatic) pauses an agent that stops behaving like itself, until a person clears it.']);
+  // proposal mode is said only when a job is in it, by the job's own name
+  assert.deepEqual(O.policyWords({ minConfidence: 50, propose: 'maintenance,fraud,nope' }).slice(3), ['Proposal mode: Machine failures, Card fraud — the agent proposes and a person decides every call, until the job clears its acceptance floor.']);
+  assert.equal(O.policyWords({ minConfidence: 50, propose: '' }).length, 3);
 });
 
 test('ruleDiff and diffText: a regrown brain against the one in use, rule by rule, in plain words', () => {
@@ -370,18 +392,21 @@ test('firstSign and theftList: what a key decided from where the trouble began, 
   assert.equal(O.theftList([null, 7, { id: 5 }, dec('d07', 7, 'energy', 'shed-load')], 'd01').n, 1);
 });
 
-test('reviewable and reviewItem: only a finished decision about a customer — the door raises one item per decision', () => {
+test('reviewable and reviewItem: any finished decision on one of the company’s jobs — the door raises one item per decision', () => {
   const d = { agent: 'finance', event: 'e000042', channel: 'credit', action: 'standard-terms', state: 'done', customer: 'C42' };
   assert.deepEqual(O.reviewable(d), { ok: true, why: '' });
-  assert.deepEqual(O.reviewable({ ...d, channel: 'inventory', action: 'raise-po' }), { ok: false, why: 'only a decision about a customer can be reviewed' });
+  assert.deepEqual(O.reviewable({ ...d, channel: 'inventory', action: 'raise-po' }), { ok: true, why: '' }, 'an order can be reviewed — and cancelled while it is only raised');
+  assert.deepEqual(O.reviewable({ ...d, channel: 'payroll', action: 'raise-po' }), { ok: false, why: 'only a decision on one of the company’s jobs can be reviewed' });
+  assert.deepEqual(O.reviewable({ ...d, channel: '__proto__' }), { ok: false, why: 'only a decision on one of the company’s jobs can be reviewed' });
   assert.deepEqual(O.reviewable({ ...d, state: 'watch' }), { ok: false, why: 'it is already waiting for a person' });
   assert.deepEqual(O.reviewable({ ...d, action: 'retain' }), { ok: false, why: 'the decision names no act to review' });
   assert.deepEqual(O.reviewable({ ...d, customer: '' }), { ok: false, why: 'no customer is named on it' });
   assert.deepEqual(O.reviewable(null), { ok: false, why: 'the decision could not be read' });
-  for (const c of ['shopper', 'churn', 'fraud', 'credit']) assert.equal(O.reviewable({ ...d, channel: c, action: { shopper: 'nurture', churn: 'retain', fraud: 'hold-payment', credit: 'upfront-terms' }[c] }).ok, true, c);
+  for (const c of ['shopper', 'churn', 'fraud', 'credit', 'inventory', 'maintenance', 'intrusion', 'energy']) assert.equal(O.reviewable({ ...d, channel: c, action: { shopper: 'nurture', churn: 'retain', fraud: 'hold-payment', credit: 'upfront-terms', inventory: 'raise-po', maintenance: 'schedule-service', intrusion: 'quarantine', energy: 'shed-load' }[c] }).ok, true, c);
   assert.deepEqual(O.reviewItem(d, 5000), { id: 'rv-e000042', fields: { kind: 'review', agent: 'door', decidedBy: 'finance', was: 'standard-terms', event: 'e000042', domain: 'credit', channel: 'credit',
     action: '', label: -1, customer: 'C42', amount: 5000, why: 'the customer asked for a person to review this decision', status: 'open' } });
   assert.equal(O.reviewItem(d, -3).fields.amount, 0);
+  assert.equal(O.reviewItem({ ...d, channel: 'intrusion', action: 'quarantine' }, 0).fields.why, 'a person was asked to review this decision, and undo it if it was wrong', 'not a customer: no customer asked');
   assert.equal(O.reviewItem({ ...d, state: 'watch' }, 1), null);
 });
 

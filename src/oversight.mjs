@@ -12,7 +12,7 @@
 // it; a choice counts only if a PERSON's key (the owner, or a live admin) wrote it. A choice another device wrote is
 // shown as ignored and the item keeps waiting. The rules a person sets (the money limit, the confidence floor, the
 // automatic pause) are read and written here too, and so are the after-a-theft list and a brain's rule-by-rule change.
-import { ACTIONS, MAX_LIMIT, opposite } from './agent.mjs';
+import { ACTIONS, MAX_LIMIT, opposite, proposeOf } from './agent.mjs';
 import { OWNER_OF, CUSTOMER_JOBS, JOBS, agentName } from './company.mjs';
 import { offWork, readDecision } from './watch.mjs';
 
@@ -146,7 +146,7 @@ export function itemOf(rec, signers, who, opts) {
     const statusBy = own(signers, 'status') ? signers.status : '', actionBy = own(signers, 'action') ? signers.action : '';
     const person = actionBy !== '' && inSet(who && who.people, actionBy);
     const chosen = PERSON_STATUS.has(status) && statusBy === actionBy && person;
-    const carried = status === 'executed' && person;
+    const carried = (status === 'executed' || status === 'failed') && person;   // the agent's report on a person's choice
     const forged = status !== 'open' && !chosen && !carried;
     const open = !chosen && !carried;
     const m = amount ? pounds(amount) : '';
@@ -180,9 +180,10 @@ export function itemOf(rec, signers, who, opts) {
       actions = [{ act: 'send', value: '', label: 'Approve & send this reply' }, { act: 'discard', value: '', label: 'Discard the draft' }];
     } else if (kind === 'review') {
       const was = str(rec.was, 40), opp = opposite(channel, was);
-      title = 'A customer asked a person to review a decision';
+      const aboutPerson = CUSTOMER_JOBS.includes(channel);
+      title = aboutPerson ? 'A customer asked a person to review a decision' : 'A person asked for a decision to be reviewed — and undone if it was wrong';
       evidence.push('The ' + agentName(rec.decidedBy) + ' decided: ' + (actionWords(was, amount) || 'not known') + '.');
-      evidence.push('UK GDPR Art. 22: a decision about a person, made by a machine, can be reviewed by a person on request.');
+      if (aboutPerson) evidence.push('UK GDPR Art. 22: a decision about a person, made by a machine, can be reviewed by a person on request.');
       actions = opp ? [{ act: 'uphold', value: was, label: 'Uphold it: ' + actionWords(was, amount) }, { act: 'overturn', value: opp, label: 'Overturn it: ' + actionWords(opp, amount) }] : [];
     } else if (kind === 'promote') {
       title = 'A regrown brain wants to replace the one in use — ' + (jobWords(rec.domain) || str(rec.domain, 32)) + ', ' + agentName(rec.agent);
@@ -193,7 +194,8 @@ export function itemOf(rec, signers, who, opts) {
       title = 'Roll back to an earlier brain — ' + (jobWords(rec.domain) || str(rec.domain, 32)) + ', ' + agentName(rec.agent);
       evidence.push('A person asked for brain ' + str(rec.patternId, 32) + ' to be put back.');
     }
-    if (customer) evidence.push('Customer: ' + customer + (m ? ' · ' + m + ' at stake' : ''));
+    if (status === 'failed') evidence.push('It could not be carried out: ' + (str(rec.outcome, 200) || 'no reason given') + '.');
+    if (customer) evidence.push((kind === 'review' && !CUSTOMER_JOBS.includes(channel) ? 'About: ' : 'Customer: ') + customer + (m ? ' · ' + m + ' at stake' : ''));
     else if (m) evidence.push(m + ' at stake');
     const writer = raised ? { ok: true, words: 'raised by ' + (ck.role === 'agent' ? 'the ' + ck.name + '’s own key' : ck.role === 'hub' ? 'the door (the office hub)' : ck.name) }
       : { ok: false, words: creator ? 'raised by another device (' + (ck.role === 'agent' ? 'the ' : '') + ck.name + ') — not ' + agentWords + '’s; treat it with care' : 'written over by more than one device' };
@@ -284,6 +286,7 @@ export const POLICY_WHY = Object.freeze({
   'limit-size': 'the money limit can be at most £1,000,000,000',
   floor: 'the confidence floor is a number from 0 to 1, like 0.10',
   pause: 'the automatic pause is on or off',
+  propose: 'proposal mode is a list of the company’s jobs',
 });
 /** Pounds and pence as a person types them — '500', '5.5', '£1,250.50' — → whole pence; null when it is not that.
  *  A very long figure comes back too large to be a safe integer: each caller sets its own ceiling. */
@@ -294,14 +297,16 @@ export function penceOf(text) {
 /** The Policies panel's three fields → { ok, fields: { moneyLimit (pence), minConfidence (permille), autoPause } } | { ok:false, why }. */
 export function policyForm(input) {
   try {
-    const { limit, floor, autoPause } = input;
+    const { limit, floor, autoPause, propose } = input;
     const pence = penceOf(limit);
     if (pence === null) return { ok: false, field: 'limit', why: POLICY_WHY.limit };
     if (!Number.isSafeInteger(pence) || pence > MAX_LIMIT) return { ok: false, field: 'limit', why: POLICY_WHY['limit-size'] };
     const f = FLOOR.exec(typeof floor === 'string' ? floor : '');
     if (!f) return { ok: false, field: 'floor', why: POLICY_WHY.floor };
     if (typeof autoPause !== 'boolean') return { ok: false, field: 'pause', why: POLICY_WHY.pause };
-    return { ok: true, fields: { moneyLimit: pence, minConfidence: Math.round(Number(f[1]) * 1000), autoPause } };
+    if (propose !== undefined && !Array.isArray(propose)) return { ok: false, field: 'propose', why: POLICY_WHY.propose };
+    // a record's fields are single values: the jobs in proposal mode travel as comma-separated text (agent.mjs proposeOf reads it)
+    return { ok: true, fields: { moneyLimit: pence, minConfidence: Math.round(Number(f[1]) * 1000), autoPause, propose: proposeOf({ propose }).join(',') } };
   } catch { return { ok: false, field: 'limit', why: POLICY_WHY.limit }; }
 }
 /** The policy record as a person reads it: one plain sentence per rule. */
@@ -309,10 +314,12 @@ export function policyWords(p) {
   const r = p !== null && typeof p === 'object' ? p : {};
   const limit = nat(r.moneyLimit);
   const floor = Number.isSafeInteger(r.minConfidence) && r.minConfidence >= 0 ? r.minConfidence : 50;
+  const proposed = proposeOf(r);
   return [limit ? 'Money limit ' + pounds(limit) + ': above it, a person decides any act that commits money — letting a payment through, standard credit terms, a purchase order.'
     : 'No money limit: the agents act on money calls a second brain confirms, at any amount.',
   'Confidence floor ' + (floor / 1000).toFixed(3) + ': a normal call with less certainty than this needs a second brain to agree; money and security calls always do.',
-  r.autoPause === false ? 'The behaviour watch (automatic) only flags an agent; a person decides whether to pause it.' : 'The behaviour watch (automatic) pauses an agent that stops behaving like itself, until a person clears it.'];
+  r.autoPause === false ? 'The behaviour watch (automatic) only flags an agent; a person decides whether to pause it.' : 'The behaviour watch (automatic) pauses an agent that stops behaving like itself, until a person clears it.',
+  ...(proposed.length ? ['Proposal mode: ' + proposed.map(jobWords).join(', ') + ' — the agent proposes and a person decides every call, until the job clears its acceptance floor.'] : [])];
 }
 
 // ── a regrown brain, rule by rule ─────────────────────────────────────────────────────────────────────────────────
@@ -379,7 +386,7 @@ export function theftList(decisions, from) {
 /** May this decision be put to a person for review? Only a finished decision about a customer. → { ok, why } */
 export function reviewable(d) {
   try {
-    if (!CUSTOMER_JOBS.includes(d.channel)) return { ok: false, why: 'only a decision about a customer can be reviewed' };
+    if (!own(ACTIONS, d.channel)) return { ok: false, why: 'only a decision on one of the company’s jobs can be reviewed' };
     if (d.state !== 'done') return { ok: false, why: 'it is already waiting for a person' };
     if (!opposite(d.channel, d.action)) return { ok: false, why: 'the decision names no act to review' };
     if (!str(d.customer)) return { ok: false, why: 'no customer is named on it' };
@@ -391,7 +398,7 @@ export function reviewItem(d, amount) {
   const r = reviewable(d);
   if (!r.ok) return null;
   return { id: 'rv-' + str(d.event, 40), fields: { kind: 'review', agent: 'door', decidedBy: str(d.agent, 32), was: d.action, event: str(d.event, 40), domain: d.channel, channel: d.channel,
-    action: '', label: -1, customer: str(d.customer, 40), amount: nat(amount), why: 'the customer asked for a person to review this decision', status: 'open' } };
+    action: '', label: -1, customer: str(d.customer, 40), amount: nat(amount), why: CUSTOMER_JOBS.includes(d.channel) ? 'the customer asked for a person to review this decision' : 'a person was asked to review this decision, and undo it if it was wrong', status: 'open' } };
 }
 
 /** What a person writes for a choice on an item: { status, action, ...extra } — or null if that choice does not fit it.

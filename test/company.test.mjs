@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { AGENTS, HUMANS, HUB, OWNER_OF, WEIGHTS, HOSTILE_TEXT, LEARN_AFTER, REGROW_EVERY, PROMOTE_BY, MISROUTE, HOSTILE, CUSTOMER_JOBS, beats, agentName, pickEvent, openStep, afterMesh, closeStep, effects, splitEffects, overturnEffects, invoiceEntry, payEntry, COST_OF_SALES, OPENING_STOCK, JOBS, jobMetrics, shouldLearn, challenge, boardKpis } from '../src/company.mjs';
+import { AGENTS, HUMANS, HUB, OWNER_OF, WEIGHTS, HOSTILE_TEXT, LEARN_AFTER, REGROW_EVERY, PROMOTE_BY, MISROUTE, HOSTILE, CUSTOMER_JOBS, beats, agentName, pickEvent, openStep, afterMesh, closeStep, effects, splitEffects, overturnEffects, workKey, invoiceEntry, payEntry, COST_OF_SALES, OPENING_STOCK, JOBS, jobMetrics, shouldLearn, challenge, boardKpis } from '../src/company.mjs';
 import { sample } from '../src/streams.mjs';
 import { prng } from '../src/sim.mjs';
 import { validEntry } from '../src/books.mjs';
@@ -432,7 +432,7 @@ test('effects: a held call says what a person needs; a quarantined customer is a
   assert.equal(q[1].f.preview, q[0].f.preview, 'the same redacted preview: digits masked');
 });
 
-test('overturnEffects: a person’s overturn writes the other act — a released payment is reversed in the books first — and nothing for anything else', () => {
+test('overturnEffects: a person’s overturn writes the other act — the state record keyed to the work replaced, a released payment reversed in the books first, the old state undone for real', () => {
   const e = (domain, amount = 12000) => ({ id: 'e9', customer: 'C9', amount, domain });
   const hold = overturnEffects('release-payment', 'hold-payment', e('fraud'), 'finance');
   assert.deepEqual(hold[0], { post: { memo: 'Card sale reversed C9', lines: [['1200', 0, 12000], ['4000', 10000, 0], ['2200', 2000, 0], ['5000', 0, 6000], ['1001', 6000, 0]] } });
@@ -442,6 +442,8 @@ test('overturnEffects: a person’s overturn writes the other act — a released
   assert.deepEqual(hold[0].post.lines.map(([a, d, c]) => [a, c, d]), sale);
   assert.deepEqual(hold.slice(1).map((x) => x.c), ['payments', 'msg']);
   assert.equal(hold[1].f.status, 'held');
+  assert.equal(hold[1].id, 'pay-e9', 'the same payment record the release wrote — replaced, not a second one');
+  assert.equal(effects({ state: 'done', action: 'release-payment' }, e('fraud'), 'finance')[1].id, 'pay-e9');
   assert.equal(hold[2].f.body, 'Finance agent: a person reviewed the decision on C9 and overturned it — the card payment is held and the sale reversed.');
   const rel = overturnEffects('hold-payment', 'release-payment', e('fraud'), 'finance');
   assert.deepEqual(rel.map((x) => (x.post ? 'post' : x.c)), ['post', 'payments', 'msg']);
@@ -453,12 +455,48 @@ test('overturnEffects: a person’s overturn writes the other act — a released
   assert.deepEqual(words('standard-terms', 'upfront-terms', 'credit', 'finance'), ['terms', 'msg:the terms are now payment up front.']);
   assert.deepEqual(words('upfront-terms', 'standard-terms', 'credit', 'finance'), ['terms', 'msg:the terms are now 30 days.']);
   assert.deepEqual(words('nurture', 'fast-track', 'shopper', 'sales'), ['crm', 'msg:the visitor is fast-tracked into the CRM.']);
-  assert.deepEqual(words('fast-track', 'nurture', 'shopper', 'sales'), ['msg:the visitor stays on the normal path.']);
-  // only the other act of a customer's job
-  assert.deepEqual(overturnEffects('raise-po', 'no-reorder', e('inventory'), 'ops'), [], 'not a decision about a customer');
+  // where the other act writes nothing of its own, the old state is undone for real — only when a record keyed to this work is there
+  const have = (c, id) => ({ crm: { id: 'lead-e9', stage: 'qualified' }, po: { id: 'po-e9', status: 'raised' }, security: { id: 'sec-e9', action: 'quarantined' }, tasks: { id: 'svc-e9', status: 'todo' } })[c]?.id === id ? { id } : undefined;
+  const undo = (from, to, d, who, cur = have) => overturnEffects(from, to, e(d), who, cur).map((x) => (x.c === 'msg' ? 'msg:' + x.f.body.split(' — ')[1] : x.c + ':' + x.id + ':' + JSON.stringify(x.f)));
+  assert.deepEqual(undo('fast-track', 'nurture', 'shopper', 'sales'), ['crm:lead-e9:{"stage":"lead"}', 'msg:the visitor stays on the normal path.']);
+  assert.deepEqual(undo('quarantine', 'allow', 'intrusion', 'systems'), ['security:sec-e9:{"host":"C9","action":"allowed","by":"Systems agent"}', 'msg:the quarantine is lifted.']);
+  assert.deepEqual(undo('schedule-service', 'keep-running', 'maintenance', 'ops'), ['tasks:svc-e9:{"status":"done","title":"Service C9 — stood down: a person overturned it"}', 'msg:the service visit is stood down.']);
+  assert.deepEqual(undo('allow', 'quarantine', 'intrusion', 'systems'), ['security:sec-e9:{"host":"C9","action":"quarantined","by":"Systems agent"}', 'msg:the host is quarantined.']);
+  assert.deepEqual(undo('shed-load', 'normal-load', 'energy', 'ops'), ['msg:normal load is restored.']);
+  // a purchase order is cancelled only while it is still only raised: once the goods are in, it is a new decision
+  const po = (status) => (c, id) => (c === 'po' && id === 'po-e9' ? { id, status } : undefined);
+  assert.deepEqual(undo('raise-po', 'no-reorder', 'inventory', 'ops', po('raised')), ['po:po-e9:{"status":"cancelled","by":"Ops agent"}', 'msg:the purchase order is cancelled.']);
+  for (const status of ['received', 'paid', 'cancelled', undefined]) assert.deepEqual(overturnEffects('raise-po', 'no-reorder', e('inventory'), 'ops', po(status)), [], String(status));
+  assert.deepEqual(undo('no-reorder', 'raise-po', 'inventory', 'ops').map((x) => x.split(':')[0]), ['po', 'tasks', 'msg']);
+  // nothing keyed to this work on the device, or a reader that fails: nothing it can undo
+  for (const cur of [null, undefined, () => undefined, () => { throw new Error('x'); }, 7]) {
+    assert.deepEqual(overturnEffects('fast-track', 'nurture', e('shopper'), 'sales', cur), [], String(cur));
+    assert.deepEqual(overturnEffects('quarantine', 'allow', e('intrusion'), 'systems', cur), [], String(cur));
+    assert.deepEqual(overturnEffects('raise-po', 'no-reorder', e('inventory'), 'ops', cur), [], String(cur));
+  }
+  // only the other act of that job
   assert.deepEqual(overturnEffects('release-payment', 'release-payment', e('fraud'), 'finance'), []);
   assert.deepEqual(overturnEffects('release-payment', 'retain', e('fraud'), 'finance'), []);
   assert.deepEqual(overturnEffects('retain', 'hold-payment', e('churn'), 'service'), []);
   assert.deepEqual(overturnEffects('release-payment', 'hold-payment', null, 'finance'), []);
   assert.deepEqual(overturnEffects('release-payment', 'hold-payment', { get domain() { throw new Error('x'); } }, 'finance'), []);
+});
+
+test('workKey: a piece of work’s state record is keyed to it; anything that is not a plain id gets no key', () => {
+  assert.equal(workKey('pay', { id: 'e000042' }), 'pay-e000042');
+  assert.equal(workKey('po', { id: 'A.b_c-9' }), 'po-A.b_c-9');
+  assert.equal(workKey('sec', { id: 'x'.repeat(60) }), 'sec-' + 'x'.repeat(60), 'exactly the longest id');
+  for (const ev of [{ id: 'x'.repeat(61) }, { id: '' }, { id: 'a b' }, { id: 'a|b' }, { id: 7 }, {}, null, undefined]) assert.equal(workKey('pay', ev), null, JSON.stringify(ev));
+  for (const kind of [null, undefined, 7]) assert.equal(workKey(kind, { id: 'e1' }), null);
+  // the records that hold a decision's state carry their key; a chat line or a task of the moment does not
+  const ev = { id: 'e5', customer: 'C5', amount: 600, domain: 'fraud' };
+  const keyed = (action, domain) => effects({ state: 'done', action }, { ...ev, domain }, 'ops').map((x) => (x.post ? 'post' : x.c + (x.id ? ':' + x.id : '')));
+  assert.deepEqual(keyed('hold-payment', 'fraud'), ['payments:pay-e5', 'msg']);
+  assert.deepEqual(keyed('upfront-terms', 'credit'), ['terms:terms-e5']);
+  assert.deepEqual(keyed('raise-po', 'inventory'), ['po:po-e5', 'tasks']);
+  assert.deepEqual(keyed('quarantine', 'intrusion'), ['security:sec-e5', 'msg']);
+  assert.deepEqual(keyed('fast-track', 'shopper'), ['crm:lead-e5']);
+  assert.deepEqual(keyed('schedule-service', 'maintenance'), ['tasks:svc-e5']);
+  assert.deepEqual(keyed('retain', 'churn'), ['tasks', 'msg']);
+  assert.deepEqual(effects({ state: 'done', action: 'hold-payment' }, { ...ev, id: 'not an id' }, 'ops')[0].id, undefined, 'no plain id: the record gets its own');
 });

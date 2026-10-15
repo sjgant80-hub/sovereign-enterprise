@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-JaZVXqH+FJGwU7XMMqkfxHRijZVxSTaYseATnlAN1tU=' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src * data: blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The AI-Native Office</title>
 <meta name="description" content="White paper: how AI agents run most of an office's work on machines the company owns, overseen by a few AI-native people — the roles, the hardware at every step, how it hooks together, the five-year cost, the one-off move and its payback, and the cloud comparison, every figure computed live from sourced UK data." />
@@ -127,7 +128,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
     There is no shared memory: every answer the company acts on is a record every device holds.</p></div>
   <div class="card"><b>Learn what you are asked</b><p>An agent asked about the same kind of work again and again takes the published brain
     for it — and keeps it only if it re-verifies on that agent's own data. The company's knowledge spreads to where the work lands.</p></div>
-  <div class="card"><b>A second, independent brain for money and security</b><p>Holding a payment, setting credit terms, quarantining a
+  <div class="card"><b>A second brain, grown separately, for money and security</b><p>Holding a payment, setting credit terms, quarantining a
     machine: a second brain on another device, grown on its own data, must agree. A copy of the same brain is not a check and is refused.
     Disagreement goes to a person.</p></div>
   <div class="card"><b>Regrow on outcomes — and only promote a winner</b><p>Outcomes come back. An agent regrows its brain on them, and the
@@ -226,7 +227,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
   <div class="card"><b>An agent answers only what it can verify</b><p>Each agent's brain answers from a rule that proved itself on
     cases it never learned from, or it abstains. An answer it cannot verify is asked of another device's brain or put on the Watch
     list for a person — never guessed.</p></div>
-  <div class="card"><b>A second, independent brain confirms what matters</b><p>Money and security calls need a different brain on
+  <div class="card"><b>A second brain, grown separately, confirms what matters</b><p>Money and security calls need a different brain on
     another device to agree; a copy of the same brain agreeing proves nothing and is refused. When no brain can confirm a call, it
     waits for a person, who chooses what happens.</p></div>
   <div class="card"><b>A model drafts; it never sends</b><p>A language model may route a message or draft a reply, and every use is
@@ -256,7 +257,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
 <ol class="src" id="sources"></ol>
 
 <p class="foot">The design lens — entropy-guided regulation (GEP), weighted pruning (WIPER), behavioural signatures (BES) and dual-map
-  checking — is the work of Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Service, LLC); the independent second brain and the held-for-a-human verdict draw on his &ldquo;From GEP Stabilization to Dual-Map Ethical Reasoning,&rdquo; Derivation v0.2. Konomi — Thomas Frumkin.
+  checking — is the work of Gary W. Floyd, Lumiea Systems Research Division (ThunderStruck Service, LLC); the second brain and the held-for-a-human verdict draw on his &ldquo;From GEP Stabilization to Dual-Map Ethical Reasoning,&rdquo; Derivation v0.2. Konomi — Thomas Frumkin.
   Source: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a>.</p>
 </div>
 
@@ -330,13 +331,13 @@ const STAKES = { fraud: 1, credit: 1, intrusion: 1 };
 $('brains').innerHTML = `<tr><th>Agent</th><th>Its brain</th><th class="n">Held-out AUC</th><th>Data</th><th>Second brain needed</th></tr>` +
   Object.entries(bIndex).map(([d, m]) => `<tr><td>${esc(ROLE[m.role] || m.role)}</td><td>${esc(m.title)}</td><td class="n">${m.heldAuc.toFixed(3)}</td>
     <td>${esc(m.kind === 'synthetic' ? 'synthetic (no open data exists)' : m.kind === 'published-synthetic' ? 'published synthetic — ' + (m.dataset || '') : (m.kind === 'real-testbed' ? 'real lab testbed — ' : m.kind === 'real-derived-label' ? 'real, label derived — ' : 'real — ') + (m.dataset || ''))}${m.licence && m.kind !== 'synthetic' ? ' · ' + esc(m.licence) : ''}</td><td>${STAKES[d] ? 'yes — money or security' : 'only when unsure'}</td></tr>`).join('') +
-  `<tr><td>Audit agent</td><td colspan="4">grows its own independent fraud, credit and intrusion brains on its own data — the second brain that must agree</td></tr>`;
+  `<tr><td>Audit agent</td><td colspan="4">grows its own fraud, credit and intrusion brains, separately, on its own data — the second brain that must agree</td></tr>`;
 $('run').innerHTML = [
   ['Pieces of work through the door', S.events],
   ['Done end to end by agents', pm(S.automatedPermille)],
   ['Agent calls that matched the real outcome (never seen when deciding)', pm(S.rightPermille) + ` (${S.correct} of ${S.done})`],
   ['Held for a person', S.toHumans],
-  ['Money and security calls a second, independent brain confirmed', S.crossChecked],
+  ['Money and security calls a second brain, grown separately, confirmed', S.crossChecked],
   ['Answered by another device\'s brain through the mesh', S.viaMesh],
   ['Brains learned by being asked (each re-verified on the learner\'s own data)', S.learned],
   ['Regrowths promoted / tried', S.regrowthsPromoted + ' / ' + S.regrowthsTried],

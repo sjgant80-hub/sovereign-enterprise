@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTIONS, actionFor, needsSecond, decide, canSpend, scorecard, DEFAULT_POLICY, MONEY_ACTIONS, MAX_LIMIT, moneyLimitOf, OWNED_ONLY, ownedOnly, opposite } from '../src/agent.mjs';
+import { ACTIONS, actionFor, needsSecond, decide, canSpend, scorecard, DEFAULT_POLICY, MONEY_ACTIONS, MAX_LIMIT, moneyLimitOf, OWNED_ONLY, ownedOnly, opposite, proposeOf } from '../src/agent.mjs';
 import { screen, revealTags, emojiJoiner, MAX_CHARS } from '../src/screen.mjs';
 
 const V = (domain, label, confidence = 0.5) => ({ verdict: 'VERIFIED', domain, label, confidence });
@@ -206,4 +206,28 @@ test('owned-only work: every job whose calls are high-stakes or commit money is 
   assert.equal(opposite('nope', 'retain'), null);
   assert.equal(opposite('constructor', 'retain'), null);
   assert.equal(opposite(null, null), null);
+});
+
+test('proposal mode: a person decides every call of a job below its acceptance floor — the agent still proposes', () => {
+  const own = (domain, label, confidence = 0.9) => ({ verdict: 'VERIFIED', label, domain, confidence });
+  const policy = (propose) => ({ minConfidence: 0.05, propose });
+  // a confident normal call that would be done is held, with its action kept as the proposal
+  const d = decide({ own: own('maintenance', 1) }, policy('maintenance'));
+  assert.deepEqual([d.state, d.action, d.label, d.domain, d.by], ['watch', 'schedule-service', 1, 'maintenance', 'own']);
+  assert.equal(d.why, 'proposal mode — a person decides each call of this job until it clears its acceptance floor');
+  assert.equal(decide({ own: own('maintenance', 1) }, policy('')).state, 'done', 'not in proposal mode: done');
+  // other jobs are untouched; a list or the text a record holds both work
+  assert.equal(decide({ own: own('churn', 1) }, policy(['maintenance'])).state, 'done');
+  assert.equal(decide({ own: own('churn', 1) }, policy(['maintenance', 'churn'])).state, 'watch');
+  // a high-stakes call a second brain confirmed is still a person's in proposal mode
+  const s = { verdict: 'VERIFIED', label: 1, domain: 'fraud' };
+  assert.equal(decide({ own: own('fraud', 1), second: s }, policy('')).state, 'done');
+  assert.match(decide({ own: own('fraud', 1), second: s }, policy('fraud')).why, /^proposal mode/);
+  // what was already held keeps its own reason
+  assert.match(decide({ own: own('fraud', 1) }, policy('fraud')).why, /no second brain could confirm/);
+  // proposeOf: the company's jobs only, each once, in the order given
+  assert.deepEqual(proposeOf({ propose: 'fraud,nope,fraud, churn,maintenance,,__proto__,constructor' }), ['fraud', 'maintenance']);
+  assert.deepEqual(proposeOf({ propose: ['credit', 'credit', 7, null, 'energy'] }), ['credit', 'energy']);
+  for (const junk of [null, undefined, {}, { propose: 7 }, { propose: null }, 'fraud']) assert.deepEqual(proposeOf(junk), [], String(junk));
+  assert.equal(DEFAULT_POLICY.propose, undefined, 'the default policy holds no job in proposal mode');
 });

@@ -401,7 +401,7 @@ export function differentiate(input, shipped, opts) {
       const mine = a.domains.length ? a.domains.filter((d) => working.has(d)) : a.grows.filter((d) => ownData.has(d));
       if (mine.length) { agents.push({ id: a.id, name: a.name, jobs: mine, takesOver: adoption ? adoption.agents[a.id] : a.job }); continue; }
       const why = a.domains.length ? 'none of its jobs has a brain that passed its check — its work waits for a person'
-        : 'no file of yours for ' + list(a.grows.map((d) => JOB_NAME[d]), ' or ') + ' to grow its independent second brain from — until one arrives, a money or security call no second brain confirms waits for a person';
+        : 'no file of yours for ' + list(a.grows.map((d) => JOB_NAME[d]), ' or ') + ' to grow its own second brain from — until one arrives, a money or security call no second brain confirms waits for a person';
       off.push({ id: a.id, name: a.name, why });
       gaps.push('The ' + a.name + ' stays off: ' + why + '.');
     }

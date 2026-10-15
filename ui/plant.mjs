@@ -262,7 +262,7 @@ function tuneHtml(s) {
   return rows + '<p class="note">An agent you switch off here is paused in the company until a person switches it on (Wire it → Devices → Clear) — the roll-out’s weeks, one department at a time.</p>' +
     '<div class="row" style="margin-top:8px"><label class="dim" for="plant-floor">Ask a second brain when an agent is less sure than</label><select id="plant-floor" data-plant="floor">' +
     FLOORS.map((v) => '<option value="' + v + '"' + (s.floor === v ? ' selected' : '') + '>' + (v / 1000).toFixed(2) + '</option>').join('') + '</select></div>' +
-    '<p class="note">Money and security calls always need a second, independent brain. This floor is for every other call: below it, the agent asks another device’s brain to agree, or the work waits for a person. Higher means more checking and more on the Watch list. It is the company’s own policy record — every agent reads it.</p>' +
+    '<p class="note">Money and security calls always need a second brain, grown separately, to agree. This floor is for every other call: below it, the agent asks another device’s brain to agree, or the work waits for a person. Higher means more checking and more on the Watch list. It is the company’s own policy record — every agent reads it.</p>' +
     '<p class="note">Free text — what a customer wrote — needs a language model. Put one on the AI box in <a href="#wire" data-view="wire">Wire it</a> (a local model, nothing sent out), or connect one on the live company’s Board.</p>';
 }
 

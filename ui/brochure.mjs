@@ -18,7 +18,7 @@ export const SCOPE = Object.freeze([
   { dept: 'Finance', shown: 'Holds fraudulent card payments, sets credit terms, keeps double-entry books and the auditable record.', modelled: 'Invoice matching, reconciliation, VAT and month-end — bridged from your bank and accounts exports.' },
   { dept: 'Operations', shown: 'Raises purchase orders before stock runs out, books machines in before they fail, sheds load before an overload.', modelled: 'Scheduling, suppliers and logistics against your own systems.' },
   { dept: 'Systems', shown: 'Quarantines intrusions; the behaviour watch pauses an agent that stops acting like itself.', modelled: 'Device and access admin, tier-1 support.' },
-  { dept: 'Audit', shown: 'Grows its own independent brains; money and security calls need it to agree.', modelled: '—' },
+  { dept: 'Audit', shown: 'Grows its own brains, separately; money and security calls need it to agree.', modelled: '—' },
   { dept: 'Marketing · HR and admin', shown: '—', modelled: 'Content, campaigns, recruitment admin, onboarding, rotas — the model tier with a person signing off.' },
 ]);
 
@@ -32,6 +32,18 @@ export const DATA_FLOWS = Object.freeze([
   { what: 'Connecting machines on different networks', where: 'A STUN server (Google’s public one by default, or your own)', receives: 'Each machine’s public network address, to find a direct path', off: 'Same-network use needs none; set your own STUN/TURN server' },
   { what: 'This demonstration page', where: 'GitHub Pages', receives: 'The page request', off: 'In production your hub serves the page on your network' },
 ]);
+
+/** What the second brain is for, measured on the re-run (receipt.secondBrain): on a day with nothing tampered it makes the same
+ *  mistakes as the first, so it catches none; with the first brain tampered with, it stops wrong calls. Said either way. */
+function secondBrainNote(receipt) {
+  const b = receipt && receipt.secondBrain;
+  if (!b || !b.untouched || !b.tampered) return '';
+  const u = b.untouched, t = b.tampered;
+  return `<p class="note"><b>What the second brain is for.</b> On the card-fraud calls of the re-run day it was asked ${u.asked} times and caught
+    ${u.caught} of the first brain’s mistakes — the two make the same ones on hard cases. Run again with the first brain tampered with,
+    it stopped ${t.caught} wrong call${t.caught === 1 ? '' : 's'}, and ${t.wrongThrough} still got through. It guards against a brain that has
+    been tampered with, not against a hard case — the hard cases are the Watch list’s job.</p>`;
+}
 
 /** What it connects to — each one named, which way the data goes, and the file or call that carries it. Only what the code does
  *  and its tests prove: the bridges (src/bridge.mjs), the model adapters (src/model.mjs), the direct links (src/rtc.mjs) and the
@@ -118,10 +130,11 @@ export function renderBrochure(ctx) {
   <div class="b-stats">
     <div><b>${m10(S.automatedPermille)}</b><span>of ${S.events} pieces of work done end to end by agents; the rest waited for a person</span></div>
     <div><b>${m10(S.rightPermille)}</b><span>of the agents' finished calls matched the real outcome, which they never saw when deciding</span></div>
-    <div><b>${S.crossChecked}</b><span>money and security calls confirmed by a second, independent brain</span></div>
+    <div><b>${S.crossChecked}</b><span>money and security calls confirmed by a second brain, grown separately by the Audit agent</span></div>
     <div><b>${S.converged ? 'All 9' : 'NOT'}</b><span>devices holding the identical company; books ${S.books.balanced ? 'balanced' : 'NOT balanced'}; record ${S.vault.audits ? 'audited' : 'NOT audited'}</span></div>
   </div>
   ${ctx.metricsHtml || ''}
+  ${secondBrainNote(ctx.receipt)}
 </section>
 
 <section class="b-sec">
@@ -200,8 +213,8 @@ export function renderBrochure(ctx) {
   <div class="b-grid">
     <div><h4>Every write signed and checked</h4><p>Each device signs what it writes with its own key; every other device checks the signature, the form and the sender's grant before reading it. Forged, altered, replayed or malformed writes are refused.</p></div>
     <div><h4>Scoped authority</h4><p>Authority is a tree from the owner: each agent and person is granted only their part of the company. Revoke a device and every other device refuses its writes from that moment.</p></div>
-    <div><h4>Personal details sealed per person</h4><p>Each staff member’s personal details are sealed under their own key. Erasing a person destroys the key on every device that syncs; the books and the record still verify. A device that stays offline keeps its copy until it reconnects.</p></div>
-    <div><h4>People oversee every decision</h4><p>Anyone can see every decision and why. Money and security calls need a second, independent brain; anything no brain can confirm waits for a person, who chooses what happens. Any agent can be paused or fired in one click.</p></div>
+    <div><h4>Personal details sealed per person</h4><p>Each person’s details — a member of staff’s, or a customer’s name, email and phone — are sealed under their own key. Erasing a person destroys the key on every device that syncs; the books and the record still verify. A device that stays offline keeps its copy until it reconnects.</p></div>
+    <div><h4>People oversee every decision</h4><p>Anyone can see every decision and why. Money and security calls need a second brain, grown separately by the Audit agent, to agree; anything no brain can confirm waits for a person, who chooses what happens. Any agent can be paused or fired in one click.</p></div>
     <div><h4>Records of every decision</h4><p>Every decision is a signed record with a receipt naming the brain, the evidence and the score — and every brain is readable rule by rule.</p></div>
     <div><h4>Built without protected characteristics</h4><p>The brains never see age, sex, marital status or education: those columns are left out of their data, and every rule they use is readable.</p></div>
     <div><h4>A record your auditor can check</h4><p>The books are sealed into an append-only transparency log (the design behind Certificate Transparency). Send its signed checkpoints to your auditor or bank, and they can prove any entry is in the books and that nothing was rewritten — without trusting you. <a href="verify.html" target="_blank" rel="noopener">Try the auditor’s checker ↗</a></p></div>
@@ -211,7 +224,7 @@ export function renderBrochure(ctx) {
 <section class="b-sec">
   <h3>Questions your board will ask — answered straight</h3>
   <dl class="b-faq">
-    <dt>What if an AI makes a wrong call?</dt><dd>Each brain answers only inside what it was proven on and abstains outside it. Money and security calls need a second, independent brain to agree; disagreements go to a person. Outcomes come back and the brains regrow — a new brain replaces the old only if it beats it on cases neither saw. In the re-run day, ${m10(S.rightPermille)} of the agents' finished calls matched the real outcome.</dd>
+    <dt>What if an AI makes a wrong call?</dt><dd>Each brain answers only inside what it was proven on and abstains outside it. Money and security calls need a second brain, grown separately by the Audit agent, to agree; disagreements go to a person. Outcomes come back and the brains regrow — a new brain replaces the old only if it beats it on cases neither saw. In the re-run day, ${m10(S.rightPermille)} of the agents' finished calls matched the real outcome. And any decision can be put to a person and undone: a held payment released or a released one reversed in the books, an order cancelled while it is only raised, a quarantine lifted, a lead put back — each carried out by the job’s own agent on the person’s choice, and tested end to end from the door to the books. A job not yet proven better than doing nothing runs in proposal mode: its agent proposes, a person decides.</dd>
     <dt>Do we still need ChatGPT or Copilot?</dt><dd>Not for the decisions the agents make — those are the company's own brains, with no per-call bill. For free text — reading what a customer wrote, sending it to the right desk, drafting a reply — you connect a language model of your choice: on your own machine, inside the browser, or a provider with your own key. Spend is capped before any paid call, every call is written to the audit trail, a model never acts alone on money or security, and its replies are held as drafts — a model never sends one.</dd>
     <dt>What if someone attacks it?</dt><dd>Hostile messages are quarantined before any AI reads them. Once a person confirms a new attack, every device becomes immune to it. An AI update is adopted only if it does at least as well as the brain it replaces on each device's own records. Forged writes are refused at the door. An agent behaving unlike itself is paused automatically until a person clears it.</dd>
     <dt>What if a laptop is stolen?</dt><dd>Revoke its grant and every device refuses its writes from that moment. Nobody can rewrite what that device already wrote: every write names the one before it, so a forged version of the past is flagged with a proof on every device. Then issue the person a new device key. Each device's key is held by its browser in a form no web page can export and its copy of the company is stored sealed, so with full-disk encryption on and the screen locked, a thief with the laptop gets nothing. The owner's device is the one key that cannot be revoked; any two of the three recovery cards printed when the company was founded bring it back on a new machine.</dd>
@@ -273,7 +286,7 @@ export function renderBrochure(ctx) {
     <li>The software: MIT licence — use, change and run it freely (<a href="https://github.com/sjgant80-hub/sovereign-enterprise/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE</a>, <a href="https://github.com/sjgant80-hub/sovereign-enterprise/blob/main/NOTICE" target="_blank" rel="noopener">NOTICE</a>).</li>
     <li>The demo brains are grown on published datasets: UCI Machine Learning Repository sets under CC BY 4.0 (attribution, given in NOTICE) and the card-fraud sample under the Open Database License v1.0, whose share-alike applies to that sample file. Your own brains are grown on your own records and are yours.</li>
     <li>Powered by the Konomi architecture, created by Thomas Frumkin — used with his permission.</li>
-    <li>The design lens — GEP, WIPER, BES and Dual-Map — is the work of Gary W. Floyd, Lumiea Systems Research Division — ThunderStruck Service, LLC, published as Open Defensive Prior Art under Creative Commons; the independent second brain draws on his “From GEP Stabilization to Dual-Map Ethical Reasoning,” Derivation v0.2.</li>
+    <li>The design lens — GEP, WIPER, BES and Dual-Map — is the work of Gary W. Floyd, Lumiea Systems Research Division — ThunderStruck Service, LLC, published as Open Defensive Prior Art under Creative Commons; the second brain draws on his “From GEP Stabilization to Dual-Map Ethical Reasoning,” Derivation v0.2.</li>
   </ul>
 </section>
 

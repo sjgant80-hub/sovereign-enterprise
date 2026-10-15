@@ -3,7 +3,7 @@
 > A full AI company on its own devices. Six AI agents (sales, service, finance, operations, systems, audit) run the company end to
 > end; two people watch and decide the exceptions; an office hub is the door where the work arrives. Every device is a brain — a
 > verified, readable pattern library (the Konomi SLM) that answers only inside what it was verified on and abstains outside it — and
-> the brains talk only through signed records on a peer-to-peer spine. Money and security calls need a second, independent brain to
+> the brains talk only through signed records on a peer-to-peer spine. Money and security calls need a second brain, grown separately, to
 > agree; what no brain can confirm waits for a person. Nothing leaves the building.
 
 Live: https://sjgant80-hub.github.io/sovereign-enterprise/
@@ -22,7 +22,7 @@ Source: https://github.com/sjgant80-hub/sovereign-enterprise
   replies from their own brains. There is no shared memory: every answer the company acts on is a record every device holds.
 - An agent asked about the same work repeatedly adopts the published brain — only if it re-verifies on its own data. A poisoned brain
   is refused by every device that checks it.
-- High-stakes calls (holding a payment, credit terms, quarantining a machine) need an independent brain on another device to agree.
+- High-stakes calls (holding a payment, credit terms, quarantining a machine) need a second brain, grown separately on another device, to agree — it stops a tampered first brain; on hard cases the two tend to make the same mistakes (measured).
 - Outcomes come back; an agent regrows its brain and promotes the new one only if it beats the old on outcomes neither saw.
 - Inbound text is screened before any brain reads it; a new attack a person confirms becomes a signed antibody every agent re-checks
   on its own genuine messages before adopting it.
@@ -48,14 +48,23 @@ Source: https://github.com/sjgant80-hub/sovereign-enterprise
 
 ## Measured (re-runnable: node tools/run-company.mjs --check)
 - A working day of 480 pieces of work on published datasets: 78.3% done end to end by agents; 90.7% of agent calls matched the real
-  outcome they never saw; 124 money and security calls confirmed by an independent second brain; 30 answered by another device's brain
-  over the spine; 104 held for a person; every device converged; books balanced; vault audited. Receipt 5015248ecf411676.
+  outcome they never saw; 124 money and security calls confirmed by a second brain grown separately; 30 answered by another device's brain
+  over the spine; 104 held for a person; every device converged; books balanced; vault audited. Receipt 1174a848d0db0d3c.
 - What those numbers prove (src/evidence.mjs, in the receipt): against doing nothing on the same calls, with an exact test, 3 of
   8 jobs are measurably better (fraud, inventory, intrusion); the rest show no evidence either way yet. The second brain, on
   money and security calls: asked 127 times, agreed 124 (both wrong together 5), disagreed 3, caught 0 of the first
   brain's mistakes — on these datasets the two make the same errors, and the page says so. What it is for, measured in the same re-run:
   with the Finance agent's fraud brain tampered with on its own device, the second brain stopped 7 of 11 wrong money calls
   (0 false alarms); untouched, it caught 0 and raised 3 false alarms.
+- May a job run unattended (src/evidence.mjs acceptance): it must beat doing nothing, and a money or security job must also
+  catch 50% of real cases and be right on 50% of its flags on the LOW end of the 95% interval. On the re-run day: card fraud,
+  stock-outs and intrusions pass; the rest run in PROPOSAL MODE (the agent proposes, a person decides every call) until a pilot
+  shows them better on the business's own records. Cost, with no price assumed (costWeighed): the agents come out ahead when a
+  missed case costs more than false-alarms/catches times a false alarm (machine failures: 2x; fraud, intrusions: at any ratio).
+- Undo, end to end (test/rollback.test.mjs): any decision can be put to a person and reversed by its job's own agent - a held
+  payment released or a released one reversed in the books, an order cancelled while only raised (refused once the goods are
+  in), a quarantine lifted, a lead put back; the state record is keyed to its work, so a reversal replaces it. Stopped without
+  the AI: a paused agent raises nothing, proposal mode acts on nothing alone, a money limit holds the money.
 
 ## The white paper — the AI-native office
 - AI runs 90% of a modelled 50-person UK office's operational work on owned machines; five AI-native people oversee it.

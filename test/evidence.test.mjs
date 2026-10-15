@@ -103,7 +103,12 @@ test('on a working day: every job’s counts add up to the board’s own; every 
     assert.equal(j.held, board[d].held, d);
     assert.equal(Math.round(1000 * j.versus.brainRight / j.n), board[d].rightPermille, d);
     assert.equal(Math.round(1000 * j.versus.nothingRight / j.n), board[d].baselinePermille, d);
+    // whether it may run unattended, and its break-even, come from its own counts and its own stakes
+    assert.deepEqual(j.accept, E.acceptance(j, j.stakes), d);
+    assert.equal(j.breakEven, j.tp ? j.fp / j.tp : null, d);
   }
+  assert.equal(ev.fraud.stakes, 'high');
+  assert.equal(ev.shopper.stakes, 'normal');
   const W = co.nodes.owner;
   const decisions = W.list('decisions');
   let reran = 0, screen = 0;
@@ -193,6 +198,7 @@ test('the edges: the exact test at its seam, a one-case interval, the second-bra
   const J = E.jobEvidence([null, 7, 'x', { channel: 'fraud', domain: 'credit', state: 'done', label: 1, truth: 1 }, { domain: 'credit', state: 'done', label: 0, truth: 0 }]);
   assert.deepEqual(Object.keys(J).sort(), ['credit', 'fraud']);
   assert.deepEqual([J.fraud.tp, J.fraud.n, J.credit.tn, J.credit.n], [1, 1, 1, 1]);
+  assert.deepEqual([J.fraud.stakes, J.fraud.breakEven, J.credit.breakEven, J.fraud.accept.pass], ['high', 0, null, false]);
   assert.deepEqual(E.jobEvidence(null), {});
 });
 
@@ -221,4 +227,56 @@ test('a brain version counts only if the role tree authorised it — a key with 
   await co.drain();
   const r = E.verifyDecision(W, 'd-planted');
   assert.deepEqual([r.ok, r.patternId, r.brainBy], [true, 'beefbeefbeefbeef', 'owner']);
+});
+
+test('acceptance: may a job run unattended — beat doing nothing, and for money or security clear recall and precision floors on the low end of the interval', () => {
+  // a fraud-like job: 7 caught, no false alarm, 1 missed — sign test 7–0, p = 2/128
+  const fraud = { tp: 7, fp: 0, tn: 62, fn: 1, n: 70 };
+  const a = E.acceptance(fraud, 'high');
+  assert.equal(a.pass, true);
+  assert.deepEqual(a.why, []);
+  assert.equal(a.versus.verdict, 'better');
+  assert.deepEqual([a.recall.k, a.recall.n, a.precision.k, a.precision.n], [7, 8, 7, 7]);
+  assert.ok(Math.abs(a.recall.lo - 0.5291) < 1e-3 && Math.abs(a.precision.lo - 0.6457) < 1e-3, a.recall.lo + ' ' + a.precision.lo);
+  // a handful of lucky calls cannot pass: 3 caught, none false, 3 missed
+  const few = E.acceptance({ tp: 3, fp: 0, tn: 20, fn: 3, n: 26 }, 'high');
+  assert.equal(few.pass, false);
+  assert.deepEqual(few.why.map((w) => w.split(' (')[0]), ['not yet shown better than doing nothing', 'catches too few of the real cases to be sure', 'too many of its flags could be false']);
+  assert.match(few.why[1], /\(at least 50% needed; as low as 19% on this evidence\)$/);
+  assert.match(few.why[2], /\(at least 50% right needed; as low as 44% on this evidence\)$/);
+  // a normal job needs only to beat doing nothing: 10 caught, 2 false alarms (p = 158/4096)
+  const normal = E.acceptance({ tp: 10, fp: 2, tn: 30, fn: 9, n: 51 }, 'normal');
+  assert.equal(normal.pass, true);
+  assert.equal(E.acceptance({ tp: 10, fp: 2, tn: 30, fn: 9, n: 51 }, 'high').pass, false, 'the same counts fail a money job: recall too low');
+  // worse than doing nothing is said as such
+  assert.deepEqual(E.acceptance({ tp: 0, fp: 6, tn: 10, fn: 2, n: 18 }, 'normal').why, ['worse than doing nothing']);
+  // the floors are a business's to raise; exactly on a floor passes, a hair above it fails
+  const lo = E.wilson(7, 8).lo;
+  assert.equal(E.acceptance(fraud, 'high', { high: { recall: lo, precision: 0 } }).pass, true);
+  assert.equal(E.acceptance(fraud, 'high', { high: { recall: lo + 1e-9, precision: 0 } }).pass, false);
+  const plo = E.wilson(7, 7).lo;
+  assert.equal(E.acceptance(fraud, 'high', { high: { recall: 0, precision: plo } }).pass, true);
+  assert.equal(E.acceptance(fraud, 'high', { high: { recall: 0, precision: plo + 1e-9 } }).pass, false);
+  assert.equal(E.acceptance(fraud, 'high', { normal: { recall: 0, precision: 0 } }).pass, true, 'floors missing their kind fall back to the defaults');
+  assert.deepEqual(E.FLOORS, { high: { recall: 0.5, precision: 0.5 }, normal: { recall: 0, precision: 0 } });
+  assert.ok(Object.isFrozen(E.FLOORS) && Object.isFrozen(E.FLOORS.high));
+  // junk never throws: no calls is not yet shown better
+  for (const junk of [null, undefined, 7, 'x', {}]) assert.equal(E.acceptance(junk, 'high').pass, false);
+});
+
+test('costWeighed: the break-even miss-to-false-alarm ratio needs no price; given prices, each way of working is costed', () => {
+  const c = { tp: 4, fp: 2, fn: 1, tn: 10, n: 17 };
+  assert.deepEqual(E.costWeighed(c), { tp: 4, fp: 2, fn: 1, tn: 10, breakEven: 0.5, priced: null });
+  // a missed case at £100, a false alarm at £5
+  const p = E.costWeighed(c, { miss: 10000, falseAlarm: 500 }).priced;
+  assert.deepEqual(p, { agents: 11000, nothing: 50000, everything: 6000, saving: 39000 });
+  assert.equal(p.saving, p.nothing - p.agents);
+  // exactly at break-even the saving is nothing
+  assert.equal(E.costWeighed(c, { miss: 1000, falseAlarm: 2000 }).priced.saving, 0);
+  assert.equal(E.costWeighed({ tp: 3, fp: 0, fn: 2, tn: 9 }).breakEven, 0, 'never a false alarm: worth it at any ratio');
+  assert.equal(E.costWeighed({ tp: 0, fp: 3, fn: 2, tn: 9 }).breakEven, null, 'caught nothing: no ratio makes it worth it');
+  for (const bad of [{ miss: -1, falseAlarm: 5 }, { miss: 1.5, falseAlarm: 5 }, { miss: 5 }, { falseAlarm: 5 }, null, 'x'])
+    assert.equal(E.costWeighed(c, bad).priced, null, JSON.stringify(bad));
+  assert.deepEqual(E.costWeighed(c, { miss: 0, falseAlarm: 0 }).priced, { agents: 0, nothing: 0, everything: 0, saving: 0 });
+  for (const junk of [null, undefined, 7, 'x']) assert.deepEqual(E.costWeighed(junk), { tp: 0, fp: 0, fn: 0, tn: 0, breakEven: null, priced: null });
 });

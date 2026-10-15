@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6x+6MKxblpfkMODRZZ2x9e818Q10/TRVDSgrKAfDGho=' 'sha256-iC6GDU+4ByRvRV0dg8O6pFTWan5wtVtJM2/tzXWzhww=' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src * data: blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sovereign Enterprise</title>
-<meta name="description" content="A full AI company on its own devices. Six AI agents run sales, service, finance, operations, systems and audit end to end; two humans watch. Every device is a brain: verified Konomi SLM patterns, re-verified on each device's own data, sharing over a signed peer-to-peer spine — the mycelium. High-stakes calls need a second, independent brain. The page runs the exact kernel its tests and mutation witness prove." />
+<meta name="description" content="A full AI company on its own devices. Six AI agents run sales, service, finance, operations, systems and audit end to end; two humans watch. Every device is a brain: verified Konomi SLM patterns, re-verified on each device's own data, sharing over a signed peer-to-peer spine — the mycelium. High-stakes calls need a second brain, grown separately, to agree. The page runs the exact kernel its tests and mutation witness prove." />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <meta name="theme-color" content="#0b0e13" />
@@ -300,7 +301,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
   Kernel-backed: this page imports <span class="mono">src/runtime · shell · plant · sow · receipt · bridge · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · audit · exportco · books · lease · sim</span> — the
   same modules the test suite and the mutation witness prove in CI, on every change. The brains are the Konomi SLM's verified pattern libraries
   (Konomi architecture — Thomas Frumkin), grown by the seed-library ribosome (sjgant80-hub). Seven of the eight jobs run on published datasets: six real (card transactions, telecom churn, credit defaults, IoT network flows, household power, web shopping sessions) and one its authors publish as synthetic (AI4I machine data); inventory runs on a synthetic stream because no open stock-out data exists. Every source and licence is on its brain card in Brains and in NOTICE. The design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd,
-  Lumiea Systems Research Division — ThunderStruck Service, LLC; the independent second brain and the held-for-a-human verdict draw on his
+  Lumiea Systems Research Division — ThunderStruck Service, LLC; the second brain and the held-for-a-human verdict draw on his
   “From GEP Stabilization to Dual-Map Ethical Reasoning,” Derivation v0.2.<br>
   Source, receipts and the full design: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a> (MIT).
 </p>
@@ -336,17 +337,17 @@ import { split as splitCards, combine as combineCards } from './src/recovery.mjs
 import { sha256 } from './src/sha256.mjs';
 import { canonical, utf8, toHex, fromHex } from './src/canon.mjs';
 import { inclusionProof, verifyInclusion, consistencyProof, verifyConsistency } from './src/vault.mjs';
-import { validEntry, trialBalance, profitAndLoss, balanceSheet, gbp } from './src/books.mjs';
+import { validEntry, trialBalance, profitAndLoss, balanceSheet, gbp, CHART } from './src/books.mjs';
 import { decideLease, renew, seal, open, keyRing } from './src/lease.mjs';
 import { simulate, prng } from './src/sim.mjs';
 import { verifyReceipt } from './src/brain.mjs';
 import { NOTES, REAL } from './src/streams.mjs';
 import { AGENTS, HUMANS, HUB, LEARN_AFTER, agentName, boardKpis } from './src/company.mjs';
-import { ACTIONS } from './src/agent.mjs';
+import { ACTIONS, proposeOf } from './src/agent.mjs';
 import { createCompany, HUMAN_IDS, AGENT_IDS, displayName, isAgent } from './src/runtime.mjs';
 import { queue, bulkPlan, falsePositives, policyForm, policyWords, brainHistory, attribution, reviewable, penceOf, pounds } from './src/oversight.mjs';
-import { signersOf } from './src/shell.mjs';
-import { jobEvidence, secondOpinion } from './src/evidence.mjs';
+import { signersOf, postEntry } from './src/shell.mjs';
+import { jobEvidence, secondOpinion, acceptance, costWeighed, FLOORS } from './src/evidence.mjs';
 import { parseIceServers } from './src/rtc.mjs';
 import { plan, gbp0, gbpM } from './src/office.mjs';
 import { cloudCompare, undercut } from './src/market.mjs';
@@ -359,6 +360,7 @@ import { sampleCsv } from './src/train.mjs';
 import { vaultOf, checkpoint, proofBundle, consistencyBundle, signBrain } from './src/audit.mjs';
 import { exportCompany, openExport, feed, companyCsvs, lockFile } from './src/exportco.mjs';
 import { LOG_MAX } from './src/store.mjs';
+import { parseJournalCsv, manualJournal } from './src/bridge.mjs';
 import { ollama, openaiCompatible, anthropic, webllm } from './src/model.mjs';
 import { makeAntibody, NOVEL_ATTACK, NOVEL_PARAPHRASES } from './src/antibody.mjs';
 import { createWire, renderWire, WIRE_CSS } from './ui/wire.mjs';
@@ -507,14 +509,25 @@ function renderDevices() {
 function openWatch(node) { return node.list('watch').filter((w) => w.status === 'open'); }
 /** What the numbers prove (src/evidence.mjs), live from this run: per job, the agents against doing nothing on the same calls,
  *  and what the second brain added on the money and security calls. */
+/** "May it run unattended?" and the cost break-even, in words, for one job's counts (src/evidence.mjs acceptance, costWeighed). */
+function unattendedHtml(a) { return a.pass ? '<span class="ok">yes</span>' : '<span class="warn">not yet</span> <span class="dim">— ' + esc(a.why.join('; ')) + '</span>'; }
+function breakEvenHtml(b) {
+  return b === null ? '<span class="dim">caught nothing — no ratio makes it worth it</span>' : b === 0 ? 'at any ratio — no false alarms'
+    : 'a miss costs more than ' + (Math.round(b * 10) / 10) + '× a false alarm';
+}
+const FLOORS_NOTE = 'May it run unattended: a job must beat doing nothing on its own calls, and a money or security job must also catch at least ' + Math.round(FLOORS.high.recall * 100) +
+  '% of the real cases and be right on at least ' + Math.round(FLOORS.high.precision * 100) + '% of its flags — judged on the low end of the 95% range, so a few lucky calls cannot pass. ' +
+  'A job that does not pass runs in proposal mode: its agent proposes, a person decides. Worth it on cost: each catch saves a missed case and each false flag costs a false alarm, so the agents come out ahead whenever a miss costs more than the ratio shown — no price assumed.';
+
 function provesPanel() {
   const j = jobEvidence(co.ledger), s = secondOpinion(co.ledger);
   const VERDICT = { better: 'better than doing nothing', worse: 'worse than doing nothing', 'no evidence either way': 'no evidence either way yet' };
-  const rows = Object.entries(j).map(([d, x]) => `<tr><td>${esc(x.job)}</td><td class="n">${x.n}</td><td class="n">${x.tp}</td><td class="n">${x.fp}</td><td class="n">${x.fn}</td>
+  const rows = Object.entries(j).map(([d, x]) => `<tr><td>${esc(x.job)}</td><td class="n">${x.n}</td><td class="n">${x.tp}</td><td class="n">${x.fp}</td><td class="n">${x.fn}</td><td>${unattendedHtml(x.accept)}</td><td>${breakEvenHtml(x.breakEven)}</td>
     <td class="${x.versus.verdict === 'better' ? 'ok' : x.versus.verdict === 'worse' ? 'bad' : 'dim'}">${esc(VERDICT[x.versus.verdict])} <span class="mono dim">p ${x.versus.p < 0.0001 ? '< 0.0001' : x.versus.p.toFixed(4)}</span></td></tr>`).join('');
   return `<div class="panel" style="margin-top:14px"><h3>What the numbers prove — and what they don’t</h3>
     <p class="note" style="margin-top:0">“Right” alone flatters a job where the answer is nearly always “no”: doing nothing scores high there too. So each job is set against doing nothing on the same finished calls. Doing nothing is right where the agents raised a false alarm, and wrong where they caught one — an exact test on those two counts says whether the difference is evidence or chance.</p>
-    <div class="tablewrap"><table><tr><th>Job</th><th class="n">Calls</th><th class="n">Caught</th><th class="n">False alarms</th><th class="n">Missed</th><th>Against doing nothing</th></tr>${rows}</table></div>
+    <div class="tablewrap"><table><tr><th>Job</th><th class="n">Calls</th><th class="n">Caught</th><th class="n">False alarms</th><th class="n">Missed</th><th>May it run unattended?</th><th>Worth it on cost when</th><th>Against doing nothing</th></tr>${rows}</table></div>
+    <p class="note">${esc(FLOORS_NOTE)}</p>
     <p class="note">The second brain, on money and security calls: asked ${s.asked} times — agreed ${s.agreed} (both wrong together ${s.agreedWrong}), disagreed ${s.disagreed}: it caught the first brain’s mistake ${s.caught} time${s.caught === 1 ? '' : 's'} and held a right call for a person ${s.falseAlarm} time${s.falseAlarm === 1 ? '' : 's'}. ${s.noSecond} waited for a person because no second brain could answer. Two brains that make the same mistakes protect less than two that don’t — this is measured, not assumed. Its job is the other case: a brain someone has tampered with. The re-run measures that too — see the white paper.</p></div>`;
 }
 /** C8 — a short note for every action, so a person sees what their click did. */
@@ -1045,13 +1058,15 @@ const VIEWS = {
       ${human ? `<div class="row"><label for="bulk-l" class="dim">Accept every proposal of £</label><input id="bulk-l" value="${esc(ui.bulk)}" inputmode="decimal" style="max-width:90px" aria-label="Bulk-accept limit in pounds"><span class="dim">or less (security calls are always read one by one)</span>
         <button class="sm" data-act="bulk" ${bulk.n ? '' : 'disabled'}>${esc(bulk.words)}</button></div>` : ''}
       <div class="feed">${q.items.map(itemHtml).join('') || '<p class="dim">Nothing waiting here — the agents have it.</p>'}</div>
-      ${done.length ? `<h3 style="margin-top:14px">Recently decided</h3><div class="log">${done.map((i) => `<div>${esc(CHIP[i.kind] || i.kind)} · ${esc(i.customer || i.channel || '')} → ${esc(i.status)}${i.chosenBy ? ' · decided by ' + esc(i.chosenBy) : ''}${i.forged ? ' · <span class="warn">marked by a device that is not a person — ignored</span>' : ''}${i.executedBy ? ' · carried out by ' + esc(agentName(i.executedBy)) : ''}</div>`).join('')}</div>` : ''}
+      ${done.length ? `<h3 style="margin-top:14px">Recently decided</h3><div class="log">${done.map((i) => `<div>${esc(CHIP[i.kind] || i.kind)} · ${esc(i.customer || i.channel || '')} → ${esc(i.status === 'failed' ? 'could not be carried out' : i.status)}${i.status === 'failed' && i.record && i.record.outcome ? ' — ' + esc(String(i.record.outcome).slice(0, 160)) : ''}${i.chosenBy ? ' · decided by ' + esc(i.chosenBy) : ''}${i.forged ? ' · <span class="warn">marked by a device that is not a person — ignored</span>' : ''}${i.executedBy ? (i.status === 'failed' ? ' · reported by ' : ' · carried out by ') + esc(agentName(i.executedBy)) : ''}</div>`).join('')}</div>` : ''}
     </div><div class="panel"><h3>The rules a person sets</h3>
       <ul class="evid">${policyWords(pol).map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
       ${human ? `<div class="row"><label for="pl-lim" class="dim">Money limit, £ (0 = none)</label><input id="pl-lim" value="${esc(pol.moneyLimit ? (pol.moneyLimit / 100).toFixed(2) : '0')}" inputmode="decimal" style="max-width:110px"></div>
       <div class="row"><label for="pl-floor" class="dim">Confidence floor (0 to 1)</label><input id="pl-floor" value="${esc(((Number.isSafeInteger(pol.minConfidence) ? pol.minConfidence : 50) / 1000).toFixed(2))}" style="max-width:80px"></div>
       <div class="row"><label><input type="checkbox" id="pl-pause" ${pol.autoPause === false ? '' : 'checked'}> The behaviour watch pauses an agent that stops behaving like itself</label></div>
-      <div class="row"><button class="primary" data-act="policy-save">Save the rules</button></div>` : '<p class="dim">The owner or the overseer changes these.</p>'}
+      <div class="row"><span class="dim">Proposal mode — the agent proposes, a person decides every call of:</span></div>
+      <div class="row">${(() => { const on = ui.proposeDraft ? [...ui.proposeDraft] : proposeOf({ propose: pol.propose }), ev = jobEvidence(co.ledger); return Object.keys(ACTIONS).map((d) => `<label class="dim"><input type="checkbox" data-propose="${esc(d)}" ${on.includes(d) ? 'checked' : ''}> ${esc((ev[d] && ev[d].job) || d)}${ev[d] && !ev[d].accept.pass ? ' <span class="warn">below its floor</span>' : ''}</label>`).join(' '); })()}</div>
+      <div class="row"><button class="sm" data-act="policy-floors">Tick the jobs below their acceptance floor</button><button class="primary" data-act="policy-save">Save the rules</button></div>` : '<p class="dim">The owner or the overseer changes these.</p>'}
       <h3 style="margin-top:14px">Agents</h3>${ctl}
       ${human ? `<div class="row" style="margin-top:10px"><button class="danger" data-act="pause-all">Pause every agent</button><button data-act="resume-all">Resume all</button></div>` : ''}
       <p class="note">Pause stops an agent acting (its work waits for a person). To fire an agent, revoke its grant in People — every device then refuses its writes.</p>
@@ -1140,7 +1155,7 @@ const VIEWS = {
       <tr><th>Debits = credits</th><th class="n ${tb.balanced ? 'ok' : 'bad'}">${gbp(tb.dr)} ${tb.balanced ? '✓' : '✗'}</th></tr></table>
       <p style="margin:12px 0 4px"><b>P&amp;L</b> income ${gbp(pl.income)} · costs ${gbp(pl.expense)} · <b class="${pl.profit >= 0 ? 'ok' : 'warn'}">${gbp(pl.profit)}</b></p>
       <p style="margin:0"><b>Balance sheet</b> assets ${gbp(bs.assets)} = liabilities ${gbp(bs.liabilities)} + equity ${gbp(bs.equity)} + profit ${gbp(bs.profit)} <b class="${bs.balanced ? 'ok' : 'bad'}">${bs.balanced ? '✓ balances' : '✗'}</b></p>
-    </div></div>`;
+    </div></div>${journalPanel(node)}`;
   },
   Vault(node) {
     const { recs, heads, cos, a } = vaultState(node);
@@ -1262,6 +1277,29 @@ async function snapDigests() {
   if (tab === 'Proof') render();
 }
 
+// ── Books: post a journal — the accountant's adjusted file read back (bridge.mjs parseJournalCsv), or one entry typed
+//    (bridge.mjs manualJournal); each checked as every posting is, then sealed into the record (shell.mjs postEntry) ──
+ui.jn = { file: null, name: '', posted: '' };
+function journalPanel(node) {
+  const may = node.canWrite('journal') && node.canWrite('vault') && node.canWrite('vault_head') && selIsHuman();
+  const f = ui.jn.file;
+  const rows = f && f.entries ? f.entries.slice(0, 40).map((e) => { const v = validEntry(e); return `<tr><td class="mono">${esc(e.id)}</td><td>${esc(e.date)}</td><td>${esc(e.memo)}</td><td class="n">${v.ok ? gbp(v.total) : '—'}</td></tr>`; }).join('') : '';
+  return `<div class="panel" style="margin-top:14px"><h3>Post a journal — your accountant’s adjustments, or an entry of your own</h3>
+    <p class="note" style="margin-top:0">Every line is checked as every posting is: accounts in the chart, a debit or a credit on each line, debits equal to credits. An entry that does not balance is not posted. Each one posted is sealed into the record your auditor can check — nothing is ever changed in place: a correction is a new entry.${may ? '' : ' <b>Only a person whose device may post to the books — the owner, or an admin — posts here.</b>'}</p>
+    <div class="row"><label class="dim" for="jn-file">The file your accountant sent back (Sage journal import, CSV)</label><input type="file" id="jn-file" accept=".csv,text/csv"></div>
+    ${f ? (f.ok ? `<p class="dim">${esc(ui.jn.name)}: ${f.entries.length} journal${f.entries.length === 1 ? '' : 's'} read · debits ${gbp(f.totals.debit)} = credits ${gbp(f.totals.credit)}${f.rejected.length ? ` · <span class="warn">${f.rejected.length} line${f.rejected.length === 1 ? '' : 's'} refused</span>` : ''}</p>
+      <div class="tablewrap" style="max-height:220px;overflow:auto"><table><tr><th>Reference</th><th>Date</th><th>What</th><th class="n">Amount</th></tr>${rows}</table></div>
+      ${f.rejected.length ? `<ul class="evid">${f.rejected.slice(0, 12).map((r) => `<li>line ${r.line}: ${esc(r.why)}</li>`).join('')}</ul>` : ''}
+      ${may ? `<div class="row"><button class="primary" data-act="jn-post-file">${f.entries.length === 1 ? 'Post this journal' : 'Post these ' + f.entries.length + ' journals'}</button></div>` : ''}`
+      : `<p class="warn">Not read: ${esc(f.why)}</p>`) : ''}
+    ${may ? `<h3 style="margin-top:14px">Or one entry by hand</h3>
+      <div class="row"><input id="jn-date" placeholder="Date — 15/10/2026" aria-label="Date of the entry" style="max-width:160px"><input id="jn-memo" placeholder="What it is for" aria-label="What the entry is for" maxlength="200"></div>
+      <textarea id="jn-lines" rows="3" placeholder="One line each: account, debit, credit — e.g.&#10;7100, 1,250.00, 0&#10;1200, 0, 1,250.00" aria-label="The entry's lines: account, debit, credit"></textarea>
+      <div class="row"><button class="primary" data-act="jn-post">Post it</button><span class="dim">Accounts: ${Object.entries(CHART).map(([c, [n]]) => esc(c) + ' ' + esc(n)).join(' · ')}</span></div>` : ''}
+    ${ui.jn.posted ? `<p class="flash">${esc(ui.jn.posted)}</p>` : ''}
+  </div>`;
+}
+
 // the mycelium map: six agent devices on a ring; edges are learned brains, mesh answers and second-brain confirmations
 function mycelium() {
   const W = 520, H = 330, cx = W / 2, cy = H / 2 + 6, R = 120;
@@ -1336,8 +1374,34 @@ async function act(a, el) {
     const n = plan.n ? await co.bulkAccept(ui.sel, plan.ids) : 0;
     toast(n ? 'Accepted ' + n + ' proposal' + (n === 1 ? '' : 's') + ' — each agent carries out its own' : plan.words, n ? 'ok' : 'warn');
   }
+  else if (a === 'jn-post') {
+    const r = manualJournal({ date: val('jn-date'), memo: val('jn-memo'), lines: $('jn-lines') ? $('jn-lines').value : '' });
+    if (!r.ok) { toast('Not posted: ' + r.why, 'warn'); return; }
+    const p = await postEntry(node, r.entry);
+    ui.jn.posted = p.ok ? 'Posted and sealed into the record: ' + r.entry.memo + ' · ' + gbp(validEntry(r.entry).total) : 'Not posted: ' + (p.reason === 'not-authorised' ? 'this device may not post to the books' : p.reason);
+    toast(ui.jn.posted, p.ok ? 'ok' : 'warn');
+    if (p.ok) for (const id of ['jn-date', 'jn-memo', 'jn-lines']) if ($(id)) $(id).value = '';
+  }
+  else if (a === 'jn-post-file') {
+    const f = ui.jn.file;
+    if (!f || !f.ok) return;
+    let done = 0, refused = 0;
+    for (const e of f.entries) { const p = await postEntry(node, { date: e.date, memo: e.memo, lines: e.lines }); if (p.ok) done++; else refused++; }
+    ui.jn = { file: null, name: '', posted: 'Posted ' + done + ' journal' + (done === 1 ? '' : 's') + ' from ' + ui.jn.name + ' and sealed ' + (done === 1 ? 'it' : 'them') + ' into the record' + (refused ? ' · ' + refused + ' refused' : '') };
+    toast(ui.jn.posted, refused ? 'warn' : 'ok');
+  }
+  else if (a === 'policy-floors') {
+    const ev = jobEvidence(co.ledger);
+    let n = 0;
+    ui.proposeDraft = new Set(Object.keys(ACTIONS).filter((d) => !!ev[d] && !ev[d].accept.pass));   // unsaved until a person saves: the beat redraws from this
+    n = ui.proposeDraft.size;
+    render();
+    toast(n ? 'Ticked ' + n + ' job' + (n === 1 ? '' : 's') + (n === 1 ? ' below its' : ' below their') + ' acceptance floor — press Save the rules to put ' + (n === 1 ? 'it' : 'them') + ' in proposal mode' : 'Every job with calls so far clears its floor', n ? 'warn' : 'ok');
+    return;
+  }
   else if (a === 'policy-save') {
-    const f = policyForm({ limit: val('pl-lim'), floor: val('pl-floor'), autoPause: !!($('pl-pause') && $('pl-pause').checked) });
+    const f = policyForm({ limit: val('pl-lim'), floor: val('pl-floor'), autoPause: !!($('pl-pause') && $('pl-pause').checked), propose: [...document.querySelectorAll('[data-propose]:checked')].map((x) => x.dataset.propose) });
+    ui.proposeDraft = null;
     if (!f.ok) toast('Not saved: ' + f.why, 'warn');
     else { const r = await co.setPolicy(ui.sel, f.fields); toast(r.ok ? 'Rules saved — every agent reads them from the spine' : 'Not saved: ' + (r.why || r.reason), r.ok ? 'ok' : 'warn'); }
   }
@@ -1452,7 +1516,7 @@ function renderOverview() {
   <div class="ov-live" id="ov-live"></div>
   <div class="ov-cards">
     <div class="card"><h3>The AI does the work</h3><p>Each agent reads the work for its department, decides, and acts: fast-tracks a buyer, holds a fraudulent payment, raises a purchase order, quarantines an intrusion — and writes it into the CRM, the books, the tasks.</p></div>
-    <div class="card"><h3>It knows what it doesn't know</h3><p>Every brain answers only inside what it was proven on, and abstains outside it. Money and security calls need a second, independent brain to agree. Anything uncertain lands on one list for a person.</p></div>
+    <div class="card"><h3>It knows what it doesn't know</h3><p>Every brain answers only inside what it was proven on, and abstains outside it. Money and security calls need a second brain, grown separately, to agree. Anything uncertain lands on one list for a person.</p></div>
     <div class="card"><h3>You own all of it</h3><p>The machines, the data, the AI brains — readable rule by rule — and the source code. No vendor holds your company. If the internet goes down, it keeps working.</p></div>
   </div>
   <h2 class="sec-h">The whole company at a glance</h2>
@@ -1475,9 +1539,13 @@ function renderOverviewLive() {
   if (!el || !co) return;
   const k = boardKpis(co.ledger);
   const watch = openWatch(co.nodes.owner).length;
+  // the headline accuracy beside what doing nothing would score on the very same finished calls (company.mjs jobMetrics):
+  // shown only when the per-job counts cover exactly the calls the headline counts
+  const m = Object.values(k.metrics || {}), n = m.reduce((s, x) => s + (x.done | 0), 0);
+  const base = n && n === k.done ? m.reduce((s, x) => s + (x.done | 0) * (Number(x.baselinePermille) || 0), 0) / n / 1000 : null;
   el.innerHTML = [
     [k.total, 'pieces of work decided'], [pct(k.automated), 'done end to end by agents'],
-    [k.done ? pct(k.accuracy) : '—', 'of agent calls matched the real outcome'], [watch, 'waiting for a person right now'],
+    [k.done ? pct(k.accuracy) : '—', 'of agent calls matched the real outcome' + (base !== null ? ' — always answering “no” would match ' + pct(base) : '')], [watch, 'waiting for a person right now'],
   ].map(([v, l]) => `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
 }
 // per-job accuracy from the re-run day's receipt: the base rate beside every score, and what the errors mean
@@ -1485,9 +1553,17 @@ function metricsHtml() {
   const m = ui.ctx && ui.ctx.receipt && ui.ctx.receipt.summary && ui.ctx.receipt.summary.metrics;
   if (!m || !Object.keys(m).length) return '';
   const f = (x) => (x === null || x === undefined || !Number.isFinite(x) ? '—' : (x / 10).toFixed(1) + '%');
-  return `<div class="tablewrap"><table><tr><th>Job (re-run day)</th><th class="n">Calls finished</th><th class="n">Right</th><th class="n">Always “no” would score</th><th class="n">Caught (recall)</th><th class="n">Flags that were real (precision)</th><th class="n">To a person</th></tr>
-    ${Object.entries(m).map(([d, x]) => `<tr><td>${esc(x.job || d)}</td><td class="n">${x.done}</td><td class="n">${f(x.rightPermille)}</td><td class="n">${f(x.baselinePermille)}</td><td class="n">${f(x.recallPermille)}</td><td class="n">${f(x.precisionPermille)}</td><td class="n">${x.held}</td></tr>`).join('')}</table></div>
-    <p class="note">“Always no” is what you would score by never acting; the brains earn their keep in the cases they catch. Scored on public datasets, whose mix of cases differs from yours.</p>`;
+  // each job against doing nothing, from the receipt's own exact sign test (src/evidence.mjs): evidence, or not yet
+  const ev = (ui.ctx.receipt.summary.evidence && ui.ctx.receipt.summary.evidence.jobs) || {};
+  const p = (x) => (x.p10k < 1 ? 'p < 0.0001' : 'p ' + (x.p10k / 10000).toFixed(4));
+  const vs = (d) => { const x = ev[d]; if (!x) return '—'; return x.verdict === 'better' ? `<span class="ok">better</span> <span class="dim">${p(x)}</span>` : x.verdict === 'worse' ? `<span class="bad">worse</span> <span class="dim">${p(x)}</span>` : `<span class="dim">no evidence either way yet (${p(x)})</span>`; };
+  const better = Object.entries(ev).filter(([, x]) => x.verdict === 'better').map(([d, x]) => (m[d] && m[d].job) || x.job || d);
+  const acc = (d) => (ev[d] ? unattendedHtml(acceptance(ev[d], ACTIONS[d] ? ACTIONS[d].stakes : 'normal')) : '—');
+  const be = (d) => (ev[d] ? breakEvenHtml(costWeighed(ev[d]).breakEven) : '—');
+  return `<div class="tablewrap"><table><tr><th>Job (re-run day)</th><th class="n">Calls finished</th><th class="n">Right</th><th class="n">Always “no” would score</th><th>Against doing nothing</th><th>May it run unattended?</th><th>Worth it on cost when</th><th class="n">Caught (recall)</th><th class="n">Flags that were real (precision)</th><th class="n">To a person</th></tr>
+    ${Object.entries(m).map(([d, x]) => `<tr><td>${esc(x.job || d)}</td><td class="n">${x.done}</td><td class="n">${f(x.rightPermille)}</td><td class="n">${f(x.baselinePermille)}</td><td>${vs(d)}</td><td>${acc(d)}</td><td>${be(d)}</td><td class="n">${f(x.recallPermille)}</td><td class="n">${f(x.precisionPermille)}</td><td class="n">${x.held}</td></tr>`).join('')}</table></div>
+    <p class="note">“Always no” is what you would score by never acting; the brains earn their keep in the cases they catch. “Against doing nothing” is an exact test on the calls where the agent and doing nothing disagree: on one day’s calls${better.length ? ', ' + esc(better.join(', ').toLowerCase()) + (better.length === 1 ? ' is' : ' are') + ' measurably better' : ' no job is yet measurably better'}; the rest are too few to tell either way, and a pilot measures each on your own records. Scored on public datasets, whose mix of cases differs from yours.</p>
+    <p class="note">${esc(FLOORS_NOTE)}</p>`;
 }
 function renderCase() {
   if (!ui.ctx) { $('v-case').innerHTML = '<p class="dim">Loading the figures…</p>'; return; }
@@ -1594,6 +1670,11 @@ document.addEventListener('input', async (e) => {
 });
 document.addEventListener('change', async (e) => {
   if (e.target.dataset && e.target.dataset.mdl) { const k = e.target.dataset.mdl; ui.model[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; if (k === 'prov' || k === 'own' || k === 'oaUrl') { ui.model.status = ''; ui.model.test = ''; render(); } return; }
+  if (e.target.id === 'jn-file' && e.target.files && e.target.files[0]) {
+    const f = e.target.files[0]; e.target.value = '';
+    ui.jn = { name: f.name.slice(0, 80), posted: '', file: f.size > 8 * 1024 * 1024 ? { ok: false, why: 'the file is over 8 MB' } : parseJournalCsv(await f.text()) };
+    render(); return;
+  }
   if (e.target.id === 'train-file' && e.target.files && e.target.files[0]) {
     const f = e.target.files[0];
     if (f.size > 20 * 1024 * 1024) { ui.train = { error: 'That file is over 20 MB — try a sample of it.' }; renderTrainBox(); return; }
@@ -1612,6 +1693,12 @@ document.addEventListener('change', async (e) => {
   if (pl.wireOwn && e.target.files) { const list = await readFiles(e.target.files); e.target.value = ''; await wire.ownFiles(list); return; }
   if (e.target.dataset && e.target.dataset.wireOs) { e.target.blur(); await wire.act('wire-os', e.target, wireRead); return; }
   if (e.target.id === 'train-target') { ui.train = { ...ui.train, target: e.target.value, result: null }; renderTrainBox(); return; }
+  if (e.target.dataset && e.target.dataset.propose && co) {   // an unsaved proposal-mode tick: kept until Save, through every redraw
+    const pol = (current() && current().list('policy').find((r) => r.id === 'agents')) || {};
+    ui.proposeDraft = ui.proposeDraft || new Set(proposeOf({ propose: pol.propose }));
+    if (e.target.checked) ui.proposeDraft.add(e.target.dataset.propose); else ui.proposeDraft.delete(e.target.dataset.propose);
+    return;
+  }
   if (e.target.id === 'stress' && co) { co.stress = !!e.target.checked; toast(co.stress ? 'Stress test on: a quarter of the work lands at the wrong agent' : 'Stress test off: every piece of work lands at its own agent'); }
 });
 document.addEventListener('input', (e) => {

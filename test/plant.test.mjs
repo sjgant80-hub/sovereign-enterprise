@@ -78,7 +78,7 @@ const file = (plan, n) => plan.files.find((f) => f.name === n);
 const SHIPPED_GAP = (name, agent) => 'No file of yours for the ' + name + ' job: the ' + agent + ' starts on the shipped brain, which must re-verify on your own records before it acts.';
 const NONE_GAP = (name) => 'No data and no brain for the ' + name + ' job: its work waits on the Watch list until data arrives.';
 const OFF_WORKER = 'none of its jobs has a brain that passed its check — its work waits for a person';
-const OFF_AUDIT = 'no file of yours for card fraud, credit default or intrusion to grow its independent second brain from — until one arrives, a money or security call no second brain confirms waits for a person';
+const OFF_AUDIT = 'no file of yours for card fraud, credit default or intrusion to grow its own second brain from — until one arrives, a money or security call no second brain confirms waits for a person';
 const MODELLED = (labels) => 'No headcount was given for ' + labels + ' — the comparison keeps the model office’s headcount there.';
 const ALL_BUT_SERVICE = 'Sales and business development, Marketing, Finance and accounts, HR and administration, Operations and delivery, IT and systems and Leadership';
 

@@ -281,11 +281,11 @@
   "vault": {
    "size": 120,
    "audits": true,
-   "root": "e4ceab87ae76fd21a7e91111717b10e965f81667556242518ebda6223f5537d5",
+   "root": "6e2ae2e7cfc802727f0c6bdcfb456442c3977c3515ac15d09a4c5be1ad6883e5",
    "cosigned": 11
   },
-  "writes": 3803,
-  "digest": "e7e416dfb76c4a07835af9f20033644af8a2f4a1d1f9f943216cd7a2ba566d27",
+  "writes": 3818,
+  "digest": "cf31bdf1b0b8bdb42f7ca7a66593550930553655d31cffec74574f3900f04e62",
   "converged": true
  },
  "systemsDecisionsTotal": 53,
@@ -312,5 +312,5 @@
    "wrongThrough": 4
   }
  },
- "receiptHash": "5015248ecf411676524f89a8f14c8c12072706c41d715abdf4fda559851f5d72"
+ "receiptHash": "1174a848d0db0d3cb11220c51955c354bc5e5ba430edfac15061bcdc5a009eaf"
 }

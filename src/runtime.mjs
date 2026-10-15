@@ -230,7 +230,7 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     }
     await overseer.put('policy', 'agents', { minConfidence: Math.round(DEFAULT_POLICY.minConfidence * 1000), moneyLimit: 0, autoPause: true, by: overseer.name });
     await co.syncAll();
-    await owner.typeAt('docs', 'policy', 0, 'Operating policy: agents act end to end. Money and security calls are decided only by the job’s own agent, and need a second, independent brain. Anything no brain can confirm waits for a person — the owner or the overseer.');
+    await owner.typeAt('docs', 'policy', 0, 'Operating policy: agents act end to end. Money and security calls are decided only by the job’s own agent, and need a second brain, grown separately, to agree. Anything no brain can confirm waits for a person — the owner or the overseer.');
     await co.syncAll();
     return co;
   };
