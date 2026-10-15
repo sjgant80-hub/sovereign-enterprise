@@ -152,12 +152,12 @@ export function adopt(p, localRows, gate = GATE_AUC, current = null) {
   if (!validPattern(p)) return { adopt: false, localAuc: 0, n: 0, reason: 'malformed pattern' };
   const v = verifyOn(p, localRows);
   if (v.n < 50) return { adopt: false, localAuc: v.auc, n: v.n, reason: 'not enough local data to verify' };
-  if (v.auc < gate) return { adopt: false, localAuc: v.auc, n: v.n, reason: 'did not re-verify here (AUC ' + v.auc + ' < ' + gate + ')' };
+  if (v.auc < gate) return { adopt: false, localAuc: v.auc, n: v.n, reason: 'did not re-verify here (AUC ' + v.auc.toFixed(3) + ' < ' + gate + ')' };
   if (validPattern(current)) {
     const c = verifyOn(current, localRows).auc;
-    if (v.auc < c - REGRESSION_TOLERANCE) return { adopt: false, localAuc: v.auc, n: v.n, currentAuc: c, reason: 'worse than the brain it would replace on ' + v.n + ' of this device’s own cases (AUC ' + v.auc + ' < ' + c + ')' };
+    if (v.auc < c - REGRESSION_TOLERANCE) return { adopt: false, localAuc: v.auc, n: v.n, currentAuc: c, reason: 'worse than the brain it would replace on ' + v.n + ' of this device’s own cases (AUC ' + v.auc.toFixed(3) + ' < ' + c.toFixed(3) + ')' };
   }
-  return { adopt: true, localAuc: v.auc, n: v.n, reason: 're-verified on ' + v.n + ' local cases (AUC ' + v.auc + ')' };
+  return { adopt: true, localAuc: v.auc, n: v.n, reason: 're-verified on ' + v.n + ' local cases (AUC ' + v.auc.toFixed(3) + ')' };
 }
 
 // ── a pattern as one signed spine record (the spine carries strings / ints / booleans only) ──────────────────

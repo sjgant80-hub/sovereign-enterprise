@@ -380,7 +380,8 @@ let view = 'overview';
 let co = null;
 const ui = { sel: 'owner', leases: {}, running: true, speed: 1, brainLog: [], gateLog: [], ring: keyRing(), ready: false, proofOut: '', flash: '',
   trace: null, tour: -1, ctx: null, train: {},
-  wsort: 'risk', wfilter: 'all', bulk: '500', seen: new Map(),   // the Watch queue: how it is sorted and filtered, the bulk-accept limit, when each item was first seen
+  wsort: 'risk', wfilter: 'all', bulk: '500', seen: new Map(),
+  revealed: new Map(),   // People: details a person chose to read on this device (held here, so the heartbeat's redraw keeps them)   // the Watch queue: how it is sorted and filtered, the bulk-accept limit, when each item was first seen
   // the visitor's business — one picture shared by For your business, The case and the Overview
   biz: { pairs: [], revenue: '6000000', margin: '8' } };
 const parseMargin = (x) => { const t = String(x ?? '').replace('%', '').trim(); const n = Number(t); return t !== '' && Number.isFinite(n) && n > -100 && n < 100 ? n / 100 : NaN; };
@@ -440,7 +441,7 @@ async function bootCompany() {
   const real = {};
   for (const [d, m] of Object.entries(index)) if (m.sample && d !== 'shopper') real[d] = await J('brains/' + m.sample);
   co = createCompany({ index, patterns, shopper, real }, { log: brainLog });
-  const ADDR = { owner: 'Flat 2, 14 Mill Lane, Leeds', overseer: '9 Rowan Close, York' };
+  const ADDR = { owner: 'Flat 2, 14 Sample Lane, Anytown (a made-up address)', overseer: '9 Example Close, Anytown (a made-up address)' };
   await co.boot({ people: async (id, human) => (human ? { privateSealed: await seal(await ui.ring.keyFor('p-' + id), ADDR[id] || '', 'people/p-' + id) } : {}) });
   const now = Date.now();
   for (const id of co.order) ui.leases[id] = { issuedAt: now, ttl: LEASE_TTL };
@@ -1112,8 +1113,8 @@ const VIEWS = {
       <p class="note">Firing an agent revokes its grant at its last write: every device refuses anything it signs after that, its data lease stops renewing, and the door routes its work to the others.</p>
     </div><div class="panel"><h3>Directory — personal details sealed per person</h3>
       ${ppl.map((p) => `<div class="item"><span class="grow"><span class="kind ${p.kind === 'agent' ? 'ai' : p.kind === 'hub' ? 'hb' : 'hu'}">${p.kind === 'agent' ? 'AI' : p.kind === 'hub' ? 'HUB' : 'HUMAN'}</span><b>${esc(p.name)}</b> <span class="dim">${esc(p.title)}</span><br>
-        <span class="mono dim" data-sealed="${esc(p.id)}">${p.privateSealed ? 'sealed · ' + short(p.privateSealed) + '…' : (p.kind === 'hub' ? 'no personal details — a machine' : 'no personal details — an agent')}</span></span>
-        ${mode === 'demo' && isOwner && p.privateSealed ? `<button class="sm" data-act="reveal" data-id="${esc(p.id)}">Reveal</button><button class="sm danger" data-act="erase" data-id="${esc(p.id)}">Erase</button>` : ''}</div>`).join('') || '<p class="dim">No directory entries.</p>'}
+        <span class="mono dim" data-sealed="${esc(p.id)}">${!p.privateSealed ? (p.kind === 'hub' ? 'no personal details — a machine' : 'no personal details — an agent') : ui.ring.shredded().includes(p.id) ? 'erased — key destroyed, unreadable on every device' : ui.revealed.has(p.id) ? esc(ui.revealed.get(p.id)) : 'sealed · ' + short(p.privateSealed) + '…'}</span></span>
+        ${mode === 'demo' && isOwner && p.privateSealed && !ui.ring.shredded().includes(p.id) ? `<button class="sm" data-act="${ui.revealed.has(p.id) ? 'hide' : 'reveal'}" data-id="${esc(p.id)}">${ui.revealed.has(p.id) ? 'Hide' : 'Reveal'}</button><button class="sm danger" data-act="erase" data-id="${esc(p.id)}">Erase</button>` : ''}</div>`).join('') || '<p class="dim">No directory entries.</p>'}
       <p class="dim" style="font-size:12px">Erase destroys the person's key: every copy of their sealed details, on every device, goes dark at once — while the record, the history and the vault all still verify.</p></div></div>`;
   },
   Proof(node) {
@@ -1208,8 +1209,9 @@ async function act(a, el) {
     await node.revoke(el.dataset.g, max);
   }
   else if (a === 'grant') { const k = val('gk').toLowerCase(); if (/^[0-9a-f]{64}$/.test(k)) await node.grant(uid(node, 'g'), k, val('gr') || 'staff', val('gr') === 'admin' ? ['*'] : ['tasks', 'msg', 'docs', 'crm', 'wire']); }
-  else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await ui.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = t === null ? 'erased — key destroyed, unreadable on every device' : t; return; }
-  else if (a === 'erase') { ui.ring.shred(el.dataset.id); const span = document.querySelector(`[data-sealed="${CSS.escape(el.dataset.id)}"]`); if (span) span.textContent = 'erased — key destroyed, unreadable on every device'; return; }
+  else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await ui.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; if (t !== null) ui.revealed.set(el.dataset.id, t); else toast('Could not open it — the key is gone', 'warn'); }
+  else if (a === 'hide') ui.revealed.delete(el.dataset.id);
+  else if (a === 'erase') { ui.ring.shred(el.dataset.id); ui.revealed.delete(el.dataset.id); toast('Erased — the key is destroyed; every copy of their details is unreadable, and the record still verifies', 'ok'); }
   else if (a === 'sim') { ui.proofOut = 'running 8 devices through partitions, drops, duplicates and attacks…'; render(); const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); ui.proofOut = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, forks: r.forks, burnedKeys: r.burnedKeys, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); }
   else if (a === 'receipt') {
     // re-check the latest verified answer: re-hash its receipt, match it to the signed decision on the spine, then tamper with it

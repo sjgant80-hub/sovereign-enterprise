@@ -285,10 +285,10 @@
    "cosigned": 11
   },
   "writes": 3803,
-  "digest": "862ad7e5d7b93e4fa422a036c9dbd81f6bddc6ddba84305a9d57106e12d10265",
+  "digest": "e7e416dfb76c4a07835af9f20033644af8a2f4a1d1f9f943216cd7a2ba566d27",
   "converged": true
  },
  "systemsDecisionsTotal": 53,
  "growthLog": 20,
- "receiptHash": "36731431f74b11bf5fcf2ef1bdfbb949de0516f1d9f9ee9055fc9721f4bf80f2"
+ "receiptHash": "4e93fec3e7ec957170a3476b6128e77446e0f071bd6037c766dcd4f340a99210"
 }
