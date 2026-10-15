@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   encodeSignal, decodeSignal, stripSdp, checkSdp, fingerprintOf, bindText, parseMessage, isMember,
   createSyncSession, connectAsHost, connectAsGuest, attachSession, LIMITS, SIGNAL_VERSION, BIND_TAG, ICE_SERVERS,
+  parseIceServers, ICE_LIMITS, ICE_WHY,
 } from '../src/rtc.mjs';
 import { createNode, pull, signEnvelope } from '../src/node.mjs';
 import { fromSeed, sign } from '../src/keys.mjs';
@@ -1127,4 +1128,56 @@ test('fuzz: every export is total on junk — sync ones never throw, async ones 
     assert.equal(typeof (await s.onMessage(mutated)).ok, 'boolean');
     s.close();
   }
+});
+
+// ── the company's own STUN / TURN servers ───────────────────────────────────────────────────────────────────────────
+test('ice servers: the owner can name their own STUN and TURN, or none at all', () => {
+  // empty keeps the one default public lookup; "none" is same network only
+  assert.deepEqual(parseIceServers(''), { ok: true, servers: ICE_SERVERS, custom: false });
+  assert.deepEqual(parseIceServers(' \n \r\n'), { ok: true, servers: ICE_SERVERS, custom: false });
+  assert.deepEqual(parseIceServers('NONE'), { ok: true, servers: [], custom: true });
+  assert.deepEqual(parseIceServers('stun:stun.example.com:3478'), { ok: true, servers: [{ urls: 'stun:stun.example.com:3478' }], custom: true });
+  // schemes are normalised, hosts may be names, IPv4 or bracketed IPv6, the port is optional
+  const r = parseIceServers('STUN:10.0.0.5\r\n  TURN:relay.example.com:3478?transport=TCP  ops s3cret!  \nturns:[2001:db8::1]:5349?transport=tcp a b\nturn:relay.example.com u p');
+  assert.deepEqual(r, { ok: true, custom: true, servers: [
+    { urls: 'stun:10.0.0.5' },
+    { urls: 'turn:relay.example.com:3478?transport=tcp', username: 'ops', credential: 's3cret!' },
+    { urls: 'turns:[2001:db8::1]:5349?transport=tcp', username: 'a', credential: 'b' },
+    { urls: 'turn:relay.example.com', username: 'u', credential: 'p' },
+  ] });
+  assert.deepEqual(parseIceServers('turn:r.example.com:1 u p').servers[0].urls, 'turn:r.example.com:1');
+  assert.deepEqual(parseIceServers('turn:r.example.com:65535 u p').servers[0].urls, 'turn:r.example.com:65535');
+  assert.equal(parseIceServers('stuns:s.example.com').servers[0].urls, 'stuns:s.example.com');
+  // "none" only means none on its own line, alone
+  assert.equal(parseIceServers('none\nstun:s.example.com').reason, 'ice-url');
+});
+
+test('ice servers: every mistake is refused in words, with its line', () => {
+  const why = (t) => { const r = parseIceServers(t); assert.equal(r.ok, false); return [r.reason, r.line, r.why]; };
+  assert.deepEqual(why('http://stun.example.com'), ['ice-url', 1, 'line 1: ' + ICE_WHY['ice-url']]);
+  assert.deepEqual(why('stun:ok.example.com\nstun:bad_host!'), ['ice-host', 2, 'line 2: ' + ICE_WHY['ice-host']]);
+  assert.equal(why('stun:-bad.example.com')[0], 'ice-host');
+  assert.equal(why('stun:a..b')[0], 'ice-host');
+  assert.equal(why('stun:host:abc')[0], 'ice-host');
+  assert.equal(why('stun:s.example.com:0')[0], 'ice-port');
+  assert.equal(why('stun:s.example.com:65536')[0], 'ice-port');
+  assert.equal(why('stun:s.example.com?transport=udp')[0], 'ice-transport');
+  assert.equal(why('turns:r.example.com?transport=udp u p')[0], 'ice-transport');
+  assert.equal(why('turn:r.example.com?transport=sctp u p')[0], 'ice-url');
+  assert.equal(why('stun:s.example.com user')[0], 'ice-credentials');
+  assert.equal(why('turn:r.example.com')[0], 'ice-credentials');
+  assert.equal(why('turn:r.example.com user')[0], 'ice-credentials');
+  assert.equal(why('turn:r.example.com u p extra')[0], 'ice-credentials');
+  assert.equal(why('turn:r.example.com ' + 'u'.repeat(ICE_LIMITS.cred + 1) + ' p')[0], 'ice-credentials');
+  assert.equal(why('turn:r.example.com u ' + 'p'.repeat(ICE_LIMITS.cred + 1))[0], 'ice-credentials');
+  assert.equal(parseIceServers('turn:r.example.com ' + 'u'.repeat(ICE_LIMITS.cred) + ' ' + 'p'.repeat(ICE_LIMITS.cred)).ok, true);
+  assert.equal(why('stun:s.example.com\n'.repeat(ICE_LIMITS.lines + 1))[0], 'ice-lines');
+  assert.equal(parseIceServers('stun:s.example.com\n'.repeat(ICE_LIMITS.lines)).servers.length, ICE_LIMITS.lines);
+  assert.equal(why('stun:' + 'a'.repeat(ICE_LIMITS.line))[0], 'ice-line-size');
+  // a valid line of exactly the limit is accepted (four 63-letter labels and one of 39: a 295-character host name)
+  const longest = 'stun:' + [...Array(4).fill('a'.repeat(63)), 'a'.repeat(39)].join('.');
+  assert.equal(longest.length, ICE_LIMITS.line);
+  assert.equal(parseIceServers(longest).ok, true);
+  assert.deepEqual(why(null), ['ice-type', 0, ICE_WHY['ice-type']]);
+  for (const junk of [undefined, 7, {}, [], () => 1, Symbol('s'), 1n, { toString() { throw new Error('boom'); } }]) assert.equal(parseIceServers(junk).ok, false);
 });

@@ -44,6 +44,61 @@ import { sign, verify } from './keys.mjs';
 export const SIGNAL_VERSION = 'SE1';
 export const BIND_TAG = 'sovereign-enterprise rtc bind v1';
 export const ICE_SERVERS = Object.freeze([Object.freeze({ urls: 'stun:stun.l.google.com:19302' })]);
+
+// The company's own STUN / TURN servers, as the owner types them — one per line:
+//   stun:host[:port]
+//   turn:host[:port][?transport=udp|tcp] username password   (a relay: the traffic passes through it, still encrypted
+//   turns:host[:port][?transport=tcp] username password         end to end by DTLS — the relay never sees a record)
+// An empty field keeps the default (one public STUN lookup); "none" means no server at all — machines on the same network
+// only. → { ok: true, servers, custom } or { ok: false, reason, line, why } — junk is refused in words, never thrown.
+export const ICE_LIMITS = Object.freeze({ lines: 8, line: 300, cred: 128 });
+export const ICE_WHY = Object.freeze({
+  'ice-type': 'the server list must be text',
+  'ice-lines': 'at most ' + ICE_LIMITS.lines + ' servers',
+  'ice-line-size': 'that line is too long',
+  'ice-url': 'start each line with stun:, turn: or turns: and a host name, for example stun:stun.example.com:3478',
+  'ice-host': 'that is not a host name or an IP address',
+  'ice-port': 'a port is a number from 1 to 65535',
+  'ice-transport': 'transport is udp or tcp; turns: takes only tcp, and stun: takes none',
+  'ice-credentials': 'a TURN relay needs a username and a password after it, separated by spaces; a STUN server takes neither',
+  'ice-fault': 'the server list could not be read',
+});
+const ICE_URL = /^(stuns?|turns?):([^\s?]+?)(?::([0-9]{1,5}))?(?:\?transport=(udp|tcp))?$/i;
+const ICE_HOST = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*|\[[0-9a-f:.]{2,45}\])$/i;
+const ICE_CRED = /^[\x21-\x7e]+$/;
+const iceNo = (reason, line) => ({ ok: false, reason, line, why: (line ? 'line ' + line + ': ' : '') + ICE_WHY[reason] });
+export function parseIceServers(text) {
+  try {
+    if (typeof text !== 'string') return iceNo('ice-type', 0);
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+    if (lines.length === 0) return { ok: true, servers: ICE_SERVERS, custom: false };
+    if (lines.length === 1 && lines[0].toLowerCase() === 'none') return { ok: true, servers: [], custom: true };
+    if (lines.length > ICE_LIMITS.lines) return iceNo('ice-lines', 0);
+    const servers = [];
+    for (let n = 1; n <= lines.length; n++) {
+      const line = lines[n - 1];
+      if (line.length > ICE_LIMITS.line) return iceNo('ice-line-size', n);
+      const [url, user, pass, ...rest] = line.split(/\s+/);
+      const m = ICE_URL.exec(url);
+      if (!m) return iceNo('ice-url', n);
+      const scheme = m[1].toLowerCase(), host = m[2], port = m[3], transport = (m[4] || '').toLowerCase();
+      if (!ICE_HOST.test(host)) return iceNo('ice-host', n);
+      if (port !== undefined && !(Number(port) >= 1 && Number(port) <= 65535)) return iceNo('ice-port', n);
+      const relay = scheme.startsWith('turn');
+      if (transport && (!relay || (scheme === 'turns' && transport === 'udp'))) return iceNo('ice-transport', n);
+      const urls = scheme + ':' + host + (port !== undefined ? ':' + port : '') + (transport ? '?transport=' + transport : '');
+      if (!relay) {
+        if (user !== undefined) return iceNo('ice-credentials', n);
+        servers.push({ urls });
+        continue;
+      }
+      if (rest.length || !ICE_CRED.test(user || '') || !ICE_CRED.test(pass || '') || user.length > ICE_LIMITS.cred || pass.length > ICE_LIMITS.cred) return iceNo('ice-credentials', n);
+      servers.push({ urls, username: user, credential: pass });
+    }
+    return { ok: true, servers, custom: true };
+  } catch { return iceNo('ice-fault', 0); }
+}
+
 export const LIMITS = Object.freeze({
   sdpIn: 65536,    // a browser's own SDP, before it is stripped
   sdp: 6000,       // a stripped SDP — and the most a deflated code may inflate to (a bomb stops here)
