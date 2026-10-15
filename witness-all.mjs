@@ -22,6 +22,7 @@
 //   antibody.mjs — a confirmed attack → a signed antibody each device adopts only if it fires on none of its own benign messages
 //   watch.mjs  — the behaviour watch over the agents (BES): off its work, entropy collapse, drift on the same work, auto-pause
 //   model.mjs  — the model tier: adapters (timeouts, request shapes), strict parsers, worst-case budget, the audit record
+//   plant.mjs  — the differentiation layer: a business's files classified, its brains grown, its old decisions re-grown and checked, the plan sealed
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
@@ -74,6 +75,7 @@ export const PAIRS = [
   ['src/rtc.mjs', ['test/rtc.test.mjs']],
   ['src/explain.mjs', ['test/explain.test.mjs']],
   ['src/adopt.mjs', ['test/adopt.test.mjs']],
+  ['src/plant.mjs', ['test/plant.test.mjs']],
 ];
 // imported (by the tests) it only lends hiddenSpans and PAIRS; run directly, it is the gate
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();

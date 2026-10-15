@@ -21,6 +21,10 @@ Vendored, verbatim, and credited:
     sjgant80-hub/bes-inward (src/bes.mjs, byte-identical at commit 166ec1a); src/watch.mjs applies it to the company's own agents.
   - vendor/csv-forge/csv.mjs — csv-forge's CSV reader (sjgant80-hub/csv-forge @ 19633c3, unchanged): parse, infer each
     column, pick the yes/no column to predict, encode the features. src/train.mjs grows a brain on what it reads.
+  - vendor/discombobulator/relearn.mjs — discombobulator's legacy re-growth kernel (sjgant80-hub/discombobulator,
+    kernel/relearn.mjs @ 0843a51): read a decision log, re-grow the decisions, check them against the old ones on held-out
+    rows and list every mismatch. Verbatim except one line: its csv-forge import is repointed from ../vendor/csv-forge/csv.mjs
+    to ../csv-forge/csv.mjs — this repository's copy, byte-identical to the one discombobulator vendors. src/plant.mjs uses it.
 
 src/rtc.mjs reuses, adapted: fingerprintOf and the proof-of-key bound to both DTLS fingerprints (sjgant80-hub/fallkard-forge,
 trade.mjs); gathering ICE into one copyable blob and refusing a malformed blob before WebRTC (sjgant80-hub/fall-os webrtc.mjs,
@@ -64,6 +68,8 @@ This build draws directly on: Gary W. Floyd, Lumiea Systems Research Division �
 Commons). Its core result — a stable system can stabilise a wrong reference — is why a high-stakes call here must be
 confirmed by an INDEPENDENT brain on another device (a copy of the same pattern agreeing proves nothing and is
 refused), and why a call no brain can confirm is held for a human (PENDING) rather than forced either way.
+It is also why a business's old decision rule, re-grown when the company is planted (src/plant.mjs), is checked
+against what really happened and not only against the old rule: a faithful copy of a rule copies its mistakes too.
 
 External figures in the white paper are cited in data/basis.json with their sources: ONS, HMRC (gov.uk), The
 Pensions Regulator, DESNZ, ECB, Salesforce, Microsoft, Anthropic, ElevenLabs, NVIDIA, LMSYS, Apple and the UK
