@@ -23,6 +23,9 @@
 //   watch.mjs  — the behaviour watch over the agents (BES): off its work, entropy collapse, drift on the same work, auto-pause
 //   model.mjs  — the model tier: adapters (timeouts, request shapes), strict parsers, worst-case budget, the audit record
 //   plant.mjs  — the differentiation layer: a business's files classified, its brains grown, its old decisions re-grown and checked, the plan sealed
+//   store.mjs  — the device's secrets at rest: the non-extractable key in IndexedDB, the sealed log and its retention rule, the
+//                one-time migration off the plaintext copies (run against an in-memory IndexedDB with real WebCrypto)
+//   recovery.mjs — owner recovery cards: Shamir over GF(256), the checksummed card, every refusal
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
@@ -54,6 +57,8 @@ export function hiddenSpans(src) {
   return spans;
 }
 export const PAIRS = [
+  ['src/store.mjs', ['test/store.test.mjs']],
+  ['src/recovery.mjs', ['test/recovery.test.mjs']],
   ['src/crdt.mjs', ['test/crdt.test.mjs', 'test/fuzz.test.mjs', 'test/spine.fuzz.test.mjs']],
   ['src/gate.mjs', ['test/gate.test.mjs', 'test/fuzz.test.mjs', 'test/spine.fuzz.test.mjs']],
   ['src/canon.mjs', ['test/canon.test.mjs']],

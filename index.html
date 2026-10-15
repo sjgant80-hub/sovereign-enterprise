@@ -6,6 +6,7 @@
 <title>Sovereign Enterprise</title>
 <meta name="description" content="A full AI company on its own devices. Six AI agents run sales, service, finance, operations, systems and audit end to end; two humans watch. Every device is a brain: verified Konomi SLM patterns, re-verified on each device's own data, sharing over a signed peer-to-peer spine — the mycelium. High-stakes calls need a second, independent brain. The page runs the exact kernel its tests and mutation witness prove." />
 <link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
 <meta name="theme-color" content="#0b0e13" />
 <style>
 :root{--bg:#0b0e13;--panel:#121821;--panel2:#0e141b;--ink:#e8eef4;--dim:#93a6b8;--faint:#5c6e80;--line:#1f2b38;
@@ -169,6 +170,16 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 @media print{.topbar,.view:not(#v-case),.b-actions,.foot,.tour,#workspace{display:none!important}
   :root{--bg:#fff;--panel:#fff;--panel2:#f6f6f6;--ink:#000;--dim:#333;--faint:#555;--line:#bbb;--accent:#0a7a5a;--accent2:#1f5fb0;--bad:#b00020}
   body{background:#fff;color:#000}.view#v-case{display:block!important}.b-sec{break-inside:avoid}}
+.rc-sheet{display:grid;gap:10px;grid-template-columns:1fr;margin:10px 0}@media(min-width:760px){.rc-sheet{grid-template-columns:repeat(3,1fr)}}
+.rc-card{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2)}
+.rc-card h4{margin:0 0 4px;font-size:14px}.rc-card p{margin:4px 0 0;font-size:12px;color:var(--dim)}
+.rc-text{font-family:var(--mono);font-size:13px;line-height:1.7;word-spacing:.25em;overflow-wrap:anywhere;margin:6px 0;color:var(--ink)}
+.rc-in{display:grid;gap:6px;margin:8px 0}.rc-in textarea{width:100%;box-sizing:border-box}
+.runbook{margin-top:12px}.runbook summary{cursor:pointer}.runbook ol{margin:8px 0 0;padding-left:20px}.runbook li,.runbook p{margin:8px 0;max-width:88ch;font-size:14px}
+#rc-print{display:none}
+@media print{body.print-cards>*:not(#rc-print){display:none!important}body.print-cards #rc-print{display:block!important;background:#fff;color:#000}
+  body.print-cards .rc-sheet{display:block}body.print-cards .rc-card{break-inside:avoid;break-after:page;border:1px dashed #000;margin:0 0 14px;background:#fff}
+  body.print-cards .rc-card p{color:#333}body.print-cards .rc-text{font-size:16px;color:#000}}
 </style>
 </head>
 <body>
@@ -229,6 +240,30 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
     peer — same machine over tabs, other machines over a direct encrypted link. Nothing goes to a server.</p>
   <div class="panel" id="realbox"></div>
   <div class="panel hide" id="rtcbox"></div>
+  <details class="panel runbook" id="runbook"><summary><b>If this laptop is stolen or lost</b> — what to do, and what a thief gets</summary>
+    <ol>
+      <li><b>Cut it off.</b> From another device of the company, open People and revoke the lost device's grant — an admin revokes staff, the owner revokes
+        an admin. From that moment every device refuses anything that key signs. What it wrote before stays, and nobody can rewrite it: each write names
+        the one before, so a forged past is caught, with a proof, on every device.</li>
+      <li><b>If it was the owner's device,</b> it cannot be revoked — the owner is the root of the company. Bring the owner back on a new machine: open
+        this page, choose Run your own → <i>Restore the owner from recovery cards</i>, and type any two of the three cards. Then connect the new machine to
+        another device of the company (Connect another machine, below). The restored owner holds its writes until its own earlier writes have come back
+        to it, so it never forks its own history.</li>
+      <li><b>Before anything goes wrong:</b> print the owner's recovery cards when you found the company and keep them in three different places; grant a
+        second admin on another machine; turn on full-disk encryption (BitLocker or Device encryption on Windows, FileVault on a Mac) and a screen lock
+        on every machine.</li>
+    </ol>
+    <p><b>What a thief with the laptop gets.</b> With full-disk encryption on and the laptop off or locked: nothing. Without it, someone who reads
+      the browser's own files straight off the disk can recover the device key and the key that seals its stored records — so they could read this
+      device's copy of the company and sign as this device until its grant is revoked (step 1). If it was taken unlocked with the browser open, they can
+      use it as you could. If it was the owner's laptop and they got that far, assume they can sign as the owner: the company's other admins keep working,
+      and the owner key cannot be removed.</p>
+    <p><b>What no thief gets.</b> The key through a web page: the browser hands its bytes to no page, not even this one, so nothing running in a browser
+      can copy it out. A changed past: every write names the one before, so nothing anyone wrote can be rewritten. The rest of the company: every other
+      device keeps working.</p>
+    <p class="note">On this demo page every project page on sjgant80-hub.github.io shares one browser origin, so another page there could ask your browser
+      to use this device's key while you have it open. A company runs this page from its own hub, on its own domain.</p>
+  </details>
   <div class="status"><span id="rconv" class="badge">…</span><span id="rinfo"></span></div>
   <div id="run-slot"></div>
 </section>
@@ -249,12 +284,15 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
   Source, receipts and the full design: <a href="https://github.com/sjgant80-hub/sovereign-enterprise">github.com/sjgant80-hub/sovereign-enterprise</a> (MIT).
 </p>
 </div>
+<div id="rc-print"></div>
 <div class="tour hide" id="tour" role="dialog" aria-label="Guided tour"></div>
 <script type="module">
 import { createNode, signEnvelope } from './src/node.mjs';
 import { connectAsHost, connectAsGuest, attachSession, isMember } from './src/rtc.mjs';
 import { GENESIS_PREV } from './src/gate.mjs';
-import { generate, exportPriv, importPriv, sign } from './src/keys.mjs';
+import { generate } from './src/keys.mjs';
+import { createKeyStore, staleDevices } from './src/store.mjs';
+import { split as splitCards, combine as combineCards } from './src/recovery.mjs';
 import { sha256 } from './src/sha256.mjs';
 import { canonical, utf8, toHex, fromHex } from './src/canon.mjs';
 import { inclusionProof, verifyInclusion, consistencyProof, verifyConsistency } from './src/vault.mjs';
@@ -772,7 +810,7 @@ const VIEWS = {
       <table><tr><th>Who</th><th>Role</th><th>Scope</th><th></th></tr>
       <tr><td>${esc(nameOfPub(node.genesis))}</td><td>owner</td><td>everything</td><td></td></tr>
       ${v.roster.map((r) => `<tr><td>${esc(nameOfPub(r.to))}</td><td>${esc(r.role)}</td><td class="mono">${esc(r.cols.join(', '))}</td>
-        <td>${r.revoked ? '<span class="warn">revoked</span>' : admin && r.role !== 'admin' ? `<button class="sm danger" data-act="revoke" data-g="${esc(r.grant)}" data-to="${esc(r.to)}">${mode === 'demo' ? 'Fire' : 'Revoke'}</button>` : ''}</td></tr>`).join('')}</table></div>
+        <td>${r.revoked ? '<span class="warn">revoked</span>' : admin && (r.role !== 'admin' || (mode === 'real' && isOwner)) ? `<button class="sm danger" data-act="revoke" data-g="${esc(r.grant)}" data-to="${esc(r.to)}">${mode === 'demo' ? 'Fire' : 'Revoke'}</button>` : ''}</td></tr>`).join('')}</table></div>
       ${mode === 'real' && admin ? `<div class="row" style="margin-top:10px"><input id="gk" placeholder="Teammate's device key (64 hex)" maxlength="64" aria-label="Device key"><select id="gr" aria-label="Role"><option value="staff">staff</option>${isOwner ? '<option value="admin">admin</option>' : ''}</select><button class="primary" data-act="grant">Grant</button></div>` : ''}
       <p class="note">Firing an agent revokes its grant at its last write: every device refuses anything it signs after that, its data lease stops renewing, and the door routes its work to the others.</p>
     </div><div class="panel"><h3>Directory — personal details sealed per person</h3>
@@ -1133,58 +1171,210 @@ $('healnet').onclick = () => { co.order.forEach((id) => { co.online[id] = true; 
 const HEX64 = /^[0-9a-f]{64}$/;
 let JOIN = new URLSearchParams(location.hash.slice(1)).get('join');
 // Where this tab's device lives. One device key must only ever be open in ONE tab: two tabs signing with the same key would
-// write two histories, and the hash chain would burn the key. So each identity is claimed by one tab (BroadcastChannel);
-// a second tab becomes a device of its own (kept for that tab only) and joins the same company. The owner's device lives in
-// localStorage; a device that joined by link lives there too, namespaced by company — so another machine remembers it.
-let storeKind = 'local', storeNs = '';
+// write two histories, and the hash chain would burn the key. So each identity is claimed by one tab — with a Web Lock, which two
+// tabs opened in the same instant cannot both take, and with the BroadcastChannel handshake every version of this page answers.
+// A second tab becomes a device of its own (kept for that tab only) and joins the same company. Each device's KEY and RECORDS live
+// in the key store (src/store.mjs): IndexedDB, the Ed25519 key non-extractable, every stored write sealed with AES-256-GCM.
+// localStorage keeps only which company a device is in — the owner's device, and one per company joined by link, so another
+// machine remembers it; sessionStorage keeps a tab device's id.
+let storeKind = 'local', storeNs = '', devNs = 'owner';
+const KS = createKeyStore({ idb: (() => { try { return self.indexedDB; } catch { return null; } })(), subtle: crypto.subtle, name: 'sovereign-enterprise' });
 const STORE = () => { try { return storeKind === 'session' ? sessionStorage : localStorage; } catch { return null; } };
 const LS = (k, v) => { try { const s = STORE(); if (!s) return null; k = storeNs + k; if (v === undefined) return s.getItem(k); if (v === null) s.removeItem(k); else s.setItem(k, v); } catch { return null; } };
 const lget = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
-function claimed(name) {
-  if (!('BroadcastChannel' in self)) return Promise.resolve(false);
+const sget = (k) => { try { return sessionStorage.getItem(k); } catch { return null; } };
+const sset = (k, v) => { try { if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch { /* blocked: this tab forgets */ } };
+/** → a function that releases the lock (this tab now holds it), null (another open tab holds it), or 'none' (no Web Locks).
+ *  It waits up to 1.5 s rather than asking ifAvailable: on a reload, this tab's own previous page (unloading, or parked in the
+ *  back-forward cache) can still hold the lock for a moment — it lets go, and this page takes it back instead of becoming a
+ *  stranger. A lock still held after that is held by another open tab. */
+function lockFor(name) {
+  if (!(navigator.locks && navigator.locks.request)) return Promise.resolve('none');
+  return new Promise((res) => {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 1500);
+    navigator.locks.request('se-device:' + name, { signal: ac.signal }, () => { clearTimeout(t); return new Promise((free) => res(free)); })
+      .catch((e) => res(e && e.name === 'AbortError' ? null : 'none'));
+  });
+}
+/** The handshake: ask who holds `name`; a tab holding it answers. Win, and this tab answers from now on. */
+function channelFor(name) {
+  if (!('BroadcastChannel' in self)) return Promise.resolve({ taken: false, close: () => {} });
   const ch = new BroadcastChannel('se-claim:' + name);
   return new Promise((res) => {
-    const t = setTimeout(() => { ch.onmessage = (m) => { if (m.data && m.data.t === 'who') ch.postMessage({ t: 'mine' }); }; res(false); }, 350);
-    ch.onmessage = (m) => { if (m.data && m.data.t === 'mine') { clearTimeout(t); ch.close(); res(true); } };
+    const t = setTimeout(() => { ch.onmessage = (m) => { if (m.data && m.data.t === 'who') ch.postMessage({ t: 'mine' }); }; res({ taken: false, close: () => ch.close() }); }, 350);
+    ch.onmessage = (m) => { if (m.data && m.data.t === 'mine') { clearTimeout(t); ch.close(); res({ taken: true, close: () => {} }); } };
     ch.postMessage({ t: 'who' });
   });
 }
+/** Is device `name` already open in another tab? If not, this tab holds it (lock and handshake) for as long as it is open. */
+async function claimed(name) {
+  const [lock, chan] = await Promise.all([lockFor(name), channelFor(name)]);
+  const taken = lock === null || chan.taken;
+  if (taken) { if (typeof lock === 'function') lock(); chan.close(); }
+  return taken;
+}
+/** Retention for tab-only devices (src/store.mjs): one not opened for 7 days whose tab is not open is deleted here. */
+async function sweepTabs() {
+  const l = await KS.list();
+  for (const ns of l.ok ? staleDevices(l.devices, { now: Date.now(), mine: devNs }) : []) {
+    const lock = await lockFor('tab:' + ns.slice(4));
+    if (lock === null) continue;                    // its tab is open after all
+    await KS.wipe(ns);
+    if (typeof lock === 'function') lock();
+  }
+}
+/** Be a device kept for this tab only: the id this tab already has, or a new one — claimed, so a copy of this tab (the browser
+ *  copies sessionStorage with it) finds it taken and becomes a device of its own. */
+async function tabDevice(id) {
+  storeKind = 'session'; storeNs = '';
+  if (!id) { id = toHex(crypto.getRandomValues(new Uint8Array(8))); await claimed('tab:' + id); }
+  devNs = 'tab.' + id;
+  sset('se.tab', id);
+}
 async function pickStore() {
-  try { if (sessionStorage.getItem('se.priv')) { storeKind = 'session'; return; } } catch { /* no session storage */ }
+  // a device kept for this tab: by its id — or, made before the key store, by its key: one id per key, so two copies of one tab
+  // can never both take the same key
+  const legacy = sget('se.priv');
+  const id = sget('se.tab') || (legacy ? 'l' + sha256(legacy).slice(0, 15) : null);
+  if (id) {
+    if (!(await claimed('tab:' + id))) { await tabDevice(id); return; }
+    sset('se.priv', null); sset('se.env', null);   // a copy of a tab that is still open: the original moves its own key; this copy is a new device
+    await tabDevice(null);
+    return;
+  }
   const own = lget('se.genesis'), joined = lget('se.joined');
   const joinG = JOIN && HEX64.test(JOIN) ? JOIN : null;
   const G = joinG && joinG !== own ? joinG : !joinG && !own && joined && HEX64.test(joined) ? joined : null;
   const ns = G ? 'se.j.' + G.slice(0, 16) + '.' : '';
   if (await claimed(ns || 'owner')) {                 // this device is already open in another tab: be a new device here
-    storeKind = 'session'; storeNs = '';
+    await tabDevice(null);
     if (!joinG) JOIN = G || own || null;
     return;
   }
   storeNs = ns;
+  devNs = G ? 'join.' + G.slice(0, 16) : 'owner';
   if (G) { try { localStorage.setItem('se.joined', G); } catch { /* storage blocked: this tab only */ } }
 }
+const stamp = () => new Date().toLocaleTimeString();
 let booting = null;
 function bootReal() { return booting || (booting = bootRealOnce()); }   // route() may call it twice on load: claim the identity once
 async function bootRealOnce() {
   await pickStore();
-  const priv = LS('se.priv');
-  real.me = priv ? await importPriv(priv) : await generate();
-  if (!priv) LS('se.priv', await exportPriv(real.me));
+  // a device made before the key store: its plaintext key and saved writes move in once — only then are the plaintext copies deleted
+  const mig = await KS.migrate(devNs, { get: (k) => LS(k), remove: (k) => LS(k, null) });
+  if (!mig.ok) real.gateLog.push(`${stamp()} this device's old key could not be moved into the key store (${mig.reason}) — it was left where it was`);
+  else if (mig.moved) real.gateLog.push(`${stamp()} moved this device's key into the key store, where it cannot be exported, and its ${mig.envelopes} saved writes into sealed storage; the plaintext copies are deleted`);
   let G = LS('se.genesis');
-  if (JOIN && HEX64.test(JOIN) && JOIN !== G) { G = JOIN; LS('se.genesis', G); LS('se.env', null); }
-  if (!G) return;
-  startReal(G);
+  if (JOIN && HEX64.test(JOIN) && JOIN !== G) { G = JOIN; LS('se.genesis', G); LS('se.catchup', null); await KS.clear(devNs); }
+  // a device with no company holds no key until it founds one (founding makes the key the recovery cards are printed from)
+  const k = G ? await KS.device(devNs) : await KS.keys(devNs);
+  real.store = k.ok ? '' : k.reason;
+  real.me = k.ok ? k.keys : null;
+  if (real.me) await KS.touch(devNs);   // opened now: the retention rule for tab-only devices counts from here
+  sweepTabs();
+  if (!G && k.ok) await slotFree();       // say now, not on the first click, if a forgotten company's key is still here
+  if (!G || !real.me) return;
+  await startReal(G);
 }
+// ── the owner's recovery cards (src/recovery.mjs): printed once at founding; any two restore the owner on a new machine ─────────
+const RC_K = 2, RC_N = 3;
+const catchingUp = () => LS('se.catchup') === '1';
+/** A restored owner must not sign until its own earlier writes are back: its next write has to name its last one (the per-writer
+ *  hash chain), or the two histories fork and every device cuts the owner key off. Until then it reads and syncs, but canWrite is
+ *  false — node.mjs asks canWrite before it signs anything. */
+function holdIfRestored(n) {
+  const can = n.canWrite;
+  n.canWrite = (c) => !catchingUp() && can(c);
+}
+/** Is this device's slot free to found or restore an owner in? Not if it still holds a key with stored writes. */
+async function slotFree() {
+  const s = await KS.stat(devNs);
+  if (!s.ok) { real.store = s.reason; return false; }
+  real.slotBusy = s.pub && s.size ? s.size : 0;
+  return !real.slotBusy;
+}
+async function foundCompany() {
+  if ($('found')) $('found').disabled = true;
+  if (!(await slotFree())) { render(); return; }
+  const f = await KS.found(devNs, { replace: true });   // a key here with no stored writes never signed for a company
+  if (!f.ok) { real.store = f.reason; render(); return; }
+  const cards = splitCards(f.seed, { k: RC_K, n: RC_N });
+  f.seed.fill(0);
+  real.me = f.keys;
+  real.cards = cards.ok ? cards.cards : null;
+  real.cardsMade = new Date().toISOString().slice(0, 10);
+  if (!cards.ok) real.gateLog.push(`${stamp()} the recovery cards could not be made (${cards.reason})`);
+  LS('se.genesis', f.keys.pub); LS('se.catchup', null);
+  await startReal(f.keys.pub);
+  render();
+}
+const RC_WHY = {
+  'too-few': 'enter at least two of the cards', duplicate: 'the same card was entered twice — use two different cards',
+  mixed: 'these cards are from different sets — use cards that were printed together',
+  mismatch: 'these cards do not rebuild one key — they may be from two different printings; try another pair',
+  checksum: 'has a typing mistake — check it character by character', format: 'is not a whole recovery card — check nothing is missing',
+  version: 'is not a recovery card from this page', 'card-size': 'is far too long to be a recovery card', 'too-many': 'there are too many cards',
+};
+async function restoreFromCards() {
+  const say = (s, cls = 'bad') => { const m = $('rc-msg'); if (m) { m.className = 'note ' + cls; m.textContent = s; } };
+  const filled = [1, 2, 3].map((i) => [i, $('rc-' + i) ? $('rc-' + i).value.trim() : '']).filter(([, v]) => v);
+  const c = combineCards(filled.map(([, v]) => v));
+  if (!c.ok) {
+    say(c.card === undefined ? 'Cannot restore: ' + (RC_WHY[c.reason] || c.reason) + '.' : 'Card ' + filled[c.card][0] + ' ' + (RC_WHY[c.reason] || 'could not be read') + '.');
+    return;
+  }
+  if (!(await slotFree())) { c.secret.fill(0); real.rcOpen = false; render(); return; }
+  const r = await KS.restore(devNs, c.secret, { replace: true });
+  c.secret.fill(0);
+  if (!r.ok) { say('Cannot restore: this browser would not store the key (' + r.reason + ').'); return; }
+  real.me = r.keys;
+  real.rcOpen = false;
+  LS('se.genesis', r.keys.pub); LS('se.catchup', '1');
+  real.gateLog.push(`${stamp()} the owner was restored from recovery cards; it holds its writes until its own earlier writes come back`);
+  await startReal(r.keys.pub);
+  render();
+}
+function rcCardsHtml(G) {
+  return real.cards.map((c, i) => `<div class="rc-card"><h4>Owner recovery card ${i + 1} of ${real.cards.length}</h4>
+    <p>Any ${RC_K} of these ${real.cards.length} cards restore the owner of company <span class="mono">${esc(G.slice(0, 16))}</span>. Made ${esc(real.cardsMade)}.</p>
+    <div class="rc-text">${esc(c)}</div>
+    <p>Keep this card apart from the others. To restore: open this page on the new machine → Run your own → Restore the owner from recovery cards.</p></div>`).join('');
+}
+function printCards(G) {
+  const p = $('rc-print');
+  p.innerHTML = `<h2 style="font-size:18px;margin:0 0 10px">Sovereign Enterprise — owner recovery cards</h2><div class="rc-sheet">${rcCardsHtml(G)}</div>`;
+  document.body.classList.add('print-cards');
+  addEventListener('afterprint', () => { document.body.classList.remove('print-cards'); p.innerHTML = ''; }, { once: true });
+  window.print();
+}
+function restoreHtml() {
+  return `<div class="panel" style="margin-top:10px"><h3 style="margin:0 0 6px">Restore the owner from recovery cards</h3>
+    <p class="note" style="margin:0 0 6px">Type or paste any two of the company's three recovery cards. Spaces, dashes and capitals do not matter, and a mistyped
+    card is caught on the card it is on. This browser becomes the owner's device again; it then holds its writes until it has caught up with the
+    rest of the company (connect it to another device of the company).</p>
+    <div class="rc-in">${[1, 2, 3].map((i) => `<textarea id="rc-${i}" rows="2" spellcheck="false" autocomplete="off" class="mono" aria-label="Recovery card ${i}${i === 3 ? ' (optional)' : ''}" placeholder="Recovery card ${i}${i === 3 ? ' (optional)' : ''} — SE1 …"></textarea>`).join('')}</div>
+    <div class="row"><button class="primary" id="rc-go">Restore the owner</button><button id="rc-cancel">Cancel</button></div>
+    <p id="rc-msg" class="note" aria-live="polite"></p></div>`;
+}
+const STORE_WHY = {
+  'no-store': 'This browser gives this page no IndexedDB, where a device keeps its key — a private window or a strict privacy setting can turn it off. Run your own needs it.',
+  store: 'This browser refused to keep a key here — its storage may be full or blocked. Run your own needs IndexedDB.',
+};
+addEventListener('beforeunload', (e) => { if (real.cards) { e.preventDefault(); e.returnValue = ''; } });   // the cards are shown once
 async function startReal(G) {
   real.node = createNode({ keys: real.me, genesis: G, name: G === real.me.pub ? 'Owner' : 'Teammate ' + real.me.pub.slice(0, 4) });
-  let saved = [];
-  try { saved = JSON.parse(LS('se.env') || '[]'); } catch { saved = []; }
+  holdIfRestored(real.node);              // before anything can be awaited: a restored owner signs nothing until it has caught up
+  const held = await KS.entries(devNs);   // this device's stored writes, opened from their seals
+  if (held.ok && held.unreadable) real.gateLog.push(`${stamp()} ${held.unreadable} stored write${held.unreadable === 1 ? '' : 's'} could not be opened (changed on disk) and ${held.unreadable === 1 ? 'was' : 'were'} skipped — the company's other devices still hold ${held.unreadable === 1 ? 'it' : 'them'}`);
   let legacy = 0;
-  for (const hex of saved) { try { if ((await real.node.receive(fromHex(hex))).reason === 'version') legacy++; } catch { /* the gate already refused it */ } }
+  for (const b of held.ok ? held.items : []) { try { if ((await real.node.receive(b)).reason === 'version') legacy++; } catch { /* the gate already refused it */ } }
+  if (catchingUp() && real.node.tip().seq > 0) LS('se.catchup', null);   // its own writes were already back
   if (legacy) real.gateLog.push(`${new Date().toLocaleTimeString()} ${legacy} saved write${legacy === 1 ? ' was' : 's were'} made before per-writer hash chains (envelope v1) and refused — "Leave / reset this device" starts this company again`);
   real.node.onChange((r) => {
     const b = real.node.bytes(r.hash);
-    try { const s = JSON.parse(LS('se.env') || '[]'); s.push(toHex(b)); LS('se.env', JSON.stringify(s.slice(-20000))); } catch { /* storage full: peers still hold the copy */ }
+    KS.append(devNs, b);   // sealed at rest; if storage is full the write still stands — the company's other devices hold it
+    if (r.env.from === real.node.pub && catchingUp()) { LS('se.catchup', null); real.gateLog.push(`${stamp()} caught up: this device's own earlier writes are back, so it writes again, continuing its own history`); setTimeout(render, 0); }
     if (real.chan) real.chan.postMessage({ t: 'env', hex: toHex(b) });
   });
   if ('BroadcastChannel' in self) {
@@ -1343,30 +1533,64 @@ function renderRtc() {
 function renderReal() {
   const box = $('realbox');
   if (!real.node) {
-    box.innerHTML = `<h3 style="margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)">Run your own company</h3>
-      <p>This browser tab becomes a device in your company. Its Ed25519 key is made here and never leaves it. Found a company and you are the owner;
-      share the invite link and every tab that opens it joins and syncs peer to peer. Another machine opens the same link, then connects to this one
-      directly over WebRTC — a code carried by hand each way, no server in the path.</p>
-      <div class="row"><button class="primary" id="found">Found a company on this device</button></div>`;
-    $('found').onclick = async () => { LS('se.genesis', real.me.pub); LS('se.env', null); await startReal(real.me.pub); render(); };
+    // rebuilt only when what it shows changes, so cards being typed into the restore form are never wiped by a repaint
+    const key = ['none', real.store || '', real.rcOpen ? 'rc' : '', real.slotBusy || 0].join('|');
+    if (box.dataset.key !== key) {
+      box.dataset.key = key;
+      box.innerHTML = `<h3 style="margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)">Run your own company</h3>
+        <p>This browser tab becomes a device in your company. Its Ed25519 key is made here and kept by the browser in a form that cannot be exported —
+        not even by this page — and its copy of the company is stored sealed. Found a company and you are the owner: you print three recovery cards,
+        any two of which bring the owner back on a new machine. Share the invite link and every tab that opens it joins and syncs peer to peer. Another
+        machine opens the same link, then connects to this one directly over WebRTC — a code carried by hand each way, no server in the path.</p>
+        ${real.store ? `<p class="bad">${esc(STORE_WHY[real.store] || 'This browser would not keep a key here (' + real.store + ').')}</p>` : `
+        ${real.slotBusy ? `<p class="warn">This device still holds a key and ${real.slotBusy} stored write${real.slotBusy === 1 ? '' : 's'} from a company it no longer remembers. To found or restore a company here, delete them first. <button class="sm danger" id="slot-wipe">Delete this device's key and records</button></p>` : `
+        <div class="row"><button class="primary" id="found">Found a company on this device</button>${devNs === 'owner' ? '<button id="rc-open">Restore the owner from recovery cards</button>' : ''}</div>
+        ${real.rcOpen ? restoreHtml() : ''}`}`}`;
+      if ($('found')) $('found').onclick = foundCompany;
+      if ($('rc-open')) $('rc-open').onclick = () => { real.rcOpen = true; render(); if ($('rc-1')) $('rc-1').focus(); };
+      if ($('rc-cancel')) $('rc-cancel').onclick = () => { real.rcOpen = false; render(); };
+      if ($('rc-go')) $('rc-go').onclick = restoreFromCards;
+      if ($('slot-wipe')) $('slot-wipe').onclick = async () => { await KS.wipe(devNs); real.slotBusy = 0; render(); };
+    }
     $('rconv').textContent = 'no company yet';
     $('rtcbox').classList.add('hide');
     return;
   }
+  box.dataset.key = '';
   const n = real.node;
   const owner = n.pub === n.genesis;
   const link = location.origin + location.pathname + '#join=' + n.genesis;
-  box.innerHTML = `<div class="row"><b>${owner ? 'You own this company.' : 'You have joined a company.'}</b>
-    <span class="dim">Your device key:</span><span class="mono">${esc(n.pub)}</span></div>
+  const cardsHtml = owner && real.cards ? `<div class="panel" style="border-color:var(--warn);margin:0 0 12px">
+    <h3 style="margin:0 0 6px">Print your recovery cards now — they are shown once</h3>
+    <p style="margin:0">These three cards are the only way to bring back the owner of this company if this device is lost. <b>Any two</b> restore the owner
+    on a new machine; one card alone reveals nothing about the key. Print them, keep each in a different place (a safe, a bank box, a trusted director),
+    and never photograph them or keep them on this computer. Once you hide them, this page cannot show them again: the browser now holds the owner key
+    in a form nothing can export.</p>
+    <div class="rc-sheet">${rcCardsHtml(n.genesis)}</div>
+    <div class="row"><button class="primary" id="rc-print-btn">Print recovery cards</button><button id="rc-done">I have printed and stored them — hide the cards</button></div></div>` : '';
+  const waitHtml = owner && catchingUp() ? `<p class="warn" style="margin:6px 0 0">Restored from recovery cards. This owner device holds its writes until its own
+    earlier writes come back from another device of the company — connect it to one (another tab of this browser that holds the company, or another
+    machine below). Writing first would fork the owner's history, and every device would cut the owner key off.
+    <button class="sm" id="rc-nowait">The lost device never wrote anything — start writing</button></p>` : '';
+  box.innerHTML = `${cardsHtml}<div class="row"><b>${owner ? 'You own this company.' : 'You have joined a company.'}</b>
+    <span class="dim">Your device key:</span><span class="mono">${esc(n.pub)}</span><span class="dim">· held by this browser, cannot be exported</span></div>
     <div class="row"><span class="dim">Invite link:</span><input value="${esc(link)}" readonly style="flex:1 1 300px" aria-label="Invite link"><button id="copy">Copy</button>
     <button class="danger" id="leave">Leave / reset this device</button></div>
+    ${real.leaving ? `<p class="warn" style="margin:4px 0 0">This deletes this device's key and its copy of the company from this browser.${owner ? ' This device is the owner: without the recovery cards, nobody can be the owner of this company again.' : ''}
+      <button class="sm danger" id="leave-yes">Yes, delete them</button> <button class="sm" id="leave-no">Keep them</button></p>` : ''}
+    ${waitHtml}
     ${!owner && !n.canWrite('tasks') ? '<p class="warn" style="margin:4px 0 0">Waiting for a grant — send your device key above to the owner or an admin; they grant you in People. Or connect to their machine below: once this device has proven its key on the link, they can grant it from there.</p>' : ''}`;
   $('copy').onclick = () => navigator.clipboard && navigator.clipboard.writeText(link);
-  $('leave').onclick = () => { LS('se.genesis', null); LS('se.env', null); LS('se.priv', null); if (storeNs) { try { localStorage.removeItem('se.joined'); } catch { /* blocked */ } } location.href = location.pathname; };
+  $('leave').onclick = () => { real.leaving = true; render(); };
+  if ($('leave-no')) $('leave-no').onclick = () => { real.leaving = false; render(); };
+  if ($('leave-yes')) $('leave-yes').onclick = async () => { real.cards = null; LS('se.genesis', null); LS('se.env', null); LS('se.priv', null); LS('se.catchup', null); await KS.wipe(devNs); if (storeNs) { try { localStorage.removeItem('se.joined'); } catch { /* blocked */ } } location.href = location.pathname; };
+  if ($('rc-print-btn')) $('rc-print-btn').onclick = () => printCards(n.genesis);
+  if ($('rc-done')) $('rc-done').onclick = () => { real.cards = null; $('rc-print').innerHTML = ''; render(); };
+  if ($('rc-nowait')) $('rc-nowait').onclick = () => { LS('se.catchup', null); real.gateLog.push(`${stamp()} told that the lost owner device never wrote anything: writing now`); render(); };
   $('rconv').className = 'badge ok';
   $('rconv').textContent = `replica ${short(n.fingerprint())} · ${n.size()} signed writes`;
   const machines = real.rtc.filter((l) => l.info && l.info.state === 'live').length;
-  $('rinfo').textContent = `${real.peers.size} other tab${real.peers.size === 1 ? '' : 's'} · ${machines} other machine${machines === 1 ? '' : 's'} connected · stored on this device only`;
+  $('rinfo').textContent = `${real.peers.size} other tab${real.peers.size === 1 ? '' : 's'} · ${machines} other machine${machines === 1 ? '' : 's'} connected · stored on this device only, sealed`;
   renderRtc();
 }
 
