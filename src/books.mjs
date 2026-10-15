@@ -26,6 +26,10 @@ export const CHART = Object.freeze({
   '7510': ['AI compute (per-use limbs)', 'expense'],
   '7900': ['Bank charges', 'expense'],
   '8000': ['Depreciation', 'expense'],
+  // A holding account: a bank line no rule recognises waits here (either sign) until a person posts it to its proper
+  // account. On the balance sheet, so the books still balance and the profit is not touched while it waits. 9998 is the
+  // code Sage 50's default chart gives its suspense account.
+  '9998': ['Suspense (to be classified)', 'liability'],
 });
 
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
