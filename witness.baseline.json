@@ -43,5 +43,15 @@
     "mutation": "< → <=",
     "snippet": "if (v.auc < c - REGRESSION_TOLERANCE) return { adopt: false, localAuc: v.auc, n: v.n, curr",
     "reason": "equivalent: the two differ only when a candidate brain’s measured AUC on this device’s cases is exactly the current brain’s AUC minus 0.01, in floating point (both are rounded to six decimals from a Mann–Whitney count over hundreds of cases); then one version adopts and the other refuses a brain that is, by the stated rule, on the line. No real pair of brains lands exactly there; every case either side is tested."
+  },
+  {
+    "mutation": ">= → >",
+    "snippet": "const verdict = p >= ALPHA ? 'no evidence either way' : tp > fp ? 'better' : 'worse';",
+    "reason": "equivalent: p is either an exact binomial tail - a whole number over a power of two, which can never equal 0.05 - or the normal approximation, a transcendental value that is not exactly 0.05; so p >= ALPHA and p > ALPHA select the same calls in every case the test can produce."
+  },
+  {
+    "mutation": "> → >=",
+    "snippet": "const verdict = p >= ALPHA ? 'no evidence either way' : tp > fp ? 'better' : 'worse';",
+    "reason": "equivalent: this branch is reached only when the result is significant (p < ALPHA), and a sign test with wins equal to losses gives p = 1 - so tp equals fp never reaches it; tp > fp and tp >= fp choose the same verdict on every reachable input."
   }
 ]

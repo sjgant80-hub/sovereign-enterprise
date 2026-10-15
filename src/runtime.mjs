@@ -234,7 +234,7 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
     const own = o.own && o.own.verdict === 'VERIFIED' ? o.own : null;
     const entry = { id: event.id, agent: id, channel: event.domain, domain: d.domain || event.domain, state: d.state, label: d.label, truth, by: d.by,
       crossChecked: d.crossChecked, action: d.action, conf: d.conf, customer: event.customer, secondBy: d.secondBy, receipt: own ? own.receipt : null,
-      asked: !!(o.own && o.own.verdict !== 'VERIFIED'), decidedTick: co.tickN };
+      asked: !!(o.own && o.own.verdict !== 'VERIFIED'), decidedTick: co.tickN, why: String(d.why || '') };
     co.ledger.push(entry); co.byEvent.set(event.id, entry);
     if (co.ledger.length > 6000) co.ledger.splice(0, 1000);
     if (d.crossChecked && d.secondBy) bump(co.crossEdges, d.secondBy + '>' + (d.by === 'own' ? id : d.by.slice(5)));
