@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Check the Books</title>
+<meta name="description" content="The auditor's checker for Sovereign Enterprise: drop a signed checkpoint, a proof of one entry or a proof that the books only grew, and see in plain words whether it holds — on your own computer, without trusting the company. Works offline from a saved copy." />
+<link rel="icon" href="icon.svg" />
+<meta name="theme-color" content="#0b0e13" />
+<style>
+:root{--bg:#0b0e13;--panel:#121821;--panel2:#0e141b;--ink:#e8eef4;--dim:#93a6b8;--faint:#5c6e80;--line:#1f2b38;
+  --accent:#45d0a8;--accent2:#6ab0ff;--bad:#ff6b6b;--warn:#ffa94d;--onaccent:#04241b;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f6f8fa;--panel:#ffffff;--panel2:#f0f3f6;--ink:#0f1720;--dim:#4d5b69;--faint:#8a97a4;--line:#dde3ea;--accent:#0e9f77;--accent2:#1f6fd1;--bad:#d23b3b;--warn:#c56a12;--onaccent:#ffffff}}
+:root[data-theme="light"]{--bg:#f6f8fa;--panel:#ffffff;--panel2:#f0f3f6;--ink:#0f1720;--dim:#4d5b69;--faint:#8a97a4;--line:#dde3ea;--accent:#0e9f77;--accent2:#1f6fd1;--bad:#d23b3b;--warn:#c56a12;--onaccent:#ffffff}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--accent2)}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px 48px}
+.top{border-bottom:1px solid var(--line)}.top .in{max-width:980px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:.04em;font-size:15px;color:var(--ink);text-decoration:none}.brand span{color:var(--accent)}
+.top nav{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}.top nav a{color:var(--dim);text-decoration:none;font-size:14px;padding:5px 8px;border-radius:8px}.top nav a:hover{color:var(--ink)}
+h1{font-size:clamp(26px,6vw,44px);line-height:1.1;margin:30px 0 10px}h1 span{color:var(--accent)}
+.lede{font-size:clamp(16px,2.3vw,18px);color:var(--dim);max-width:68ch;margin:0 0 8px}
+h2{font-size:clamp(20px,3.4vw,26px);margin:36px 0 8px}
+h3{font-size:16px;margin:0 0 8px}
+p{max-width:76ch}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;gap:12px;grid-template-columns:1fr}@media(min-width:760px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,1fr)}}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:16px;background:var(--panel2);min-width:0}
+.drop.over{border-color:var(--accent2)}
+.drop b{display:block;margin-bottom:2px}.drop .dim{font-size:13.5px}
+.drop .name{font-family:var(--mono);font-size:12.5px;overflow-wrap:anywhere;margin-top:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 0}
+button,.btn{font:inherit;font-size:14px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 13px;cursor:pointer;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid var(--accent2);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--onaccent);font-weight:700}
+button.sm{font-size:13px;padding:5px 10px}
+input[type=file]{font:inherit;font-size:13px;color:var(--dim);max-width:100%}
+textarea{font-family:var(--mono);font-size:12px;width:100%;min-height:90px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+.dim{color:var(--dim)}.mono{font-family:var(--mono);font-size:12.5px;overflow-wrap:anywhere}
+#out{margin-top:14px}
+.verdict{border-radius:12px;padding:14px 16px;border:1px solid var(--line);background:var(--panel)}
+.verdict h3{font-size:clamp(17px,3vw,21px);margin:0 0 8px}
+.verdict ul{margin:0;padding-left:20px}.verdict li{margin:4px 0;overflow-wrap:anywhere}
+.verdict.ok{border-color:var(--accent)}.verdict.ok h3{color:var(--accent)}
+.verdict.warn{border-color:var(--warn)}.verdict.warn h3{color:var(--warn)}
+.verdict.bad{border-color:var(--bad)}.verdict.bad h3{color:var(--bad)}
+.vi{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;border:2px solid currentColor;font-size:15px;margin-right:4px}
+.samples{display:grid;gap:10px;grid-template-columns:1fr}@media(min-width:760px){.samples{grid-template-columns:repeat(5,1fr)}}
+.samples button{text-align:left;padding:10px 12px;min-height:100%}.samples button b{display:block;font-size:14px}.samples button span{display:block;font-size:12.5px;color:var(--dim)}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;gap:10px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:32px 1fr;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+ol.steps li::before{content:counter(s);width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--onaccent);font-weight:800;display:grid;place-items:center;font-size:14px}
+ol.steps b{display:block}ol.steps span{color:var(--dim);font-size:14.5px}
+figure{margin:0}figure svg{width:100%;height:auto;display:block;max-width:520px;margin:0 auto}
+figcaption{font-size:13.5px;color:var(--dim);margin-top:8px}
+svg text{font-family:var(--sans);font-size:12px;fill:var(--ink)}svg .t-dim{fill:var(--dim)}svg .t-small{font-size:11px}
+svg .n{fill:var(--panel2);stroke:var(--line);stroke-width:1.5}svg .n-path{fill:var(--panel2);stroke:var(--accent);stroke-width:2.5}
+svg .n-proof{fill:var(--panel2);stroke:var(--accent2);stroke-width:2.5;stroke-dasharray:4 3}svg .n-old{fill:color-mix(in srgb,var(--accent) 22%,var(--panel2));stroke:var(--line);stroke-width:1.5}
+svg .e{stroke:var(--line);stroke-width:1.5}svg .e-path{stroke:var(--accent);stroke-width:2.5}
+.facts{margin:0;padding-left:20px}.facts li{margin:6px 0;max-width:80ch}
+.bp{display:grid;gap:10px;grid-template-columns:1fr}@media(min-width:760px){.bp{grid-template-columns:1fr 1fr}}
+.bp div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.bp b{display:block}.bp .f{font-family:var(--mono);font-size:12px;color:var(--faint)}.bp p{margin:4px 0 0;font-size:14px;color:var(--dim)}
+.note{font-size:13px;color:var(--dim)}
+.foot{color:var(--faint);font-size:13px;margin-top:36px;border-top:1px solid var(--line);padding-top:14px}
+details.paste summary{cursor:pointer;color:var(--accent2);font-size:14px;margin-top:10px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+  <a class="brand" href="index.html">SOVEREIGN<span> ENTERPRISE</span></a>
+  <nav aria-label="On this page"><a href="#check">Check a file</a><a href="#how">How it works</a><a href="#rests">What it rests on</a><a href="#auditors">For auditors</a><a href="#blueprint">Blueprint</a></nav>
+</div></header>
+<main class="wrap">
+  <h1>Check a company’s books — <span>without trusting the company.</span></h1>
+  <p class="lede">A company that runs on Sovereign Enterprise seals every posting into an append-only record and can send you its signed
+    checkpoints. This page checks what it sends: that an entry is in its books, and that the books only grew — nothing rewritten — since the
+    last checkpoint you were given. Everything runs here, in your browser: nothing you drop is uploaded, and you can save this checker as one
+    file that works offline.</p>
+
+  <section id="check" aria-label="Check a file">
+    <h2>Check a file</h2>
+    <div class="grid two">
+      <label class="drop" id="drop-sent" for="f-sent">
+        <b>1 · The file the company sent you</b>
+        <span class="dim">A checkpoint, a proof of one entry, a proof that the books only grew, or a brain file (.json). Drop it here or choose it.</span>
+        <span class="row"><input type="file" id="f-sent" accept=".json,application/json"></span>
+        <span class="name" id="n-sent"></span>
+      </label>
+      <label class="drop" id="drop-held" for="f-held">
+        <b>2 · The checkpoint you already hold <span class="dim">(optional)</span></b>
+        <span class="dim">The last checkpoint you saved from this company. With it, the checker also proves the new file extends what you have already seen.</span>
+        <span class="row"><input type="file" id="f-held" accept=".json,application/json"></span>
+        <span class="name" id="n-held"></span>
+      </label>
+    </div>
+    <details class="paste"><summary>Or paste the text the company sent</summary>
+      <textarea id="paste" aria-label="Paste the file's text" spellcheck="false" placeholder='{"kind":"se-checkpoint", …}'></textarea>
+      <div class="row"><button class="sm" data-act="paste">Check the pasted text</button></div>
+    </details>
+    <div class="row"><button class="sm" data-act="clear">Clear both</button></div>
+    <div id="out" aria-live="polite"><p class="dim">Drop a file in box 1 — or try one of the samples below.</p></div>
+
+    <h3 style="margin-top:22px">No file yet? Try it on a sample company</h3>
+    <p class="note">These are made right now, in your browser, by a three-device company with real Ed25519 keys and real signed writes — the same
+      posting the Finance agent does. Your saved sample checkpoint goes in box 2 automatically.</p>
+    <div class="samples">
+      <button data-sample="checkpoint"><b>A checkpoint</b><span>10 entries, co-signed by the Audit agent.</span></button>
+      <button data-sample="proof"><b>One entry</b><span>Entry #3 and its proof, against that checkpoint.</span></button>
+      <button data-sample="grew"><b>The books grew</b><span>14 entries now — proven to extend your 10.</span></button>
+      <button data-sample="tampered"><b>A changed entry</b><span>The same proof, one word of the memo changed.</span></button>
+      <button data-sample="rewritten"><b>A rewritten book</b><span>Another 10-entry checkpoint, entry #3 rewritten.</span></button>
+    </div>
+    <p class="note" id="sample-dl"></p>
+  </section>
+
+  <section aria-label="Start here">
+    <h2>Start here</h2>
+    <ol class="steps">
+      <li><span><b>Ask the company for a checkpoint.</b><span>In Sovereign Enterprise: Vault → “Send the signed checkpoint to your auditor”. It is a small .json file — by email is fine; it cannot be altered without the checker seeing it.</span></span></li>
+      <li><span><b>Check it and save it.</b><span>Drop it in box 1. If it is genuine, press “Save this checkpoint”. Confirm the sequencer key it names with the company once, by phone or in person — that key signs every later checkpoint.</span></span></li>
+      <li><span><b>Next time, ask for a proof that the books only grew.</b><span>The company makes it from your checkpoint (Vault → “Prove the books only grew”). Drop it in box 1 and your saved checkpoint in box 2.</span></span></li>
+      <li><span><b>Sample any entry.</b><span>Ask for a proof of the entries you want to test (Vault → “Prove one entry”). The checker shows the entry, its accounts and amounts, and that it is in the signed books.</span></span></li>
+    </ol>
+  </section>
+
+  <section id="how" aria-label="How it works">
+    <h2>How it works</h2>
+    <p>The company’s books are a Merkle tree — the design behind Certificate Transparency (RFC 9162), which every web browser relies on for its
+      certificates. Each entry is hashed; pairs of hashes are hashed together, up to one hash at the top, the <b>root</b>. Change any entry, anywhere,
+      and the root changes. The company’s Finance agent signs each root; its Audit agent rebuilds the books on its own device and co-signs.</p>
+    <div class="grid two">
+      <figure class="panel">
+        <svg viewBox="0 0 360 236" role="img" aria-labelledby="d1t">
+          <title id="d1t">An inclusion proof: entry 5 and three hashes the company sends lead to the signed root</title>
+          <line class="e e-path" x1="180" y1="40" x2="260" y2="92"/><line class="e" x1="180" y1="40" x2="100" y2="92"/>
+          <line class="e" x1="100" y1="92" x2="60" y2="142"/><line class="e" x1="100" y1="92" x2="140" y2="142"/>
+          <line class="e e-path" x1="260" y1="92" x2="220" y2="142"/><line class="e" x1="260" y1="92" x2="300" y2="142"/>
+          <line class="e" x1="60" y1="142" x2="40" y2="192"/><line class="e" x1="60" y1="142" x2="80" y2="192"/>
+          <line class="e" x1="140" y1="142" x2="120" y2="192"/><line class="e" x1="140" y1="142" x2="160" y2="192"/>
+          <line class="e" x1="220" y1="142" x2="200" y2="192"/><line class="e e-path" x1="220" y1="142" x2="240" y2="192"/>
+          <line class="e" x1="300" y1="142" x2="280" y2="192"/><line class="e" x1="300" y1="142" x2="320" y2="192"/>
+          <rect class="n-path" x="150" y="26" width="60" height="28" rx="6"/><text x="180" y="44" text-anchor="middle">root</text>
+          <text x="180" y="16" text-anchor="middle" class="t-dim t-small">signed by Finance · co-signed by Audit</text>
+          <rect class="n-proof" x="78" y="80" width="44" height="24" rx="6"/><text x="100" y="96" text-anchor="middle">B</text>
+          <rect class="n-path" x="238" y="80" width="44" height="24" rx="6"/><text x="260" y="96" text-anchor="middle">·</text>
+          <rect class="n" x="40" y="130" width="40" height="24" rx="6"/><rect class="n" x="120" y="130" width="40" height="24" rx="6"/>
+          <rect class="n-path" x="200" y="130" width="40" height="24" rx="6"/><text x="220" y="146" text-anchor="middle">·</text>
+          <rect class="n-proof" x="280" y="130" width="40" height="24" rx="6"/><text x="300" y="146" text-anchor="middle">A</text>
+          <rect class="n" x="26" y="182" width="28" height="22" rx="5"/><rect class="n" x="66" y="182" width="28" height="22" rx="5"/>
+          <rect class="n" x="106" y="182" width="28" height="22" rx="5"/><rect class="n" x="146" y="182" width="28" height="22" rx="5"/>
+          <rect class="n-proof" x="186" y="182" width="28" height="22" rx="5"/><text x="200" y="197" text-anchor="middle">C</text>
+          <rect class="n-path" x="226" y="182" width="28" height="22" rx="5"/><text x="240" y="197" text-anchor="middle">5</text>
+          <rect class="n" x="266" y="182" width="28" height="22" rx="5"/><rect class="n" x="306" y="182" width="28" height="22" rx="5"/>
+          <text x="40" y="224" text-anchor="middle" class="t-dim t-small">#0</text><text x="120" y="224" text-anchor="middle" class="t-dim t-small">#2</text>
+          <text x="240" y="224" text-anchor="middle" class="t-small">your entry</text><text x="320" y="224" text-anchor="middle" class="t-dim t-small">#7</text>
+        </svg>
+        <figcaption><b>Is this entry in the books?</b> The checker hashes the entry itself (5), then folds in the three hashes the company sent —
+          C, then A, then B (dashed). If it arrives at exactly the root the company signed, the entry is in the books, at that position. To fake it,
+          the company would have to forge a hash — which no one can.</figcaption>
+      </figure>
+      <figure class="panel">
+        <svg viewBox="0 0 360 236" role="img" aria-labelledby="d2t">
+          <title id="d2t">A consistency proof: the first five entries you were shown are still the first five, unchanged</title>
+          <line class="e" x1="180" y1="40" x2="260" y2="92"/><line class="e" x1="180" y1="40" x2="100" y2="92"/>
+          <line class="e" x1="100" y1="92" x2="60" y2="142"/><line class="e" x1="100" y1="92" x2="140" y2="142"/>
+          <line class="e" x1="260" y1="92" x2="220" y2="142"/><line class="e" x1="260" y1="92" x2="300" y2="142"/>
+          <line class="e" x1="60" y1="142" x2="40" y2="192"/><line class="e" x1="60" y1="142" x2="80" y2="192"/>
+          <line class="e" x1="140" y1="142" x2="120" y2="192"/><line class="e" x1="140" y1="142" x2="160" y2="192"/>
+          <line class="e" x1="220" y1="142" x2="200" y2="192"/><line class="e" x1="220" y1="142" x2="240" y2="192"/>
+          <line class="e" x1="300" y1="142" x2="280" y2="192"/><line class="e" x1="300" y1="142" x2="320" y2="192"/>
+          <rect class="n-path" x="140" y="26" width="80" height="28" rx="6"/><text x="180" y="44" text-anchor="middle">new root (8)</text>
+          <rect class="n-proof" x="74" y="80" width="52" height="24" rx="6"/><text x="100" y="96" text-anchor="middle">#0–3</text>
+          <rect class="n" x="238" y="80" width="44" height="24" rx="6"/>
+          <rect class="n" x="40" y="130" width="40" height="24" rx="6"/><rect class="n" x="120" y="130" width="40" height="24" rx="6"/>
+          <rect class="n" x="200" y="130" width="40" height="24" rx="6"/>
+          <rect class="n-proof" x="280" y="130" width="40" height="24" rx="6"/><text x="300" y="146" text-anchor="middle">#6–7</text>
+          <rect class="n-old" x="26" y="182" width="28" height="22" rx="5"/><rect class="n-old" x="66" y="182" width="28" height="22" rx="5"/>
+          <rect class="n-old" x="106" y="182" width="28" height="22" rx="5"/><rect class="n-old" x="146" y="182" width="28" height="22" rx="5"/>
+          <rect class="n-proof" x="186" y="182" width="28" height="22" rx="5"/><text x="200" y="197" text-anchor="middle">#4</text>
+          <rect class="n-proof" x="226" y="182" width="28" height="22" rx="5"/><text x="240" y="197" text-anchor="middle">#5</text>
+          <rect class="n" x="266" y="182" width="28" height="22" rx="5"/><rect class="n" x="306" y="182" width="28" height="22" rx="5"/>
+          <text x="100" y="224" text-anchor="middle" class="t-small">your checkpoint: #0–#4</text><text x="280" y="224" text-anchor="middle" class="t-dim t-small">added since: #5–#7</text>
+        </svg>
+        <figcaption><b>Did the books only grow?</b> Your saved checkpoint holds the root of the first five entries. From four hashes (dashed), the
+          checker rebuilds <b>both</b> roots: yours, from #0–3 and #4 alone, and the new one from all four. Both must come out exactly. If anything in
+          #0–#4 had been changed, removed or reordered, your root would not.</figcaption>
+      </figure>
+    </div>
+    <ol class="steps" style="margin-top:12px">
+      <li><span><b>The checkpoint’s own signature.</b><span>The device that sent it signed the whole file. One changed byte and that signature fails.</span></span></li>
+      <li><span><b>The tree head inside it.</b><span>Not a copy of a number: the exact write the Finance agent’s key signed when it sealed the books, checked against that key — and each Audit agent co-signature, checked against its own.</span></span></li>
+      <li><span><b>The proof.</b><span>An entry’s path to the signed root, or the path from your old root to the new one — recomputed here, hash by hash.</span></span></li>
+      <li><span><b>Against what you hold.</b><span>The new tree head must be signed by the same key as your saved checkpoint. Two signed checkpoints of the same size with different roots are not an error message: they are the proof the company signed two versions of its books.</span></span></li>
+    </ol>
+  </section>
+
+  <section id="rests" aria-label="What a verdict rests on">
+    <h2>What a verdict rests on</h2>
+    <ul class="facts">
+      <li><b>Proven by the file alone:</b> who signed it, that not a byte has changed since, and that an entry is in the books the company signed — at that position, with those accounts and amounts.</li>
+      <li><b>Proven against your saved checkpoint:</b> that the books only grew since you saved it. A company cannot quietly rewrite anything you have already been shown.</li>
+      <li><b>The keys:</b> the first checkpoint you receive tells you the company’s signing keys. Confirm the sequencer key with the company once, by a channel of your own; every later file must carry the same key, and the checker refuses one that does not.</li>
+      <li><b>Comparing notes:</b> a company could show two parties two different books. If you and its bank compare checkpoints of the same size, any difference is signed evidence of it.</li>
+      <li><b>What it does not prove:</b> that an entry is true to the world — that the goods were delivered or the payment made. It proves what the company recorded, and that the record was never changed. That is the part an audit could not check before without trusting the company’s systems.</li>
+    </ul>
+  </section>
+
+  <section id="auditors" aria-label="For auditors and banks">
+    <h2>For auditors and banks</h2>
+    <div class="grid three">
+      <div class="panel"><h3>At the start of an engagement</h3><p class="note">Ask for a checkpoint. Check it here, confirm the sequencer key with the finance lead, and file it with your working papers.</p></div>
+      <div class="panel"><h3>At each review</h3><p class="note">Ask for a proof that the books only grew since your last checkpoint. One file, checked in seconds. Save the new checkpoint it hands you.</p></div>
+      <div class="panel"><h3>Sampling</h3><p class="note">Pick the entries you want to test; ask for a proof of each. The proof shows the entry exactly as it was sealed, with its accounts and amounts.</p></div>
+    </div>
+    <p class="note">A lender can do the same: a checkpoint with each covenant report, and a proof that the books only grew since the last one.</p>
+  </section>
+
+  <section id="blueprint" aria-label="Blueprint">
+    <h2>The blueprint — what runs when you check</h2>
+    <p>This page runs the very modules the company’s own devices run, proven by its test suite and mutation gate. They are open source (MIT).</p>
+    <div class="bp">
+      <div><b>The checker</b><span class="f">src/audit.mjs</span><p>Reads a checkpoint, a proof or a brain file, verifies every signature and proof, and gives the verdict in these words.</p></div>
+      <div><b>The vault</b><span class="f">src/vault.mjs</span><p>The RFC 9162 Merkle tree: leaf and node hashes, inclusion and consistency proofs, checked hash by hash.</p></div>
+      <div><b>Device keys</b><span class="f">src/keys.mjs</span><p>Ed25519 signature checks, using your browser’s own cryptography.</p></div>
+      <div><b>The gate’s grammar</b><span class="f">src/gate.mjs · src/canon.mjs</span><p>Reads each signed write exactly as every device does: one canonical byte form, so a signature cannot be re-wrapped.</p></div>
+      <div><b>The books</b><span class="f">src/books.mjs</span><p>Decodes an entry’s lines into accounts and amounts, in whole pence.</p></div>
+      <div><b>SHA-256</b><span class="f">src/sha256.mjs</span><p>The hash behind every entry, node and root.</p></div>
+    </div>
+    <div class="panel" style="margin-top:12px">
+      <h3>Keep your own copy</h3>
+      <p class="note" id="offline-note">Save this checker as one HTML file — the page and every module above, inlined. Open it from your disk with no
+        connection: it never changes after you saved it, so you are not relying on this website to keep checking honestly.</p>
+      <div class="row"><button class="primary" data-act="offline" id="offline-btn">Save this checker as one file</button><span class="dim" id="offline-msg" aria-live="polite"></span></div>
+    </div>
+  </section>
+
+  <section aria-label="The short paper">
+    <h2>Why a transparency log, not a blockchain</h2>
+    <p>One company does not need strangers to agree on its books; it needs anyone it shows them to — an auditor, a bank, a regulator — to be able
+      to check two things on their own: that a given entry is in the books, and that the books were never rewritten. That is exactly what a
+      transparency log gives, and it is what Certificate Transparency has done at internet scale since 2013: an append-only Merkle tree, a signed
+      root, an inclusion proof, a consistency proof.</p>
+    <p>Sovereign Enterprise seals every posting into such a log as it happens. The Finance agent sequences and signs; the Audit agent rebuilds the
+      books on a separate device and co-signs. Neither step asks you to trust them: the keys sign, the hashes add up or they do not, and the
+      checkpoint you saved last quarter pins everything before it. The whole check is a few hundred lines you can read, running in your browser.</p>
+  </section>
+
+  <p class="foot">Sovereign Enterprise — an AI company on its own devices. <a href="index.html">Back to the company</a> ·
+    <a href="https://github.com/sjgant80-hub/sovereign-enterprise">Source (MIT)</a> · Nothing on this page is uploaded or stored anywhere.</p>
+</main>
+<script type="module">
+import { judge } from './src/audit.mjs';
+import { renderVerdict, samples, standalone } from './ui/verify.mjs';
+
+const $ = (id) => document.getElementById(id);
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\x22': '&quot;', '\x27': '&#39;' };
+const esc = (s) => String(s ?? '').replace(/[&<>\x22\x27]/g, (c) => ESC[c]);
+const MAX = 16 * 1024 * 1024;
+const st = { sent: '', held: '', names: { sent: '', held: '' }, verdict: null, samples: null, run: 0 };
+
+function download(name, text, type = 'application/json') {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function label() {
+  $('n-sent').textContent = st.names.sent;
+  $('n-held').textContent = st.names.held;
+}
+async function check() {
+  label();
+  if (!st.sent) { $('out').innerHTML = '<p class="dim">Drop a file in box 1 — or try one of the samples below.</p>'; return; }
+  const run = ++st.run;
+  $('out').innerHTML = '<p class="dim">Checking every signature and every hash…</p>';
+  const v = await judge(st.sent, st.held || undefined);
+  if (run !== st.run) return;
+  st.verdict = v;
+  $('out').innerHTML = renderVerdict(v);
+}
+async function take(slot, file) {
+  if (!file) return;
+  if (file.size > MAX) { $('out').innerHTML = renderVerdict({ tone: 'bad', title: 'That file is too large', lines: ['A checkpoint or a proof is a few kilobytes; this is over 16 MB.'] }); return; }
+  st[slot] = await file.text();
+  st.names[slot] = file.name + ' · ' + file.size.toLocaleString('en-GB') + ' bytes';
+  await check();
+}
+for (const slot of ['sent', 'held']) {
+  const box = $('drop-' + slot);
+  $('f-' + slot).addEventListener('change', (e) => take(slot, e.target.files && e.target.files[0]));
+  box.addEventListener('dragover', (e) => { e.preventDefault(); box.classList.add('over'); });
+  box.addEventListener('dragleave', () => box.classList.remove('over'));
+  box.addEventListener('drop', (e) => { e.preventDefault(); box.classList.remove('over'); take(slot, e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
+}
+const SAMPLE_HELD = { checkpoint: false, proof: true, grew: true, tampered: true, rewritten: true };
+async function sample(which) {
+  $('out').innerHTML = '<p class="dim">Making a sample company in this browser — three devices, real keys, real signed writes…</p>';
+  if (!st.samples) st.samples = await samples();
+  st.sent = st.samples[which];
+  st.names.sent = 'sample-' + which + '.json (made in this browser)';
+  st.held = SAMPLE_HELD[which] ? st.samples.checkpoint : '';
+  st.names.held = SAMPLE_HELD[which] ? 'sample-checkpoint.json — the checkpoint “you” saved' : '';
+  $('f-sent').value = ''; $('f-held').value = '';
+  $('sample-dl').innerHTML = 'Try dropping it yourself: <a href="#" data-dl="' + which + '">download sample-' + esc(which) + '.json</a>' +
+    (SAMPLE_HELD[which] ? ' and <a href="#" data-dl="checkpoint">sample-checkpoint.json</a>' : '') + '.';
+  await check();
+}
+async function saveOffline() {
+  const msg = $('offline-msg');
+  msg.textContent = 'Gathering the page and every module it runs…';
+  try {
+    const html = await fetch(location.pathname, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : Promise.reject(new Error('the page'))));
+    const one = await standalone(html, (p) => fetch(p, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)));
+    download('sovereign-enterprise-checker.html', one, 'text/html');
+    msg.textContent = 'Saved — open it from your disk; it needs no connection.';
+  } catch (e) {
+    msg.textContent = 'Could not gather the files (' + (e && e.message ? e.message : 'offline') + '). Open this page online once, then save.';
+  }
+}
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('button, a[data-dl]');
+  if (!t) return;
+  if (t.dataset.dl) { e.preventDefault(); if (st.samples) download('sample-' + t.dataset.dl + '.json', st.samples[t.dataset.dl]); return; }
+  if (t.dataset.sample) { t.disabled = true; try { await sample(t.dataset.sample); } finally { t.disabled = false; } return; }
+  const act = t.dataset.act;
+  if (act === 'keep' && st.verdict && st.verdict.keep) {
+    const k = st.verdict.keep;
+    download('checkpoint-' + k.size + '-entries-' + String(k.at).slice(0, 10) + '.json', JSON.stringify(k, null, 1));
+  } else if (act === 'clear') {
+    st.sent = ''; st.held = ''; st.names = { sent: '', held: '' }; st.verdict = null;
+    $('f-sent').value = ''; $('f-held').value = ''; $('sample-dl').innerHTML = '';
+    await check();
+  } else if (act === 'paste') {
+    const v = $('paste').value.trim();
+    if (!v) return;
+    st.sent = v; st.names.sent = 'pasted text · ' + v.length.toLocaleString('en-GB') + ' characters';
+    await check();
+  } else if (act === 'offline') {
+    t.disabled = true; try { await saveOffline(); } finally { t.disabled = false; }
+  }
+});
+if (globalThis.__STANDALONE) {
+  $('offline-btn').classList.add('hide');
+  $('offline-note').textContent = 'This is a saved copy: the page and every module it runs are inside this one file. It needs no connection and cannot change.';
+}
+</script>
+</body>
+</html>

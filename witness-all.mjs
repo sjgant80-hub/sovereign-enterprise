@@ -27,6 +27,8 @@
 //                one-time migration off the plaintext copies (run against an in-memory IndexedDB with real WebCrypto)
 //   recovery.mjs — owner recovery cards: Shamir over GF(256), the checksummed card, every refusal
 //   receipt.mjs — the per-planting receipt: before and after on the business's own held-out rows, the office comparison, the live results — signed, re-derivable, reproducible
+//   audit.mjs  — what an outsider can check: signed checkpoints, entry proofs, proofs the books only grew, signed brain files
+//   exportco.mjs — export (the records, never a key; lockable under a passphrase) and restore through the gate; the spreadsheets
 // keys/sha256/node/sim are value-tested (NIST vectors, real signatures, end-to-end convergence), not mutated.
 import { runMutations } from './.witness/witness.mjs';
 import { fileURLToPath } from 'node:url';
@@ -83,6 +85,8 @@ export const PAIRS = [
   ['src/adopt.mjs', ['test/adopt.test.mjs']],
   ['src/plant.mjs', ['test/plant.test.mjs']],
   ['src/receipt.mjs', ['test/receipt.test.mjs']],
+  ['src/audit.mjs', ['test/audit.test.mjs']],
+  ['src/exportco.mjs', ['test/exportco.test.mjs']],
 ];
 // imported (by the tests) it only lends hiddenSpans and PAIRS; run directly, it is the gate
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();

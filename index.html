@@ -240,6 +240,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
     peer — same machine over tabs, other machines over a direct encrypted link. Nothing goes to a server.</p>
   <div class="panel" id="realbox"></div>
   <div class="panel hide" id="rtcbox"></div>
+  <div class="panel" id="backupbox"></div>
   <details class="panel runbook" id="runbook"><summary><b>If this laptop is stolen or lost</b> — what to do, and what a thief gets</summary>
     <ol>
       <li><b>Cut it off.</b> From another device of the company, open People and revoke the lost device's grant — an admin revokes staff, the owner revokes
@@ -276,7 +277,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 </div>
 
 <p class="foot">
-  Kernel-backed: this page imports <span class="mono">src/runtime · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · books · lease · sim</span> — the
+  Kernel-backed: this page imports <span class="mono">src/runtime · company · mesh · watch · agent · brain · grow · screen · market · office · crdt · gate · canon · keys · node · rtc · vault · audit · exportco · books · lease · sim</span> — the
   same modules the test suite and the mutation witness prove in CI, on every change. The brains are the Konomi SLM's verified pattern libraries
   (Konomi architecture — Thomas Frumkin), grown by the seed-library ribosome (sjgant80-hub). Seven of the eight jobs run on published datasets: six real (card transactions, telecom churn, credit defaults, IoT network flows, household power, web shopping sessions) and one its authors publish as synthetic (AI4I machine data); inventory runs on a synthetic stream because no open stock-out data exists. Every source and licence is on its brain card in Brains and in NOTICE. The design lens (GEP, WIPER, BES, Dual-Map) is the work of Gary W. Floyd,
   Lumiea Systems Research Division — ThunderStruck Service, LLC; the independent second brain and the held-for-a-human verdict draw on his
@@ -312,6 +313,9 @@ import { money } from './src/adopt.mjs';
 import { fitFrom, fitResultHtml } from './src/explain.mjs';
 import { renderTrain, loadCsv, grow as growBrain, brainFile } from './ui/train.mjs';
 import { sampleCsv } from './src/train.mjs';
+import { vaultOf, checkpoint, proofBundle, consistencyBundle, signBrain } from './src/audit.mjs';
+import { exportCompany, openExport, feed, companyCsvs, lockFile } from './src/exportco.mjs';
+import { LOG_MAX } from './src/store.mjs';
 import { ollama, openaiCompatible, anthropic, webllm } from './src/model.mjs';
 import { makeAntibody, NOVEL_ATTACK, NOVEL_PARAPHRASES } from './src/antibody.mjs';
 
@@ -615,6 +619,196 @@ function immunePanel(node) {
     </ol></div>`;
 }
 
+// ── for your auditor or bank (src/audit.mjs): a signed checkpoint, a proof of one entry, a proof the books only grew ──
+const audUi = { msg: '', tone: '' };
+function saveFile(name, text, type = 'application/json') {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const audSay = (msg, tone = '') => { audUi.msg = msg; audUi.tone = tone; const el = $('aud-msg'); if (el) { el.textContent = msg; el.className = 'note ' + tone; } };
+const isoDay = () => new Date().toISOString().slice(0, 10);
+document.addEventListener('input', (e) => { if (e.target && e.target.id === 'aud-i') audUi.entry = e.target.value; });
+/** n — how many entries the vault on this device holds (the Vault view has already rebuilt it). */
+function auditPanel(n) {
+  const off = n ? '' : 'disabled';
+  return `<div class="panel" id="auditor" style="margin-top:14px"><h3>For your auditor or bank — proof without trusting you</h3>
+    <p>Send a <b>signed checkpoint</b> of these books: the tree head exactly as the Finance agent signed it, the Audit agent’s co-signature, and this
+      device’s signature over both. Your auditor checks it in their own browser on <a href="verify.html" target="_blank" rel="noopener">the auditor’s checker ↗</a>
+      — or on a copy of it they saved, offline — and keeps it. From then on you can prove any entry is in the books, and that nothing they have already
+      seen was rewritten: every later checkpoint must extend the one they hold.</p>
+    ${n ? '' : '<p class="note">Nothing is sealed in these books yet — every posting is sealed into the vault as it is made.</p>'}
+    <div class="row"><button class="primary" data-act="aud-cp" ${off}>Send the signed checkpoint to your auditor</button></div>
+    <div class="row"><label for="aud-i" class="dim">Entry #</label><input id="aud-i" inputmode="numeric" style="flex:0 1 110px" value="${esc(audUi.entry ?? (n ? n - 1 : ''))}" aria-label="Number of the entry to prove" ${off}>
+      <span class="dim">(0 to ${Math.max(0, n - 1)})</span><button data-act="aud-proof" ${off}>Prove one entry</button></div>
+    <div class="row"><label for="aud-old" class="dim">Prove the books only grew since a checkpoint your auditor holds:</label><input type="file" id="aud-old" accept=".json,application/json" ${off}></div>
+    <p class="note ${audUi.tone}" id="aud-msg" aria-live="polite">${esc(audUi.msg)}</p>
+    <p class="note">Each is a small .json file to email. The auditor drops it on the checker and reads, in plain words: “this entry is in the books”,
+      “the books only grew since” a date — or exactly what failed.</p></div>`;
+}
+/** A checkpoint of this device's books, now. In the live company the Audit agent first co-signs the head from its own rebuilt copy. */
+async function freshCheckpoint(node) {
+  while (busy) await new Promise((r) => setTimeout(r, 25));
+  busy = true;            // hold the heartbeat: the head the Audit agent co-signs is the head this checkpoint carries
+  try {
+    if (mode === 'demo' && co.available('audit')) {
+      await co.syncAll();   // the Audit agent first takes every write the Finance agent has made, then rebuilds and co-signs
+      const { a, cos } = co.vaultState(co.nodes.audit);
+      if (a.ok && a.size && !cos.some((c) => c.size === a.size)) { await co.witnessHead(co.nodes.audit); await co.syncAll(); }
+    }
+    const vs = vaultOf(node);
+    return { vs, cp: await checkpoint(vs, mode === 'demo' ? co.keys[ui.sel] : real.me) };
+  } finally { busy = false; }
+}
+async function auditAct(a) {
+  const node = current();
+  if (!node) return;
+  const raw = ($('aud-i') ? $('aud-i').value : '').trim();     // read before anything awaits: the view may redraw
+  const { vs, cp } = await freshCheckpoint(node);
+  if (!cp.ok) { audSay('Not made: ' + cp.why + '.', 'bad'); return; }
+  const b = cp.bundle;
+  if (a === 'aud-cp') {
+    const name = 'checkpoint-' + b.size + '-entries-' + isoDay() + '.json';
+    saveFile(name, JSON.stringify(b, null, 1));
+    audSay('Saved ' + name + ' — ' + b.size + ' entries, ' + (b.cosigs.length ? 'co-signed by the Audit agent' : 'not yet co-signed by a second device') + '. Email it to your auditor: they drop it on the checker and keep it.', 'ok');
+  } else if (a === 'aud-proof') {
+    if (!/^\d{1,9}$/.test(raw)) { audSay('Not made: type the number of an entry, from 0 to ' + (b.size - 1) + '.', 'bad'); return; }
+    const i = Number(raw);
+    const p = proofBundle(vs, i, b);
+    if (!p.ok) { audSay('Not made: ' + p.why + '.', 'bad'); return; }
+    saveFile('proof-entry-' + i + '.json', JSON.stringify(p.bundle, null, 1));
+    audSay('Saved proof-entry-' + i + '.json — “' + p.bundle.entry.memo + '”, ' + p.bundle.entry.date + ', in the books of ' + b.size + ' entries. The auditor drops it on the checker.', 'ok');
+  }
+}
+async function auditGrew(file) {
+  const node = current();
+  if (!node) return;
+  let old = null;
+  try { old = JSON.parse(await file.text()); } catch { old = null; }
+  const { vs, cp } = await freshCheckpoint(node);
+  if (!cp.ok) { audSay('Not made: ' + cp.why + '.', 'bad'); return; }
+  const c = consistencyBundle(old, vs, cp.bundle);
+  if (!c.ok) { audSay('Not made: ' + c.why + '.', 'bad'); return; }
+  const name = 'books-grew-' + c.bundle.from.size + '-to-' + cp.bundle.size + '-' + isoDay() + '.json';
+  saveFile(name, JSON.stringify(c.bundle, null, 1));
+  audSay('Saved ' + name + ' — from ' + c.bundle.from.size + ' to ' + cp.bundle.size + ' entries, nothing before changed. The auditor drops it on the checker beside the checkpoint they hold.', 'ok');
+}
+
+// ── back up, export, restore (src/exportco.mjs): the company leaves with you — its records, never a key ────────────
+const bk = { msg: '', tone: '', statting: false };
+const bkSay = (msg, tone = '') => { bk.msg = msg; bk.tone = tone; const el = $('bk-msg'); if (el) { el.textContent = msg; el.className = 'note ' + tone; } };
+const BK_RESTORE = `<div class="row"><input type="password" id="bk-pass" placeholder="Passphrase — to lock an export, or to open a locked one (10+ characters)" autocomplete="new-password" aria-label="Passphrase for the export file" style="flex:1 1 240px"><label for="bk-file" class="dim">Restore from an export</label><input type="file" id="bk-file" accept=".json,application/json"></div><p class="note" id="bk-msg" aria-live="polite"></p>`;
+/** How much of this device's copy the key store keeps (src/store.mjs stat) — counted where it is kept, not guessed. */
+async function paintStored() {
+  const n = real.node;
+  if (!n || !$('bk-status') || bk.statting) return;
+  bk.statting = true;
+  try {
+    const s = await KS.stat(devNs);
+    const m = n.size(), kept = s.ok ? Math.min(s.size, m) : 0;
+    if (!$('bk-status')) return;
+    $('bk-status').innerHTML = s.ok ? `This browser keeps this device’s key — in a form that cannot be copied off it — and <b>${kept.toLocaleString('en-GB')}</b> of the
+      <b>${m.toLocaleString('en-GB')}</b> signed writes it holds, sealed with AES-256-GCM${kept < m ? ' (the rest live in this tab’s memory and on your other devices until you export)' : ''}.
+      It keeps at most the latest ${LOG_MAX.toLocaleString('en-GB')} writes, plus the grants and revokes. Clearing this site’s data, a private window or the browser freeing space deletes
+      this device’s copy; your other devices hold their own. Back up by exporting the company now and then.`
+      : 'This browser gives this device no storage (' + esc(s.reason) + ') — export the company to keep a copy.';
+  } finally { bk.statting = false; }
+}
+function renderBackup() {
+  const box = $('backupbox');
+  if (!box) return;
+  const n = real.node;
+  const state = n ? 'company' : 'none';
+  if (box.dataset.state !== state) {
+    box.dataset.state = state;
+    box.innerHTML = n ? `<h3>Back up, export, restore</h3>
+      <p class="note" id="bk-status"></p>
+      <div class="row"><button class="primary" data-act="bk-export">Export company (.json)</button>
+        <label class="dim" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="bk-lock"> lock the file with the passphrase below</label></div>
+      <div class="row"><span class="dim">Spreadsheets:</span>${[['tasks', 'Tasks'], ['crm', 'CRM'], ['journal', 'Journal'], ['people', 'People']].map(([c, l]) => `<button class="sm" data-act="bk-csv" data-f="${c}.csv">${l} (.csv)</button>`).join('')}</div>
+      ${BK_RESTORE}
+      <p class="note"><b>What the file holds:</b> every signed write this device holds — the company’s records, books and history — under a manifest this
+        device signs. Lock it with a passphrase if it leaves this machine (PBKDF2-SHA256, 600,000 rounds, then AES-256-GCM over the whole file).
+        <b>What it does not hold:</b> any key. This device’s key cannot be copied off this browser, not even by this page.
+        <b>How you get back:</b> the owner restores from any two of the three recovery cards, on any machine, then restores this file — the owner’s own
+        earlier writes come back with it, so it writes again straight away. A teammate’s new device opens the invite link, is granted by the owner, and
+        restores the file the same way. A restore runs every write through the gate, exactly as if another device had sent it, and checks it rebuilt the
+        same company. The spreadsheets leave out everyone’s sealed personal details.</p>`
+      : `<h3>Restore a company from its export</h3>
+      <p class="note">An export holds the company’s records and no key, so this browser needs its device first: the owner restores from two of the three
+        recovery cards (above); a teammate opens the company’s invite link and is granted. Then restore the file here, under Run your own.</p>`;
+  }
+  if ($('bk-msg') && $('bk-msg').textContent !== bk.msg) bkSay(bk.msg, bk.tone);
+  paintStored();
+}
+async function backupAct(a, el) {
+  const n = real.node;
+  if (!n) return;
+  if (a === 'bk-csv') {
+    const f = companyCsvs(n);
+    const file = f.ok ? f.files.find((x) => x.name === el.dataset.f) : null;
+    if (!file) { bkSay('Could not write that spreadsheet: ' + (f.why || 'unknown sheet') + '.', 'bad'); return; }
+    saveFile(file.name, '﻿' + file.text, 'text/csv');
+    bkSay('Saved ' + file.name + ' — ' + file.rows + ' row' + (file.rows === 1 ? '' : 's') + '.', 'ok');
+  } else if (a === 'bk-export') {
+    const r = await exportCompany(n, real.me);
+    if (!r.ok) { bkSay('Not exported: ' + r.why + '.', 'bad'); return; }
+    let text = JSON.stringify(r.file), lockedNote = '';
+    if ($('bk-lock') && $('bk-lock').checked) {
+      bkSay('Locking the file under your passphrase…');
+      const l = await lockFile(text, $('bk-pass') ? $('bk-pass').value : '');
+      if (!l.ok) { bkSay('Not exported: ' + l.why + '.', 'bad'); return; }
+      text = JSON.stringify(l.file);
+      lockedNote = ', locked under your passphrase — keep the passphrase somewhere other than the file';
+    }
+    const name = 'company-' + n.genesis.slice(0, 8) + '-' + isoDay() + (lockedNote ? '.locked' : '') + '.json';
+    saveFile(name, text);
+    bkSay('Saved ' + name + ' — ' + r.file.manifest.count.toLocaleString('en-GB') + ' signed writes' + lockedNote + '. It holds no key: the owner comes back with the recovery cards, then restores it.', 'ok');
+  }
+}
+async function restoreFrom(file) {
+  if (!real.node) { bkSay('First bring this browser’s device back — the owner from the recovery cards, a teammate by the invite link — then restore the file.', 'warn'); return; }
+  if (file.size > 512 * 1024 * 1024) { bkSay('Not restored: that file is too large to be a company export.', 'bad'); return; }
+  bkSay('Reading the export and checking its signed manifest…');
+  const r = await openExport(await file.text(), $('bk-pass') ? $('bk-pass').value : '');
+  if (!r.ok) { bkSay('Not restored: ' + r.why + '.', 'bad'); return; }
+  if (r.genesis !== real.node.genesis) { bkSay('Not restored: this export is of a different company (owner key ' + r.genesis.slice(0, 16) + '…).', 'bad'); return; }
+  const wasHeld = catchingUp();
+  real.bulk = true;                       // every write is stored as it is admitted; the other tabs are greeted once, at the end
+  let f;
+  try { f = await feed(real.node, r.envelopes, (d, t) => { if (d % 2048 < 256 || d === t) bkSay('Restoring — ' + d.toLocaleString('en-GB') + ' of ' + t.toLocaleString('en-GB') + ' signed writes through the gate…'); }); }
+  finally { real.bulk = false; }
+  // the page's own rule (startReal): a restored owner whose own earlier writes are back continues its history and writes again
+  // (each of its own writes coming back already released it as it was admitted — this is the same rule, checked once more)
+  if (catchingUp() && real.node.tip().seq > 0) { LS('se.catchup', null); real.gateLog.push(`${stamp()} caught up from an export: this device's own earlier writes are back`); }
+  const released = wasHeld && !catchingUp() ? ' This owner device’s own earlier writes, up to the export of ' + r.manifest.at.slice(0, 10) + ', came back with the file, so it writes again, continuing its own history. If the lost owner device wrote anything after that export, connect this one to a device that holds those writes before writing here.' : '';
+  const st = await KS.stat(devNs);        // queued behind every write the restore stored: they are all kept when this returns
+  if (real.chan) real.chan.postMessage({ t: 'hello', from: real.me.pub, have: real.node.have() });
+  const same = real.node.digest() === r.manifest.state;
+  const why = Object.entries(f.reasons).map(([k, v]) => v + ' ' + k).join(', ');
+  bkSay('Restored ' + f.restored.toLocaleString('en-GB') + ' signed writes' + (r.locked ? ' from a locked file' : '') + (f.held ? ' (' + f.held.toLocaleString('en-GB') + ' were already here)' : '') +
+    (f.refused ? '; the gate refused ' + f.refused + ' (' + why + ')' : '') + '. ' +
+    (same ? 'This device now holds exactly the company in the export — the same company digest.' : 'This device now holds everything in the export, plus writes it already had.') +
+    (st.ok ? ' This browser keeps ' + Math.min(st.size, real.node.size()).toLocaleString('en-GB') + ' of them, sealed.' : ' This browser could not store them — keep the export file.') + released, f.refused ? 'warn' : 'ok');
+  render();
+}
+
+// ── "Teach it your own work": the brain leaves signed — by this browser's company device, or its own signing key ──────
+async function downloadBrain(summary) {
+  const body = brainFile(ui.train, summary);
+  if (!body) return;
+  if (!real.me) await bootReal();
+  let keys = real.me;
+  if (!keys) { const d = await KS.device('signer'); keys = d.ok ? d.keys : null; }   // no company here: a key of its own, made here, non-extractable
+  const s = keys ? await signBrain(body, keys) : { ok: false, why: 'this browser gives this page no key store to sign with' };
+  if (!s.ok) { ui.train = { ...ui.train, signError: 'Not saved: ' + s.why + '.', signedBy: '' }; renderTrainBox(); return; }
+  saveFile(summary ? 'your-brain.signed.json' : 'your-brain.signed.no-data-summary.json', JSON.stringify(s.file, null, 1));
+  ui.train = { ...ui.train, signedBy: keys.pub, signedWith: keys === real.me ? 'device' : 'browser', signError: '' };
+  renderTrainBox();
+}
+
 const can = (node, c) => node.canWrite(c);
 const readonlyNote = (node) => (mode === 'demo' && !HUMAN_IDS.includes(ui.sel) ? `<p class="dim">This is the ${esc(displayName(ui.sel))}'s device — it writes here; you watch.</p>` : '');
 const outcomeMark = (x) => (x.state !== 'done' || (x.label !== 0 && x.label !== 1) ? '' : x.label === x.truth ? '<span class="ok" title="matched the outcome">✓</span>' : '<span class="bad" title="the outcome went the other way">✗</span>');
@@ -799,7 +993,7 @@ const VIEWS = {
       <tr><td>Inclusion proof (latest entry, hashes only)</td><td class="n ${inc ? 'ok' : 'warn'}">${inc === null ? '—' : inc ? '✓ verified' : '✗'}</td></tr>
       <tr><td>Consistency proof (first head → latest)</td><td class="n ${con === false ? 'bad' : 'ok'}">${con === null ? '—' : con ? '✓ only appended' : '✗ rewritten'}</td></tr>
       <tr><td>Audit agent co-signatures</td><td class="n">${cos.length}</td></tr></table>
-    </div><div class="panel"><h3>Leaves</h3><div class="log">${recs.sort((x, y) => y.index - x.index).slice(0, 200).map((r) => `<div>#${r.index} ${esc(r.entry)} · ${short(r.leaf)}</div>`).join('')}</div></div></div>`;
+    </div><div class="panel"><h3>Leaves</h3><div class="log">${recs.sort((x, y) => y.index - x.index).slice(0, 200).map((r) => `<div>#${r.index} ${esc(r.entry)} · ${short(r.leaf)}</div>`).join('')}</div></div></div>` + auditPanel(a.size);
   },
   People(node) {
     const v = node.view();
@@ -868,6 +1062,8 @@ async function act(a, el) {
   if (!node) return;
   const val = (id) => ($(id) ? $(id).value.trim() : '');
   if (a.startsWith('rtc-')) return rtcAct(a, el);
+  if (a.startsWith('aud-')) return auditAct(a);
+  if (a.startsWith('bk-')) return backupAct(a, el);
   if (a === 'task-add' && val('tt')) await node.put('tasks', uid(node, 't'), { title: val('tt').slice(0, 200), owner: node.name, status: 'todo' });
   else if (a === 'task-cycle') { const t = node.list('tasks').find((x) => x.id === el.dataset.id); const n = { todo: 'doing', doing: 'done', done: 'todo' }[t && t.status] || 'doing'; await node.put('tasks', el.dataset.id, { status: n }); }
   else if (a === 'task-del') await node.del('tasks', el.dataset.id);
@@ -1108,6 +1304,8 @@ document.addEventListener('change', async (e) => {
     if (f.size > 20 * 1024 * 1024) { ui.train = { error: 'That file is over 20 MB — try a sample of it.' }; renderTrainBox(); return; }
     ui.train = loadCsv({}, await f.text(), f.name); renderTrainBox(); return;
   }
+  if (e.target.id === 'aud-old' && e.target.files && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; if (f.size > 1024 * 1024) audSay('Not made: that file is too large to be a checkpoint.', 'bad'); else await auditGrew(f); return; }
+  if (e.target.id === 'bk-file' && e.target.files && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; await restoreFrom(f); return; }
   if (e.target.id === 'train-target') { ui.train = { ...ui.train, target: e.target.value, result: null }; renderTrainBox(); return; }
   if (e.target.id === 'mc') { const n = current(); if (can(n, null)) await n.put('policy', 'agents', { minConfidence: +e.target.value, by: n.name }); render(); }
 });
@@ -1140,7 +1338,7 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.act === 'model-send') { t.disabled = true; try { await modelSend(); } finally { t.disabled = false; } return; }
   if (t.dataset.act === 'train-sample') { const j = await fetch('brains/shopper.sample.json').then((r) => r.json()); ui.train = loadCsv({}, sampleCsv(j), 'UCI Online Shoppers — 1,182 real sessions (CC BY 4.0)'); renderTrainBox(); return; }
   if (t.dataset.act === 'train-go') { t.disabled = true; t.textContent = 'Growing…'; await new Promise((r) => setTimeout(r, 20)); ui.train = growBrain(ui.train); renderTrainBox(); return; }
-  if (t.dataset.act === 'train-download') { const body = brainFile(ui.train); if (!body) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type: 'application/json' })); a.download = 'your-brain.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); return; }
+  if (t.dataset.act === 'train-download' || t.dataset.act === 'train-download-bare') { t.disabled = true; try { await downloadBrain(t.dataset.act === 'train-download'); } finally { t.disabled = false; } return; }
   if (t.dataset.try) { const b = $(t.dataset.try); if (b) { b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
   if (t.dataset.tab) { tab = t.dataset.tab; if (t.dataset.device && mode === 'demo') ui.sel = t.dataset.device; ui.flash = ''; render(); if (t.closest('#guide')) $('tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   if (t.dataset.speed) { ui.speed = +t.dataset.speed; ui.running = true; render(); return; }
@@ -1375,7 +1573,7 @@ async function startReal(G) {
     const b = real.node.bytes(r.hash);
     KS.append(devNs, b);   // sealed at rest; if storage is full the write still stands — the company's other devices hold it
     if (r.env.from === real.node.pub && catchingUp()) { LS('se.catchup', null); real.gateLog.push(`${stamp()} caught up: this device's own earlier writes are back, so it writes again, continuing its own history`); setTimeout(render, 0); }
-    if (real.chan) real.chan.postMessage({ t: 'env', hex: toHex(b) });
+    if (real.chan && !real.bulk) real.chan.postMessage({ t: 'env', hex: toHex(b) });   // a restore greets the other tabs once, at the end
   });
   if ('BroadcastChannel' in self) {
     real.chan = new BroadcastChannel('sovereign-enterprise:' + G.slice(0, 24));
@@ -1554,6 +1752,7 @@ function renderReal() {
     }
     $('rconv').textContent = 'no company yet';
     $('rtcbox').classList.add('hide');
+    renderBackup();
     return;
   }
   box.dataset.key = '';
@@ -1592,6 +1791,7 @@ function renderReal() {
   const machines = real.rtc.filter((l) => l.info && l.info.state === 'live').length;
   $('rinfo').textContent = `${real.peers.size} other tab${real.peers.size === 1 ? '' : 's'} · ${machines} other machine${machines === 1 ? '' : 's'} connected · stored on this device only, sealed`;
   renderRtc();
+  renderBackup();
 }
 
 

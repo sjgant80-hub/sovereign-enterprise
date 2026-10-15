@@ -180,7 +180,7 @@ export function renderBrochure(ctx) {
     <div><h4>People oversee every decision</h4><p>Anyone can see every decision and why. Money and security calls need a second, independent brain; anything no brain can confirm waits for a person, who chooses what happens. Any agent can be paused or fired in one click.</p></div>
     <div><h4>Records of every decision</h4><p>Every decision is a signed record with a receipt naming the brain, the evidence and the score — and every brain is readable rule by rule.</p></div>
     <div><h4>Built without protected characteristics</h4><p>The brains never see age, sex, marital status or education: those columns are left out of their data, and every rule they use is readable.</p></div>
-    <div><h4>A record your auditor can check</h4><p>The books are sealed into an append-only transparency log (the design behind Certificate Transparency): anyone holding a copy of its signed checkpoints can prove an entry is in the books and that nothing was rewritten.</p></div>
+    <div><h4>A record your auditor can check</h4><p>The books are sealed into an append-only transparency log (the design behind Certificate Transparency). Send its signed checkpoints to your auditor or bank, and they can prove any entry is in the books and that nothing was rewritten — without trusting you. <a href="verify.html" target="_blank" rel="noopener">Try the auditor’s checker ↗</a></p></div>
   </div>
 </section>
 

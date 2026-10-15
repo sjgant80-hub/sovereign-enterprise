@@ -46,6 +46,9 @@ Source: https://github.com/sjgant80-hub/sovereign-enterprise
 - 384 unit, boundary, hostile-input and integration tests; two byte-reproducible re-runs (the AI company's working day; a
   hostile-network simulation); a mutation + fuzz witness over every decision kernel; a gate on the page's own script.
 
+## The auditor's checker
+- https://sjgant80-hub.github.io/sovereign-enterprise/verify.html — drop a signed checkpoint, a proof of one entry or a proof that the books only grew; every signature and hash is checked in your own browser, without trusting the company. Save it as one file and it works offline.
+
 ## Credits
 - Konomi architecture and the Konomi SLM lineage: Thomas Frumkin.
 - GEP / WIPER / BES / Dual-Map design lens: Gary W. Floyd, Lumiea Systems Research Division — ThunderStruck Service, LLC.
