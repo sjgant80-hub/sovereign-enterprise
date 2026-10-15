@@ -307,6 +307,75 @@ export function parseRoute(text, allowed) {
   } catch { return null; }
 }
 
+// ── a drafted reply, checked before a person sees it (pure) ─────────────────────────────────────────────────────────
+// The route prompt forbids echoing the message and promising anything; a model can still do both. So every draft is
+// checked: one that repeats a run of the customer's own words (or a number, address or link from it) is REFUSED — a
+// reply that parrots the message is how an injected instruction leaks back out; one that promises money, credit or an
+// appointment is FLAGGED for the person who sends it, unless the company's records already hold that promise; one sent
+// to a desk that cannot be the right one for what the message is about is FLAGGED. A draft is never sent by a model.
+export const ECHO_WORDS = 5;                 // this many of the customer's words in a row, repeated, is an echo
+export const DRAFT_PROMISES = Object.freeze({
+  refund: /\b(?:refund|reimburs|money back|repay)/i,
+  credit: /\b(?:credit(?:ed)?\b|compensat|discount|voucher|goodwill)/i,
+  appointment: /\b(?:appointment|booked|book (?:you|a|an|in)|engineer (?:will|is)|visit (?:you|on)|call you (?:back )?(?:on|at|tomorrow))/i,
+});
+const COMMIT = /\b(?:will|shall|have|has been|we(?:\x27|’)ll|we(?:\x27|’)ve|going to|guarantee|promise|arrange|issue|processed|approved|confirm)\b/i;
+const DESK_TOPICS = Object.freeze([
+  { re: /\b(?:refund|charge[ds]?|bill(?:ed|ing)?|invoice|payment|card|overcharg|direct debit)/i, desks: ['finance', 'service'], what: 'money' },
+  { re: /\b(?:password|log ?in|hack(?:ed)?|breach|phish|virus|malware|suspicious (?:email|link|login))/i, desks: ['systems', 'service'], what: 'security' },
+]);
+const wordsOf = (s) => (String(s).toLowerCase().match(/[\p{L}\p{N}]+/gu) || []);
+const DETAIL = /[\w.+-]+@[\w-]+\.[\w.]+|https?:\/\/\S+|\b\d{4,}\b/g;
+
+/** The longest run of words the draft repeats, in order, from the message. */
+function longestRun(draft, message) {
+  const a = wordsOf(draft), b = wordsOf(message);
+  let best = 0;
+  const prev = new Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    let diag = 0;
+    for (let j = 1; j <= b.length; j++) {
+      const up = prev[j];
+      prev[j] = a[i - 1] === b[j - 1] ? diag + 1 : 0;
+      best = Math.max(best, prev[j]);
+      diag = up;
+    }
+  }
+  return best;
+}
+
+/**
+ * checkDraft({ draft, message, department, records }) → { ok, refused, flags: [{ kind, why }] }.
+ *   ok false (refused) — the draft echoes the message: ECHO_WORDS of its words in a row, or a number, email address or link
+ *   from it. Never shown as a reply; the message still reaches the desk.
+ *   flags — 'promise' (it promises a refund, credit or appointment the records do not hold: records = { refund, credit,
+ *   appointment } booleans for this customer), 'desk' (a money or security message routed to a desk that cannot handle it).
+ * Junk never throws: it is refused.
+ */
+export function checkDraft(input) {
+  try {
+    const { draft, message, department, records } = input || {};
+    if (typeof draft !== 'string' || !draft.trim() || typeof message !== 'string') return { ok: false, refused: 'there is no draft to check', flags: [] };
+    const run = longestRun(draft, message);
+    if (run >= ECHO_WORDS) return { ok: false, refused: 'it repeats ' + run + ' of the customer’s words in a row — a reply never parrots the message', flags: [] };
+    const details = new Set(String(message).match(DETAIL) || []);
+    const leaked = (draft.match(DETAIL) || []).filter((d) => details.has(d));
+    if (leaked.length) return { ok: false, refused: 'it repeats a detail from the message (' + leaked[0] + ')', flags: [] };
+    const held = records && typeof records === 'object' ? records : {};
+    const flags = [];
+    for (const sentence of draft.split(/(?<=[.!?])\s+/)) {
+      if (!COMMIT.test(sentence)) continue;
+      for (const [kind, re] of Object.entries(DRAFT_PROMISES)) {
+        if (re.test(sentence) && held[kind] !== true && !flags.some((f) => f.what === kind)) flags.push({ kind: 'promise', what: kind, why: 'it promises a ' + kind + ' no record holds — a person decides that, not the draft' });
+      }
+    }
+    for (const t of DESK_TOPICS) {
+      if (t.re.test(message) && !t.desks.includes(department)) flags.push({ kind: 'desk', what: t.what, why: 'a ' + t.what + ' message sent to ' + (department || 'no desk') + ' — it belongs with ' + t.desks.join(' or ') });
+    }
+    return { ok: true, refused: '', flags };
+  } catch { return { ok: false, refused: 'the draft could not be read', flags: [] }; }
+}
+
 // ── money + audit (pure) ─────────────────────────────────────────────────────────────────────────────────────────
 const rate = (x) => Number.isFinite(x) && x >= 0;
 
