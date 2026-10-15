@@ -31,17 +31,17 @@ export const TAB_HELP = {
   Proof: { demo: '<b>Under the hood.</b> This device\'s copy of the company, every forged or malformed write the gate refused, every forked slot and which write was kept, the hostile-network simulation, and a re-check of an AI receipt.', run: '<b>Under the hood.</b> Your replica and the gate\'s refusals.' },
 };
 
-/** Start here (overview) — each step runnable with "Show me". */
+/** Start here (overview) — each step runnable with "Show me"; `spot` is what it rings once it gets there. */
 export const START_STEPS = [
-  { id: 'watch', title: 'Watch the company work', text: 'The Board shows what the agents decided and how often they were right against the real outcome.', go: 'live', tab: 'Board' },
-  { id: 'feed', title: 'Read any decision', text: 'On Agents, press Trace on a line to see that exact decision traced step by step through the company.', go: 'live', tab: 'Agents' },
-  { id: 'brains', title: 'See the brains talk', text: 'On Brains, the map shows who answered, taught and confirmed whom — every message a signed record.', go: 'live', tab: 'Brains' },
-  { id: 'attack', title: 'Attack it', text: 'Send a hostile customer message and watch it quarantined unread; poison a brain and watch every device refuse it.', go: 'live', tab: 'Watch', then: 'hostile' },
-  { id: 'steal', title: 'Steal an agent’s key', text: 'A thief with a valid key and grant starts deciding the Ops agent’s work. The behaviour watch sees it is not behaving like itself and pauses it automatically; a person clears it.', go: 'live', tab: 'Watch', then: 'steal' },
-  { id: 'immune', title: 'Make it immune', text: 'Send a new kind of attack that gets past the screen, confirm it once as the overseer, and watch every agent re-check it and become immune — while a mistaken confirmation is refused by all of them.', go: 'live', tab: 'Watch', then: 'immune' },
-  { id: 'model', title: 'Connect a language model', text: 'On the Board, connect a model — on your own machine, in the browser, or with your own key — and write to the company as a customer: it routes the message and drafts a reply a person sends.', go: 'live', tab: 'Board', then: 'model-tier' },
-  { id: 'overseer', title: 'Be the overseer', text: 'Select the overseer’s device (a person) and clear a held call — the agent carries out your choice. Pause or fire any agent.', go: 'live', tab: 'Watch', device: 'overseer' },
-  { id: 'split', title: 'Cut the network', text: 'Split the network or take devices offline: work carries on, and every device converges again when it heals.', go: 'live', tab: 'Board', then: 'splitnet' },
+  { id: 'watch', title: 'Watch the company work', text: 'The Board shows what the agents decided and how often they were right against the real outcome.', go: 'live', tab: 'Board', spot: '#app .kpis' },
+  { id: 'feed', title: 'Read any decision', text: 'On Agents, press Trace on a line to see that exact decision traced step by step through the company.', go: 'live', tab: 'Agents', spot: '#app .feed' },
+  { id: 'brains', title: 'See the brains talk', text: 'On Brains, the map shows who answered, taught and confirmed whom — every message a signed record.', go: 'live', tab: 'Brains', spot: '#app .myc' },
+  { id: 'attack', title: 'Attack it', text: 'Send a hostile customer message and watch it quarantined unread; poison a brain and watch every device refuse it.', go: 'live', tab: 'Watch', then: 'hostile', spot: '#app' },
+  { id: 'steal', title: 'Steal an agent’s key', text: 'A thief with a valid key and grant starts deciding the Ops agent’s work. The behaviour watch sees it is not behaving like itself and pauses it automatically; a person clears it.', go: 'live', tab: 'Watch', then: 'steal', spot: '#app' },
+  { id: 'immune', title: 'Make it immune', text: 'Send a new kind of attack that gets past the screen, confirm it once as the overseer, and watch every agent re-check it and become immune — while a mistaken confirmation is refused by all of them.', go: 'live', tab: 'Watch', then: 'immune', spot: '#immune' },
+  { id: 'model', title: 'Connect a language model', text: 'On the Board, connect a model — on your own machine, in the browser, or with your own key — and write to the company as a customer: it routes the message and drafts a reply a person sends.', go: 'live', tab: 'Board', then: 'model-tier', spot: '#model-tier' },
+  { id: 'overseer', title: 'Be the overseer', text: 'Select the overseer’s device (a person) and clear a held call — the agent carries out your choice. Pause or fire any agent.', go: 'live', tab: 'Watch', device: 'overseer', spot: '#app' },
+  { id: 'split', title: 'Cut the network', text: 'Split the network or take devices offline: work carries on, and every device converges again when it heals.', go: 'live', tab: 'Board', then: 'splitnet', spot: '#conv' },
   { id: 'fit', title: 'Put in your own numbers', text: 'Enter your headcount and revenue: the five-year saving, the cloud comparison and the rival that could undercut you, on your figures.', go: 'business' },
   { id: 'case', title: 'Take it to your board', text: 'The full case — the saving, the cloud, the rival, security and regulation, the roll-out — printable as a PDF.', go: 'case' },
   { id: 'own', title: 'Run your own', text: 'Turn this browser into a device in your own company, invite your team, and connect another machine directly over WebRTC — no server in the path.', go: 'run' },

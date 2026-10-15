@@ -137,7 +137,7 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
 .guide ol{margin:10px 0 4px;padding-left:20px;color:var(--dim);font-size:14px}.guide li{margin:4px 0}.guide li b{color:var(--ink)}
 .toasts{position:fixed;right:16px;bottom:16px;z-index:60;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 32px));pointer-events:none}
 .toast{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:10px;padding:9px 12px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-.toast.ok{border-left-color:var(--ok)}.toast.warn{border-left-color:var(--warn)}.toast.bad{border-left-color:var(--bad)}
+.toast.ok{border-left-color:var(--accent)}.toast.warn{border-left-color:var(--warn)}.toast.bad{border-left-color:var(--bad)}
 .witem .evid{margin:6px 0 4px;padding-left:18px;font-size:13px;color:var(--dim)}.witem .evid li{margin:2px 0}
 .witem .choices{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.witem textarea{width:100%;min-height:44px}
 .seg{display:inline-flex;flex-wrap:wrap;gap:4px}.seg button.on{border-color:var(--accent2);color:var(--accent2)}
@@ -216,7 +216,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 <section class="view" id="v-overview" aria-label="Overview"></section>
 
 <section class="view" id="v-live" aria-label="The live company">
-  <details class="guide" id="guide" open><summary>Start here — what you're looking at, and what to try</summary><div id="guide-body"></div></details>
+  <details class="guide" id="guide"><summary>Start here — what you're looking at, and what to try</summary><div id="guide-body"></div></details>
   <div class="bar" id="devices" role="list" aria-label="Devices in the company"></div>
   <div class="status">
     <span id="conv" class="badge">…</span>
@@ -446,6 +446,9 @@ async function bootCompany() {
   const real = {};
   for (const [d, m] of Object.entries(index)) if (m.sample && d !== 'shopper') real[d] = await J('brains/' + m.sample);
   co = createCompany({ index, patterns, shopper, real }, { log: brainLog });
+  // count the writes the spine carries, so Heal can say how many crossed the split before every device matched again
+  // (the first sync after a heal carries exactly the backlog: it runs before that beat's new work)
+  { const sync = co.syncAll; co.carried = 0; co.syncAll = async () => { const m = await sync(); co.carried += m; if (ui.heal && ui.heal.first == null) ui.heal.first = m; return m; }; }
   const ADDR = { owner: 'Flat 2, 14 Sample Lane, Anytown (a made-up address)', overseer: '9 Example Close, Anytown (a made-up address)' };
   await co.boot({ people: async (id, human) => (human ? { privateSealed: await seal(await ui.ring.keyFor('p-' + id), ADDR[id] || '', 'people/p-' + id) } : {}) });
   const now = Date.now();
@@ -485,8 +488,17 @@ function renderDevices() {
   const on = fps.filter((_, i) => co.online[co.order[i]]);
   const all = fps.every((f) => f === fps[0]);
   const conv = on.every((f) => f === on[0]);
+  const down = fps.length - on.length;
+  // a heal is measured from the moment the last device is back: the writes the spine carried, and the beats it took
+  if (down) { ui.heal = null; ui.wasDown = true; } else if (ui.wasDown) { ui.wasDown = false; ui.split = false; ui.heal = { carried: co.carried, beats: 0 }; }
+  if (ui.heal && !ui.heal.done && all) {
+    const h = ui.heal.done = { writes: ui.heal.first == null ? co.carried - ui.heal.carried : ui.heal.first, beats: ui.heal.beats };
+    toast(h.writes ? `Healed: ${h.writes} deliveries across the split (one write reaching one device), and all ${fps.length} devices match again — every write kept, nothing to settle by hand` : `Healed: no device had fallen behind, so nothing needed to cross`);
+  }
+  const healed = ui.heal && ui.heal.done;
   $('conv').className = 'badge ' + (all ? 'ok' : 'warn');
-  $('conv').textContent = all ? `ALL ${fps.length} DEVICES CONVERGED · ${short(fps[0])}` : conv ? `${on.length} online converged · ${fps.length - on.length} offline` : 'syncing…';
+  $('conv').textContent = all ? `ALL ${fps.length} DEVICES CONVERGED · ${short(fps[0])}${healed ? ` · healed: ${healed.writes} writes delivered across the split in ${healed.beats > 1 ? healed.beats + ' syncs' : 'one sync'}` : ''}`
+    : ui.split && down ? `NETWORK SPLIT · ${on.length} connected · ${down} cut off — both sides keep working` : ui.heal && !down ? 'HEALING · the devices that were cut off are catching up…' : conv ? `${on.length} online converged · ${down} offline` : 'syncing…';
   $('netinfo').textContent = `${on.length}/${fps.length} online · ${co.n} pieces of work in${co.n >= SHIFT ? ' · shift complete' : ''}`;
   $('run').textContent = ui.running && co.n < SHIFT ? 'Pause' : 'Run';
   $('speeds').innerHTML = SPEEDS.map((s) => `<button class="sm ${ui.speed === s ? 'on' : ''}" data-speed="${s}" aria-label="Speed ${s} times">${s}×</button>`).join(' ');
@@ -527,7 +539,8 @@ function renderTabs() {
   $('flash').innerHTML = ui.flash ? `<div class="flash">${esc(ui.flash)}</div>` : '';
 }
 
-function render() {
+function render() { paint(); keepSpot(); }
+function paint() {
   if (!co) return;
   if (view === 'overview') return renderOverviewLive();
   if (view === 'wire') return renderWireView();
@@ -671,7 +684,7 @@ function behaviourPanel(node, human) {
         return `${list}<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="sm" data-act="watch-clear" data-id="${a.id}">False alarm — resume it</button><button class="sm" data-act="watch-relearn" data-id="${a.id}">False alarm — resume and re-learn its habits</button><button class="sm danger" data-act="rekey" data-id="${a.id}">Real theft — fire this key and issue a new one</button></span>`;
       })() : ''}</span></div>`;
   }).join('');
-  return `<div class="panel" style="margin-top:14px"><h3>Behaviour watch — is each agent behaving like itself?</h3>${items}
+  return `<div class="panel" id="behaviour" style="margin-top:14px"><h3>Behaviour watch — is each agent behaving like itself?</h3>${items}
     <p class="note">A valid key and a valid grant are not enough: the watch reads what each agent <b>does</b> — Gary W. Floyd's Behavioral Entropy Signatures
     (Lumiea Systems Research Division — ThunderStruck Service, LLC), over the company's own agents. Each agent's habits are learned from its first 120 decisions
     and then frozen. One thing every time, clockwork, or a collapse in what it does given the work → <b>scripted</b>; an act its work does not call for, or a
@@ -1124,8 +1137,11 @@ const VIEWS = {
   },
   Proof(node) {
     const v = node.view();
-    const devs = mode === 'demo' ? co.order.map((id) => co.nodes[id]) : [real.node];
     const log = mode === 'demo' ? ui.gateLog : real.gateLog;
+    const snap = ui.digests && ui.digests.mode === mode ? ui.digests : null;
+    if (!snap) setTimeout(snapDigests, 0);
+    const mine = snap && snap.rows.find((r) => r.id === (mode === 'demo' ? ui.sel : 'self'));
+    const kinds = snap ? new Set(snap.rows.map((r) => r.digest)).size : 0;
     return `<div class="grid two"><div class="panel"><h3>This device's replica</h3>
       <table><tr><td>Signed writes held</td><td class="n">${node.size()}</td></tr>
       <tr><td>Applied to the company</td><td class="n">${v.report.applied}</td></tr>
@@ -1134,14 +1150,32 @@ const VIEWS = {
       <tr><td>Forked slots — two signed writes for one slot (each provable)</td><td class="n ${v.report.forks.length ? 'warn' : ''}">${v.report.forks.length}${v.report.forks.length ? ' · ' + v.report.forks.filter((f) => f.rule === 'chain').length + ' kept the write the device built on' : ''}</td></tr>
       <tr><td>Keys burned (a second, continued history was signed)</td><td class="n ${v.report.burned.length ? 'bad' : ''}">${v.report.burned.length}</td></tr>
       <tr><td>Lamport clock</td><td class="n">${node.clock()}</td></tr>
-      <tr><td>Company digest (SHA-256 of the canonical state)</td><td class="n mono">${short(node.digest())}…</td></tr></table>
-      <h3 style="margin-top:14px">Every device — company digest</h3><table>${devs.map((d) => `<tr><td>${esc(d.name || 'this device')}</td><td class="n mono">${short(d.digest())}</td></tr>`).join('')}</table>
+      <tr><td>Company digest (SHA-256 of the canonical state, at the snapshot below)</td><td class="n mono">${mine ? short(mine.digest) + '…' : '…'}</td></tr></table>
+      <h3 style="margin-top:14px">Every device — company digest</h3>
+      <p class="note" style="margin-top:0">Each digest hashes the whole company — about a megabyte by mid-shift — so they are taken as a snapshot, not every beat: the company pauses for that moment, so every device is read at the same instant. ${!snap || snap.busy ? 'Taking them now…' : `Taken at ${esc(snap.at)}, after ${snap.n} pieces of work: ${kinds === 1 ? (snap.rows.length > 1 ? 'every device holds the same company.' : 'this device’s company.') : kinds + ' different companies — the devices that were cut off have not caught up yet.'}`} <button class="sm" data-act="digests" ${!snap || snap.busy ? 'disabled' : ''}>Take them again</button></p>
+      <table>${snap ? snap.rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="n mono">${short(r.digest)}</td></tr>`).join('') : ''}</table>
       <div class="row" style="margin-top:12px"><button class="primary" data-act="sim">Run the hostile-network simulation</button><button data-act="receipt">Re-check a brain receipt</button></div>
       <pre class="mono" id="simout" style="white-space:pre-wrap;margin:0">${esc(ui.proofOut)}</pre>
     </div><div class="panel"><h3>The gate — refused at the door</h3>
       <div class="log">${log.slice(-60).reverse().map((x) => `<div>${esc(x)}</div>`).join('') || '<span class="dim">Nothing refused yet — press "Attack this device".</span>'}</div></div></div>`;
   },
 };
+
+// The Proof tab's digests, as one snapshot: the heartbeat waits while they are taken (so every device is read at the same instant),
+// and the page yields between devices so it stays responsive.
+async function snapDigests() {
+  if (ui.digests && ui.digests.busy) return;
+  const snap = ui.digests = { mode, busy: true, n: co.n, rows: [] };
+  while (busy) await new Promise((r) => setTimeout(r, 20));
+  busy = true;
+  try {
+    snap.n = co.n;
+    const devs = mode === 'demo' ? co.order.map((id) => [id, co.nodes[id]]) : [['self', real.node]];
+    for (const [id, d] of devs) { if (!d) continue; await new Promise((r) => setTimeout(r, 0)); snap.rows.push({ id, name: id === 'self' ? 'this device' : displayName(id), digest: d.digest() }); }
+    snap.at = new Date().toLocaleTimeString();
+  } finally { busy = false; snap.busy = false; }
+  if (tab === 'Proof') render();
+}
 
 // the mycelium map: six agent devices on a ring; edges are learned brains, mesh answers and second-brain confirmations
 function mycelium() {
@@ -1217,6 +1251,7 @@ async function act(a, el) {
   else if (a === 'reveal') { const p = node.list('people').find((x) => x.id === el.dataset.id); const k = await ui.ring.keyFor(el.dataset.id); const t = k && p ? await open(k, p.privateSealed, 'people/' + el.dataset.id) : null; if (t !== null) ui.revealed.set(el.dataset.id, t); else toast('Could not open it — the key is gone', 'warn'); }
   else if (a === 'hide') ui.revealed.delete(el.dataset.id);
   else if (a === 'erase') { ui.ring.shred(el.dataset.id); ui.revealed.delete(el.dataset.id); toast('Erased — the key is destroyed; every copy of their details is unreadable, and the record still verifies', 'ok'); }
+  else if (a === 'digests') { await snapDigests(); }
   else if (a === 'sim') { ui.proofOut = 'running 8 devices through partitions, drops, duplicates and attacks…'; render(); const r = await simulate({ seed: (Date.now() % 100000) | 0, nodes: 8, rounds: 14, partitionFrom: 4, partitionTo: 10 }); ui.proofOut = JSON.stringify({ converged: r.converged, envelopes: r.envelopes, partitionRounds: r.partitionRounds, droppedGossip: r.droppedGossip, duplicateDeliveries: r.duplicateDeliveries, attacks: r.attacks, unauthorised: r.unauthorised, equivocators: r.equivocators, forks: r.forks, burnedKeys: r.burnedKeys, attackOutcomes: r.attackOutcomes, digest: r.digest }, null, 1); }
   else if (a === 'receipt') {
     // re-check the latest verified answer: re-hash its receipt, match it to the signed decision on the spine, then tamper with it
@@ -1397,12 +1432,29 @@ async function route(opts = {}) {
   if (view === 'wire') renderWireView(true);
   if (view === 'plant') { renderPlantView(true); plant.ready().then(() => renderPlantView()).catch(() => {}); }
   if (!opts.keepScroll) window.scrollTo(0, 0);
-  if (view === 'live' && $('guide-body') && !$('guide-body').innerHTML) $('guide-body').innerHTML = renderStart();
+  // the guide opens by itself once — on a first visit, on a screen wide enough to read it beside the company; after that it stays folded
+  if (view === 'live' && $('guide-body') && !$('guide-body').innerHTML) {
+    $('guide-body').innerHTML = renderStart();
+    let seen = null; try { seen = localStorage.getItem('se-guide-seen'); localStorage.setItem('se-guide-seen', '1'); } catch { /* blocked storage: treat as a first visit */ }
+    $('guide').open = !seen && matchMedia('(min-width: 700px)').matches;
+  }
   render();
 }
 window.addEventListener('popstate', () => route());
 
-// ── the guided tour ──────────────────────────────────────────────────────────────────────────────────
+// ── the guided tour, and "Show me" ─────────────────────────────────────────────────────────────────────
+// What is ringed: the tour's current target, and for a few seconds whatever "Show me" went to. The live view is rebuilt every
+// beat, so render() calls keepSpot() to put the ring back on the new element instead of losing it.
+function spot(sel, ms = 4000) { ui.spot = { sel, until: Date.now() + ms }; keepSpot(true); setTimeout(() => keepSpot(), ms + 50); }
+function keepSpot(scroll = false) {
+  const want = [];
+  if (ui.tour >= 0 && TOUR[ui.tour] && TOUR[ui.tour].target) want.push(TOUR[ui.tour].target);
+  if (ui.spot && Date.now() < ui.spot.until) want.push(ui.spot.sel); else ui.spot = null;
+  const els = want.map((q) => document.querySelector(q)).filter(Boolean);
+  document.querySelectorAll('.tour-hl').forEach((e) => { if (!els.includes(e)) e.classList.remove('tour-hl'); });
+  els.forEach((e) => e.classList.add('tour-hl'));
+  if (scroll && els.length) els[els.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 function tourShow(i) {
   document.querySelectorAll('.tour-hl').forEach((e) => e.classList.remove('tour-hl'));
   ui.tour = i;
@@ -1413,10 +1465,7 @@ function tourShow(i) {
   if (s.tab) { tab = s.tab; }
   if (s.device) ui.sel = s.device;
   render();
-  setTimeout(() => {
-    const el = s.target ? document.querySelector(s.target) : null;
-    if (el) { el.classList.add('tour-hl'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-  }, 60);
+  setTimeout(() => keepSpot(true), 60);
   t.innerHTML = `<h4>${esc(s.title)}</h4><p>${esc(s.text)}</p><div class="row"><span class="n">${i + 1} / ${TOUR.length}</span>
     <span><button class="sm" data-tour="close">Close</button> ${i > 0 ? '<button class="sm" data-tour="back">Back</button>' : ''} <button class="sm primary" data-tour="${i === TOUR.length - 1 ? 'close' : 'next'}">${i === TOUR.length - 1 ? 'Done' : 'Next'}</button></span></div>`;
   t.classList.remove('hide');
@@ -1478,7 +1527,7 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.view) { e.preventDefault(); go(t.dataset.view); return; }
   if (t.dataset.go) { go(t.dataset.go); return; }
   if (t.dataset.tour) { const a = t.dataset.tour; tourShow(a === 'start' ? 0 : a === 'next' ? ui.tour + 1 : a === 'back' ? ui.tour - 1 : -1); return; }
-  if (t.dataset.step) { const s = START_STEPS.find((x) => x.id === t.dataset.step); if (s && s.go) { if (s.tab) tab = s.tab; if (s.device) ui.sel = s.device; go(s.go); if (s.then) setTimeout(() => { const el = document.getElementById(s.then); if (!el) return; if (el.tagName === 'BUTTON') el.click(); else el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); } return; }
+  if (t.dataset.step) { const s = START_STEPS.find((x) => x.id === t.dataset.step); if (s && s.go) { if (s.tab) tab = s.tab; if (s.device) ui.sel = s.device; go(s.go); setTimeout(() => { const el = s.then && document.getElementById(s.then); if (el && el.tagName === 'BUTTON') el.click(); spot(s.spot || (el ? '#' + s.then : '#v-' + s.go)); }, 300); } return; }
   if (t.dataset.explain) { ui.trace = t.dataset.explain; go('how'); return; }
   if (t.dataset.act === 'print-brochure') { window.print(); return; }
   if (t.dataset.act && t.dataset.act.startsWith('plant-')) { t.disabled = true; try { await plant.act(t.dataset.act, t, (id) => ($(id) ? $(id).value : '')); } finally { t.disabled = false; } return; }
@@ -1494,8 +1543,8 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.act === 'train-sample') { const j = await fetch('brains/shopper.sample.json').then((r) => r.json()); ui.train = loadCsv({}, sampleCsv(j), 'UCI Online Shoppers — 1,182 real sessions (CC BY 4.0)'); renderTrainBox(); return; }
   if (t.dataset.act === 'train-go') { t.disabled = true; t.textContent = 'Growing…'; await new Promise((r) => setTimeout(r, 20)); ui.train = growBrain(ui.train); renderTrainBox(); return; }
   if (t.dataset.act === 'train-download' || t.dataset.act === 'train-download-bare') { t.disabled = true; try { await downloadBrain(t.dataset.act === 'train-download'); } finally { t.disabled = false; } return; }
-  if (t.dataset.try) { const b = $(t.dataset.try); if (b) { b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
-  if (t.dataset.tab) { tab = t.dataset.tab; if (t.dataset.device && mode === 'demo') ui.sel = t.dataset.device; ui.flash = ''; render(); if (t.closest('#guide')) $('tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (t.dataset.try) { const b = $(t.dataset.try); if (b) { b.click(); spot('#' + t.dataset.try); } return; }
+  if (t.dataset.tab) { if (t.dataset.tab === 'Proof' && tab !== 'Proof') ui.digests = null; tab = t.dataset.tab; if (t.dataset.device && mode === 'demo') ui.sel = t.dataset.device; ui.flash = ''; render(); if (t.closest('#guide')) $('tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   if (t.dataset.speed) { ui.speed = +t.dataset.speed; ui.running = true; render(); return; }
   if (t.dataset.net !== undefined) { const id = t.dataset.net; co.online[id] = !co.online[id]; render(); return; }
   if (t.dataset.dev && mode === 'demo') { ui.sel = t.dataset.dev; render(); return; }
@@ -1517,7 +1566,7 @@ $('attack').onclick = async () => { await attack(current()); toast('Attacked thi
 $('hostile').onclick = async () => { await hostile(); toast('A hostile message arrived — the screen quarantines it before any AI reads it', 'warn'); };
 $('poison').onclick = async () => { await poison(); toast('A compromised agent offered a poisoned brain — each device re-tests it on its own data (see Brains)', 'warn'); };
 $('steal').onclick = () => { co.steal('ops'); tab = 'Watch'; render(); toast('A thief has the Ops agent’s key — watch the behaviour watch catch it below', 'bad'); };
-$('splitnet').onclick = () => { co.order.forEach((id, i) => { co.online[id] = i < 5; }); ui.flash = 'The network is split: the first five devices can see each other, the rest are cut off. Work and edits carry on on both sides; press Heal and every device converges to the same company.'; render(); };
+$('splitnet').onclick = () => { co.order.forEach((id, i) => { co.online[id] = i < 5; }); ui.split = true; ui.flash = 'The network is split: the first five devices can see each other, the rest are cut off. Work and edits carry on on both sides; press Heal and every device converges to the same company.'; render(); };
 $('healnet').onclick = () => { co.order.forEach((id) => { co.online[id] = true; }); ui.flash = ''; render(); };
 
 // ── run your own company: this tab is your device; other tabs join over BroadcastChannel ───────────
@@ -2030,6 +2079,8 @@ setInterval(async () => {
   busy = true;
   try {
     await co.tick({ events: ui.running && co.n < SHIFT ? ui.speed : 0 });
+    await co.syncAll();   // this beat's own writes reach every online device before the cards are drawn, so the badge shows where they stand
+    if (ui.heal && !ui.heal.done) ui.heal.beats++;
     const now = Date.now();
     for (const id of co.order) {
       const L = decideLease(ui.leases[id], now, grantLive(id), LEASE_WIN);
