@@ -14,6 +14,7 @@ import { sha256Bytes } from '../src/sha256.mjs';
 import { canonical, utf8, toHex } from '../src/canon.mjs';
 import { AGENTS, HUB, OWNER_OF, HOSTILE_TEXT } from '../src/company.mjs';
 import { answer } from '../src/brain.mjs';
+import { pickSecond } from '../src/mesh.mjs';
 import { shopperRows, sample } from '../src/streams.mjs';
 import { makeAntibody, NOVEL_ATTACK, NOVEL_PARAPHRASES } from '../src/antibody.mjs';
 
@@ -438,16 +439,16 @@ test('after a restart it never answers an ask again — even one only it answere
   assert.equal(mine().length, 1);
 });
 
-test('a hand-off from someone with no live agent grant is refused by the agent device', async () => {
+test('a hand-off is carried out only from a live agent whose own device wrote it — never from a name another device wrote', async () => {
   const o = await office({ agents: ['finance', 'ops'] });
   const pay = (c) => JSON.stringify({ c: 'payments', f: { customer: c, amount: 1, status: 'released', by: 'x' } });
   await o.nodes.owner.put('handoff', 'h1', { from: 'stranger', to: 'finance', payload: pay('S1'), status: 'open', event: 'e1' });
-  await o.nodes.owner.put('handoff', 'h2', { from: 'ops', to: 'finance', payload: pay('S2'), status: 'open', event: 'e2' });
+  await o.nodes.owner.put('handoff', 'h2', { from: 'ops', to: 'finance', payload: pay('S2'), status: 'open', event: 'e2' });   // names Ops; the owner's key wrote it
+  await o.nodes.ops.put('handoff', 'h3', { from: 'ops', to: 'finance', payload: pay('S3'), status: 'open', event: 'e3' });     // Ops' own device
   await o.sync();
   await S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: {} }).tick();
-  assert.equal(rec(o.nodes.finance, 'handoff', 'h1').status, 'refused');
-  assert.equal(rec(o.nodes.finance, 'handoff', 'h2').status, 'done');
-  assert.deepEqual(o.nodes.finance.list('payments').map((p) => p.customer), ['S2']);
+  assert.deepEqual(['h1', 'h2', 'h3'].map((id) => rec(o.nodes.finance, 'handoff', id).status), ['refused', 'refused', 'done']);
+  assert.deepEqual(o.nodes.finance.list('payments').map((p) => p.customer), ['S3']);
 });
 
 test('learning by being asked needs a published brain and the device’s own rows; without either it carries on, learning nothing', async () => {
@@ -643,11 +644,12 @@ test('honourWork: hand-offs to this agent from a live sender are carried out; ap
   const o = await office({ agents: ['finance', 'ops'] });
   const W = o.nodes.owner;
   const pay = (customer) => JSON.stringify({ c: 'payments', f: { customer, amount: 10, status: 'released', by: 'Ops agent' } });
-  await W.put('handoff', 'h1', { from: 'ops', to: 'finance', payload: pay('P1'), status: 'open', event: 'e1' });
+  const O = o.nodes.ops;   // a hand-off is written by its sender's own device
+  await O.put('handoff', 'h1', { from: 'ops', to: 'finance', payload: pay('P1'), status: 'open', event: 'e1' });
   await W.put('handoff', 'h2', { from: 'stranger', to: 'finance', payload: pay('P2'), status: 'open', event: 'e2' });
-  await W.put('handoff', 'h3', { from: 'ops', to: 'finance', payload: '{not json', status: 'open', event: 'e3' });
-  await W.put('handoff', 'h4', { from: 'ops', to: 'ops', payload: pay('P4'), status: 'open', event: 'e4' });
-  await W.put('handoff', 'h5', { from: 'ops', to: 'finance', payload: pay('P5'), status: 'done', event: 'e5' });
+  await O.put('handoff', 'h3', { from: 'ops', to: 'finance', payload: '{not json', status: 'open', event: 'e3' });
+  await O.put('handoff', 'h4', { from: 'ops', to: 'ops', payload: pay('P4'), status: 'open', event: 'e4' });
+  await O.put('handoff', 'h5', { from: 'ops', to: 'finance', payload: pay('P5'), status: 'done', event: 'e5' });
   const watch = (id, f) => W.put('watch', id, { event: 'e9', customer: 'C9', amount: 500, status: 'approved', ...f });
   await watch('w1', { agent: 'door', channel: 'fraud', action: 'hold-payment' });
   await watch('w2', { agent: 'ops', channel: 'fraud', action: 'hold-payment' });
@@ -1183,8 +1185,8 @@ test('fuzz: no export throws or rejects on junk', async () => {
   const JUNK = [undefined, null, 0, NaN, '', 'x', [], {}, [null], toxic, 1n, () => 1, Symbol('s')];
   const fns = Object.entries(S).filter(([, v]) => typeof v === 'function');
   assert.deepEqual(fns.map(([k]) => k).sort(), ['adoptAntibodiesOn', 'agentRoster', 'applyEffect', 'askSecond', 'checkIn', 'clearsOf', 'companyMark', 'createAgentShell', 'createWork',
-    'finishWork', 'gateFor', 'grantFor', 'honourWork', 'isPaused', 'learnBrain', 'ollamaSteps', 'oversee', 'planOf', 'policyOf', 'postEntry', 'publishBrain', 'receiptRecord',
-    'seedFor', 'stepAgent', 'stockBrains', 'testWork', 'uid', 'vaultState', 'verifyWiringReceipt', 'wireRecords', 'wiringChecklist', 'wiringReceipt', 'wiringView', 'witnessHead', 'witnessVault']);
+    'finishWork', 'gateFor', 'grantFor', 'honourWork', 'isPaused', 'learnBrain', 'ollamaSteps', 'oversee', 'ownRecords', 'personApproved', 'planOf', 'policyOf', 'postEntry', 'publishBrain', 'receiptRecord',
+    'seedFor', 'signedAs', 'stepAgent', 'stockBrains', 'testWork', 'uid', 'vaultState', 'verifyWiringReceipt', 'wireRecords', 'wiringChecklist', 'wiringReceipt', 'wiringView', 'witnessHead', 'witnessVault']);
   // the parts of the agent step (stepAgent, finishWork, askSecond, publishBrain, uid, seedFor) take a context only the runtime and the shell build —
   // they are reached through createAgentShell here, whose tick never rejects
   const internal = new Set(['stepAgent', 'finishWork', 'askSecond', 'publishBrain', 'uid', 'seedFor']);
@@ -1197,4 +1199,93 @@ test('fuzz: no export throws or rejects on junk', async () => {
       if (name === 'createAgentShell') await assert.doesNotReject(out.tick(), name);
     }
   }
+});
+
+
+// ── a compromised agent writes in another's name: every reader that acts reads the signer, never the name ──────────
+// Every agent may write the shared collections, so "from: finance" or "by: audit" proves nothing. These are the attacks
+// a compromised agent (here the Systems agent's device) can make with its own, valid key — each refused.
+test('attack: a hand-off forged in another agent’s name, or written over, is refused; the real one is carried out', async () => {
+  const o = await office({ agents: ['finance', 'ops', 'systems'] });
+  const pay = (c) => JSON.stringify({ c: 'payments', f: { customer: c, amount: 1, status: 'released', by: 'x' } });
+  const X = o.nodes.systems;
+  await X.put('handoff', 'f1', { from: 'ops', to: 'finance', payload: pay('FORGED'), status: 'open', event: 'e1' });   // "from Ops" — Systems' key
+  await o.nodes.ops.put('handoff', 'r1', { from: 'ops', to: 'finance', payload: pay('REAL'), status: 'open', event: 'e2' });
+  await o.nodes.ops.put('handoff', 'r2', { from: 'ops', to: 'finance', payload: pay('ORIGINAL'), status: 'open', event: 'e3' });
+  await o.sync();
+  await X.put('handoff', 'r2', { payload: pay('SWAPPED') });                                     // Systems writes over Ops' payload
+  await o.sync();
+  assert.equal(rec(o.nodes.finance, 'handoff', 'r2').payload, pay('SWAPPED'), 'the overwrite wins the field — so the field alone proves nothing');
+  await S.honourWork({ node: o.nodes.finance, id: 'finance', cols: agentCols('finance'), honoured: () => true, effect: (n, e) => S.applyEffect(n, e, '2026-10-15') });
+  assert.deepEqual(['f1', 'r1', 'r2'].map((id) => rec(o.nodes.finance, 'handoff', id).status), ['refused', 'done', 'refused']);
+  assert.deepEqual(o.nodes.finance.list('payments').map((p) => p.customer), ['REAL']);
+});
+
+test('attack: an agent cannot approve a held call — its own or another’s; only a person (the owner or an admin) can', async () => {
+  const o = await office({ agents: ['finance', 'systems'], extra: ['overseer'] });
+  await o.nodes.owner.grant('admin-overseer', o.k.overseer.pub, 'admin', ['*']);
+  await o.sync();
+  const F = o.nodes.finance, X = o.nodes.systems;
+  const held = (id) => F.put('watch', id, { agent: 'finance', event: 'e-' + id, channel: 'fraud', customer: 'C1', amount: 900, status: 'open', action: '' });
+  for (const id of ['w1', 'w2', 'w3', 'w4']) await held(id);
+  await o.sync();
+  await F.put('watch', 'w1', { status: 'approved', action: 'release-payment' });                 // Finance approves its own held call
+  await X.put('watch', 'w2', { status: 'approved', action: 'release-payment' });                 // Systems approves Finance's
+  await o.nodes.overseer.put('watch', 'w3', { status: 'approved', action: 'hold-payment' });     // a person (an admin)
+  await o.nodes.owner.put('watch', 'w4', { status: 'approved', action: 'release-payment' });     // a person (the owner)
+  await o.sync();
+  assert.deepEqual([...S.personApproved(F, 'watch')].sort(), ['w3', 'w4']);
+  await S.honourWork({ node: F, id: 'finance', cols: agentCols('finance'), honoured: () => true, effect: (n, e) => S.applyEffect(n, e, '2026-10-15') });
+  assert.deepEqual(['w1', 'w2', 'w3', 'w4'].map((id) => rec(F, 'watch', id).status), ['approved', 'approved', 'executed', 'executed']);
+  // once the agent has carried it out, its own "executed" is not a person's approval any more
+  assert.deepEqual([...S.personApproved(F, 'watch')].sort(), []);
+});
+
+test('attack: a second opinion forged in the Audit agent’s name does not confirm a money call — it is held for a person', async () => {
+  const o = await office({ agents: ['finance', 'audit', 'systems'] });
+  const fin = await stock(o, 'finance');
+  const i = pick('fraud', (f) => answer({ fraud: fin.fraud }, f).verdict === 'VERIFIED');
+  await send(o, 'e100001', 'finance', 'fraud', i);
+  let T = 0;
+  const sync = () => o.sync(['owner', 'hub', 'finance', 'systems']);   // the Audit agent's device is offline: no real second opinion can come
+  const shell = S.createAgentShell({ node: o.nodes.finance, agentId: 'finance', library: fin, now: () => T, deadline: 3 });
+  await sync(); await shell.tick(); await sync(); T++;
+  const ask = o.nodes.systems.list('ask').find((a) => a.item === 'e100001' && a.kind === 'second');
+  assert.ok(ask, 'Finance asked for a second opinion on its own money call');
+  const own = answer({ fraud: fin.fraud }, caseOf('fraud', i));
+  const forged = { ask: ask.id, item: ask.item, by: 'audit', kind: 'second', verdict: 'VERIFIED', domain: 'fraud', label: own.label, conf: 900, route: 900,
+    pattern: 'f'.repeat(16), receipt: '0'.repeat(16) };
+  await o.nodes.systems.put('reply', 'q-forged', forged);                                       // "by: audit" — the Systems agent's key
+  // the forgery is well-formed: by the reply alone it would pass as an independent second opinion
+  assert.equal(pickSecond([forged], 'fraud', ask.pattern).node, 'audit');
+  await sync();
+  assert.deepEqual(S.signedAs(o.nodes.finance, 'reply', (r) => r.by).filter((r) => r.id === 'q-forged'), [], 'Systems is not Audit');
+  for (let k = 0; k < 5; k++) { await sync(); await shell.tick(); await sync(); T++; }
+  const d = decisionsFor(o.nodes.finance, 'e100001');
+  assert.equal(d.length, 1);
+  assert.equal(d[0].cross, false, 'no second brain confirmed it');
+  assert.notEqual(d[0].second, 'audit');
+  assert.equal(d[0].state, 'watch', 'a money call no independent brain confirmed waits for a person');
+});
+
+test('attack: decisions forged in another agent’s name neither frame it to the behaviour watch nor count as its work; a restart reads only its own key', async () => {
+  const o = await office({ agents: ['finance', 'ops', 'systems'] });
+  const X = o.nodes.systems, P = o.nodes.ops;
+  await P.put('decisions', 'd-real', { agent: 'ops', event: 'e1', domain: 'inventory', action: 'raise-po', state: 'done', by: 'own' });
+  await X.put('decisions', 'd-forged', { agent: 'ops', event: 'e2', domain: 'fraud', action: 'release-payment', state: 'done', by: 'own' });
+  await X.put('reply', 'r-forged', { ask: 'q1', item: 'e3', by: 'ops', kind: 'answer', verdict: 'VERIFIED', domain: 'inventory', label: 1 });
+  await X.put('ask', 'q-forged', { item: 'e4', from: 'ops', kind: 'answer', features: '{}', domain: '', pattern: '', exclude: '' });
+  await o.sync();
+  assert.deepEqual(S.signedAs(P, 'decisions', (d) => d.agent).map((d) => d.id), ['d-real']);
+  assert.deepEqual(S.ownRecords(P, 'decisions').map((d) => d.id), ['d-real']);
+  assert.deepEqual(S.ownRecords(P, 'reply'), [], 'a reply in Ops’ name that Ops never wrote is not one Ops gave');
+  assert.deepEqual(S.ownRecords(P, 'ask'), []);
+  assert.deepEqual(S.ownRecords(X, 'decisions').map((d) => d.id), ['d-forged'], 'the forger’s own records are its own');
+  // junk never throws
+  for (const n of [null, {}, { list() { throw new Error('x'); } }]) {
+    assert.deepEqual(S.signedAs(n, 'reply', (r) => r.by), []);
+    assert.deepEqual(S.ownRecords(n, 'reply'), []);
+    assert.deepEqual([...S.personApproved(n, 'watch')], []);
+  }
+  assert.deepEqual(S.signedAs(P, 'nope', (r) => r.by), []);
 });

@@ -223,7 +223,7 @@ export async function finishWork(ctx, event, o, gathered = {}) {
 export async function stepAgent(ctx) {
   const { node, id, work: w } = ctx;
   const policy = ctx.policy();
-  const replies = node.list('reply');
+  const replies = signedAs(node, 'reply', (r) => r.by);   // an answer or a second opinion counts only from the device that gave it
   // 1. answer the peers: every ask on the spine this device has not answered, from its OWN library
   for (const a of node.list('ask')) {
     if (w.replied.has(a.id) || a.from === id) continue;
@@ -333,19 +333,22 @@ export async function adoptAntibodiesOn(input) {
 }
 
 /**
- * Housekeeping for one agent device: carry out the hand-offs addressed to it (only from a sender that still holds a live
- * grant, by this device’s view — honoured(fromId)), and the held calls a person approved for it.
+ * Housekeeping for one agent device: carry out the hand-offs addressed to it — only those its named sender's own live agent
+ * key wrote (signedAs; honoured(fromId) may add a caller's own rule) — and the held calls a PERSON approved for it (the
+ * owner or a live admin wrote the approval: personApproved).
  */
 export async function honourWork(input) {
   try {
-    const { node, id, cols, honoured, effect } = input;
+    const { node, id, cols, honoured = () => true, effect } = input;   // honoured(from): any extra rule a caller adds
+    const sent = new Set(signedAs(node, 'handoff', (x) => x.from).map((x) => x.id));   // written by the sender it names
     for (const h of node.list('handoff').filter((x) => x.to === id && x.status === 'open')) {
       let payload = null;
       try { payload = JSON.parse(h.payload); } catch { payload = null; }
-      const ok = payload && honoured(h.from) ? (await effect(node, payload)).ok : false;
+      const ok = payload && sent.has(h.id) && honoured(h.from) ? (await effect(node, payload)).ok : false;
       await node.put('handoff', h.id, { status: ok ? 'done' : 'refused', doneBy: id });
     }
-    for (const w of node.list('watch').filter((x) => (x.agent === id || (x.agent === 'door' && OWNER_OF[x.channel] === id)) && x.status === 'approved' && x.action)) {
+    const approved = personApproved(node, 'watch');
+    for (const w of node.list('watch').filter((x) => (x.agent === id || (x.agent === 'door' && OWNER_OF[x.channel] === id)) && x.status === 'approved' && x.action && approved.has(x.id))) {
       const d = { state: 'done', action: w.action, domain: w.channel, crossChecked: false };   // what a person chose; effects() reads the action
       const { mine, handoff } = splitEffects(effects(d, { id: w.event, customer: w.customer, amount: w.amount | 0, domain: w.channel }, id), cols, OWNER_OF[w.channel]);
       for (const e of mine) await effect(node, e);
@@ -365,7 +368,7 @@ export async function oversee(input) {
   const out = [];
   try {
     const { node, agents, policy = WATCH_POLICY, paused = (x) => isPaused(node, x), by = 'AI overseer', log = () => {} } = input;
-    const seen = watchAll(node.list('decisions'), {}, clearsOf(node));
+    const seen = watchAll(signedAs(node, 'decisions', (d) => d.agent), {}, clearsOf(node));
     for (const id of agents) {
       const r = seen[id];
       if (!r || !shouldPause(r, policy) || paused(id)) continue;
@@ -402,6 +405,48 @@ function writers(node, c, keys) {
     out.set(id, by.size === 1 ? [...by][0] : '');
   }
   return out;
+}
+
+// ── who really wrote it: a record is an agent's only if that agent's own key wrote it ─────────────────────────────
+// Every agent may write the shared collections (asks, replies, decisions, hand-offs, the watch list), so a field that
+// NAMES an agent proves nothing: a compromised agent can write "from: finance" or "by: audit". What the spine does prove
+// is which key wrote each field. So every reader that acts on such a record — answers and second opinions, hand-offs,
+// approvals, the behaviour watch — reads the signer, not the name.
+export const SIGNED_FIELDS = Object.freeze({
+  reply: Object.freeze(['ask', 'item', 'by', 'kind', 'verdict', 'why', 'domain', 'label', 'conf', 'route', 'pattern', 'receipt']),
+  handoff: Object.freeze(['from', 'to', 'payload', 'event']),
+  decisions: Object.freeze(['agent', 'event', 'domain', 'action', 'state', 'by', 'cross', 'second', 'conf', 'receipt', 'customer', 'channel']),
+  ask: Object.freeze(['item', 'from', 'kind', 'domain', 'features', 'pattern', 'exclude']),
+});
+export const APPROVAL_FIELDS = Object.freeze(['status', 'action']);
+
+/** The records of collection c that really are the agent's they name — who(record) → that agent's id: every field in
+ *  SIGNED_FIELDS[c] written by ONE key, and that key the one the role tree grants to that agent now. A record another
+ *  device wrote, or wrote over, is not that agent's, whatever it says. */
+export function signedAs(node, c, who) {
+  try {
+    const pubs = new Map(agentRoster(node).map((g) => [g.pub, g.agent]));
+    const w = writers(node, c, SIGNED_FIELDS[c]);
+    return node.list(c).filter((r) => { const a = pubs.get(w.get(r.id)); return a !== undefined && a === who(r); });
+  } catch { return []; }
+}
+
+/** This device's own records of collection c: every field in SIGNED_FIELDS[c] written by its own key. */
+export function ownRecords(node, c) {
+  try {
+    const w = writers(node, c, SIGNED_FIELDS[c]);
+    return node.list(c).filter((r) => w.get(r.id) === node.pub);
+  } catch { return []; }
+}
+
+/** The ids of the records of collection c whose status and action ONE person wrote — the owner, or a live admin. An
+ *  approval is a person's decision: an agent that writes "approved" on a held call (its own, or another's) decides nothing. */
+export function personApproved(node, c) {
+  try {
+    const people = new Set([node.genesis, ...node.view().roster.filter((r) => r.role === 'admin' && !r.revoked).map((r) => r.to)]);
+    const w = writers(node, c, APPROVAL_FIELDS);
+    return new Set([...w].filter(([, pub]) => people.has(pub)).map(([id]) => id));
+  } catch { return new Set(); }
 }
 
 // ── the agent shell ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -460,10 +505,10 @@ export function createAgentShell(opts) {
 
   /** After a restart: what this device already answered, asked and decided is on the spine — pick it up from there. */
   async function resumeFromSpine() {
-    for (const r of node.list('reply')) if (r.by === agentId) work.replied.add(r.ask);
-    const decided = new Set(node.list('decisions').filter((d) => d.agent === agentId).map((d) => d.event));
+    for (const r of ownRecords(node, 'reply')) if (r.by === agentId) work.replied.add(r.ask);
+    const decided = new Set(ownRecords(node, 'decisions').filter((d) => d.agent === agentId).map((d) => d.event));
     const open = node.list('inbox').filter((x) => x.to === agentId && x.status === 'open').map((x) => x.id);
-    for (const a of node.list('ask')) if (a.from === agentId) resume.set(a.item + '/' + a.kind, a.id);   // its latest ask per piece of work and kind
+    for (const a of ownRecords(node, 'ask')) if (a.from === agentId) resume.set(a.item + '/' + a.kind, a.id);   // its latest ask per piece of work and kind
     const rerun = new Set(node.list('adopt').filter((x) => x.by === agentId && x.source === 'antibody').map((x) => x.patternId));
     for (const r of node.list('antibody')) {
       if (!rerun.has(String(r.abId || '').slice(0, 64))) continue;
@@ -487,7 +532,7 @@ export function createAgentShell(opts) {
     }
     if (!started) { started = true; await resumeFromSpine(); }
     await stepAgent(ctx);
-    await honourWork({ node, id: agentId, cols: cols(), honoured: (from) => agentRoster(node).some((g) => g.agent === from), effect });
+    await honourWork({ node, id: agentId, cols: cols(), effect });   // a hand-off counts only if its sender's live agent key wrote it (signedAs)
     if (agent.domains.length) await adoptAntibodiesOn({ node, id: agentId, name: agent.name, seen, adopted, benign, log });
     else await witnessVault(node);
     set('running', 'working: ' + work.pending.size + ' waiting on replies');

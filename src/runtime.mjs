@@ -31,7 +31,7 @@ import { ask } from './model.mjs';
 import { watchAll, shouldPause, DEFAULT_POLICY as WATCH_POLICY } from './watch.mjs';
 // the one agent step, the books, the vault witness, the antibodies, hand-offs and the overseer — shared with a real agent device
 import { uid, seedFor, gateFor, policyOf, isPaused, clearsOf, vaultState, postEntry, witnessHead, witnessVault, applyEffect, publishBrain, createWork,
-  stepAgent, finishWork, askSecond, learnBrain, stockBrains, adoptAntibodiesOn, honourWork, oversee } from './shell.mjs';
+  stepAgent, finishWork, askSecond, learnBrain, stockBrains, adoptAntibodiesOn, honourWork, oversee, signedAs } from './shell.mjs';
 
 const pad = (n, w = 6) => String(n).padStart(w, '0');
 export { seedFor };   // src/shell.mjs: the one seed a device grows its own brain with
@@ -358,7 +358,7 @@ export function createCompany(brains, { seed = 20261014, date = () => new Date()
   // ── the behaviour watch (src/watch.mjs — BES, Gary W. Floyd): a valid key and a valid grant are not enough. The AI
   //    overseer watches what each agent DOES on its own replica, pauses one the watch flags, and a human clears it ──
   co.clearsOf = clearsOf;
-  co.watch = (viewId = 'overseer') => { const node = co.nodes[viewId]; return watchAll(node.list('decisions'), {}, co.clearsOf(node)); };
+  co.watch = (viewId = 'overseer') => { const node = co.nodes[viewId]; return watchAll(signedAs(node, 'decisions', (d) => d.agent), {}, co.clearsOf(node)); };   // each agent's own decisions, by its own key
   co.watchTick = async () => {
     const ov = co.nodes.overseer;
     if (!co.online.overseer || !ov.canWrite('control')) return [];
