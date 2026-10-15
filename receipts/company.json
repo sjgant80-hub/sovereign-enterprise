@@ -1,5 +1,5 @@
 {
- "model": "sovereign-enterprise/company-run/3",
+ "model": "sovereign-enterprise/company-run/4",
  "seed": 20261014,
  "date": "2026-10-14",
  "events": 480,
@@ -290,5 +290,27 @@
  },
  "systemsDecisionsTotal": 53,
  "growthLog": 20,
- "receiptHash": "4e93fec3e7ec957170a3476b6128e77446e0f071bd6037c766dcd4f340a99210"
+ "secondBrain": {
+  "untouched": {
+   "asked": 84,
+   "agreed": 81,
+   "agreedWrong": 1,
+   "disagreed": 3,
+   "caught": 0,
+   "falseAlarm": 3,
+   "noSecond": 0,
+   "wrongThrough": 1
+  },
+  "tampered": {
+   "asked": 84,
+   "agreed": 77,
+   "agreedWrong": 4,
+   "disagreed": 7,
+   "caught": 7,
+   "falseAlarm": 0,
+   "noSecond": 0,
+   "wrongThrough": 4
+  }
+ },
+ "receiptHash": "5015248ecf411676524f89a8f14c8c12072706c41d715abdf4fda559851f5d72"
 }
