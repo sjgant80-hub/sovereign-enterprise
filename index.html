@@ -101,6 +101,10 @@ td.n,th.n{text-align:right;font-family:var(--mono)}
 @media(max-width:700px){.topbar .in{flex-wrap:wrap;row-gap:4px;padding-bottom:4px}.brand{flex:1}.nav{order:3;flex:1 0 100%;margin:0 -6px}.nav a{padding:7px 9px;font-size:13.5px}}
 .nav a{color:var(--dim);text-decoration:none;padding:7px 8px;border-radius:8px;white-space:nowrap;font-size:14px}
 .nav a.on{color:var(--ink);background:var(--panel);box-shadow:inset 0 -2px 0 var(--accent)}.nav a:hover{color:var(--ink)}
+.navtoggle{display:none}
+@media(max-width:700px){.navtoggle{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:15px;font-weight:600;cursor:pointer}
+  .nav{display:none}.nav.open{display:grid;grid-template-columns:1fr 1fr;gap:4px;overflow:visible;padding:4px 6px 8px}
+  .nav.open a{min-height:44px;display:flex;align-items:center;padding:0 12px;font-size:15px;white-space:normal}}
 .view{display:none;padding-top:8px}.view.on{display:block}
 .ov-hero{padding:34px 0 8px;max-width:900px}
 .ov-hero h1{font-size:clamp(28px,6vw,52px);line-height:1.08;letter-spacing:-.01em;margin:0}
@@ -192,6 +196,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
 <body>
 <header class="topbar"><div class="in">
   <span class="brand" data-view="overview" role="link" tabindex="0">SOVEREIGN<span class="x"> ENTERPRISE</span></span>
+  <button class="navtoggle" id="navtoggle" type="button" aria-expanded="false" aria-controls="nav"><span aria-hidden="true">☰</span> <span id="navcur">Overview</span></button>
   <nav class="nav" id="nav" aria-label="Sections">
     <a href="#overview" data-view="overview">Overview</a>
     <a href="#live" data-view="live">Live company</a>
@@ -1373,6 +1378,8 @@ async function route(opts = {}) {
   const h = location.hash.slice(1).split('=')[0];
   view = TOP.includes(h) ? h : (new URLSearchParams(location.hash.slice(1)).get('join') ? 'run' : 'overview');
   for (const t of TOP) $('v-' + t).classList.toggle('on', t === view);
+  $('nav').classList.remove('open'); $('navtoggle').setAttribute('aria-expanded', 'false');   // the phone menu closes once a section is chosen
+  { const cur = document.querySelector('#nav a[data-view="' + view + '"]'); if (cur) $('navcur').textContent = cur.textContent; }
   for (const a of document.querySelectorAll('#nav a')) { a.classList.toggle('on', a.dataset.view === view); if (a.dataset.view === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
   const ws = $('workspace');
   if (view === 'live') { mode = 'demo'; $('live-slot').appendChild(ws); ws.classList.remove('hide'); }
@@ -1467,6 +1474,7 @@ document.addEventListener('input', (e) => {
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('a[data-view], .brand, button, [data-net], [data-dev]');
   if (!t) return;
+  if (t.id === 'navtoggle') { const open = !$('nav').classList.contains('open'); $('nav').classList.toggle('open', open); t.setAttribute('aria-expanded', String(open)); return; }
   if (t.dataset.view) { e.preventDefault(); go(t.dataset.view); return; }
   if (t.dataset.go) { go(t.dataset.go); return; }
   if (t.dataset.tour) { const a = t.dataset.tour; tourShow(a === 'start' ? 0 : a === 'next' ? ui.tour + 1 : a === 'back' ? ui.tour - 1 : -1); return; }
