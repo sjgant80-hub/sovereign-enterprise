@@ -298,7 +298,9 @@ function grownJob(d, agent, needed, c) {
   return { domain: d, agent, needed, file: c.file, source: 'grown', verified, reverify: false, heldAuc: ok ? t.pattern.heldAuc : null, rows: t.rows || null,
     features: (t.features || []).map((x) => ({ name: x.name, from: String(x.from).slice(0, 120) })), target: t.target || null, positive: t.positive || null,
     pattern: ok ? t.pattern : null,
-    why: verified ? 'Grown from your file ' + c.file + ': ' + t.rows + ' rows, learning ' + t.target + ' (' + t.positive + ' is the case to catch). On the rows it never grew on it scored AUC ' + auc3(t.pattern.heldAuc) + ' — it passed.'
+    why: verified ? 'Grown from your file ' + c.file + ': ' + t.rows + ' rows, learning ' + t.target + ' (' + t.positive + ' is the case to catch). ' +
+      (t.graded ? 'Graded on its newest rows, ' + t.graded.from + ' to ' + t.graded.to + ', after growing on the older — how it does on what came after: AUC '
+        : 'On the rows it never grew on it scored AUC ') + auc3(t.pattern.heldAuc) + ' — it passed.'
       : 'The brain grown from your file ' + c.file + ' did not pass: ' + t.why + '. The ' + agentName(agent) + ' holds this work for a person until more of your data arrives.' };
 }
 function shippedJob(d, agent, needed, sh) {

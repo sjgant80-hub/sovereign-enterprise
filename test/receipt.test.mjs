@@ -648,3 +648,29 @@ test('fuzz: every export is total — junk in, a refusal out, never a throw or a
     assert.equal((await verifyPlantingReceipt(j)).ok, false, label);
   }
 });
+
+test('a dated file: its brain is graded on the NEWEST rows after growing on the older, and the receipt reproduces that grade from the same file', async () => {
+  const j = read('brains/real/churn.sample.json'), F = j.features.length;
+  const day = (i) => new Date(Date.UTC(2025, 0, 1) + ((i * 7919) % 365) * 86400000).toISOString().slice(0, 10);   // the file is NOT in date order
+  const text = [[...j.features, 'Signup date', 'Churned'].join(','), ...j.data.map((r, i) => [...r.slice(0, F), day(i), r[F] ? 'yes' : 'no'].join(','))].join('\n');
+  const IN = { business: { type: 'saas' }, files: [{ name: 'churn-dated.csv', text }] };
+  const plan = differentiate(IN, SHIPPED, { seed: 1 });
+  const pj = planJob(plan, 'churn');
+  assert.ok(pj && pj.pattern, 'a churn brain was grown');
+  const r = await buildPlantingReceipt({ plan, before: IN, office: OFFICE_IN, bridges: [], after: null, at: '2026-10-16' }, KEYS);
+  const c = jobOf(body(r), 'churn').checked;
+  assert.equal(c.split, 'time');
+  assert.equal(c.rows, pj.pattern.held);
+  assert.equal(c.train + c.rows, j.data.length);
+  // the graded rows are the newest: every one is on or after the last day it grew on
+  const days = j.data.map((_, i) => day(i)).sort();
+  assert.equal(c.gradedTo, days[days.length - 1]);
+  assert.equal(c.gradedFrom, days[days.length - c.rows]);
+  assert.ok(days[days.length - c.rows - 1] <= c.gradedFrom);
+  assert.deepEqual(await verifyPlantingReceipt(r), { ok: true, why: '' });
+  assert.ok(receiptHtml(r).includes(c.rows + ' newest cases from that file — ' + c.gradedFrom + ' to ' + c.gradedTo + ', after everything it learned from'), 'the receipt says how it was graded');
+  assert.ok(!receiptHtml(RA).includes('newest cases'), 'an undated file says nothing of the kind');
+  // the same rows undated: graded 3 in 10 through the file
+  assert.equal(jobOf(BA, 'churn').checked.split, 'mixed');
+  assert.deepEqual([jobOf(BA, 'churn').checked.gradedFrom, jobOf(BA, 'churn').checked.gradedTo], ['', '']);
+});

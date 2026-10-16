@@ -673,3 +673,15 @@ test('a bank statement or trial balance the bridge reads is set aside as a recor
   assert.equal(one.kind, 'unknown');
   assert.match(one.reason, /could not be read as a table/);
 });
+
+test('a dated file of outcomes: the job says it was graded on the newest rows, from which day to which', async () => {
+  const { readFileSync } = await import('node:fs');
+  const j = JSON.parse(readFileSync(new URL('../brains/real/churn.sample.json', import.meta.url), 'utf8')), F = j.features.length;
+  const day = (i) => new Date(Date.UTC(2025, 0, 1) + ((i * 7919) % 365) * 86400000).toISOString().slice(0, 10);
+  const text = [[...j.features, 'Signup date', 'Churned'].join(','), ...j.data.map((r, i) => [...r.slice(0, F), day(i), r[F] ? 'yes' : 'no'].join(','))].join('\n');
+  const plan = P.differentiate({ business: { type: 'saas' }, files: [{ name: 'churn-dated.csv', text }] }, {}, { seed: 1 });
+  const job = plan.jobs.find((x) => x.domain === 'churn');
+  assert.equal(job.verified, true);
+  const days = j.data.map((_, i) => day(i)).sort();
+  assert.match(job.why, new RegExp('Graded on its newest rows, ' + days[days.length - job.pattern.held] + ' to ' + days[days.length - 1] + ', after growing on the older — how it does on what came after: AUC [0-9][.][0-9]{3} — it passed[.]$'));
+});

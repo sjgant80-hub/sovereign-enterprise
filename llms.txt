@@ -65,6 +65,9 @@ Source: https://github.com/sjgant80-hub/sovereign-enterprise
   payment released or a released one reversed in the books, an order cancelled while only raised (refused once the goods are
   in), a quarantine lifted, a lead put back; the state record is keyed to its work, so a reversal replaces it. Stopped without
   the AI: a paused agent raises nothing, proposal mode acts on nothing alone, a money limit holds the money.
+- Graded on what came after (train.mjs datedOrder): when a business's own file gives every case a date, its brain grows on
+  the older 70% and is graded on the newest 30% - the planting receipt reproduces that grade from the same file and says
+  which days it covered; an undated file is graded on 3 rows in every 10 spread through it.
 
 ## The white paper — the AI-native office
 - AI runs 90% of a modelled 50-person UK office's operational work on owned machines; five AI-native people oversee it.

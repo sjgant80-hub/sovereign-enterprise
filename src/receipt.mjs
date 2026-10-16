@@ -51,6 +51,7 @@ import { sign, verify } from './keys.mjs';
 import { hashPlan, PLAN_MODEL } from './plant.mjs';
 import { prepare, parseCsv } from '../vendor/csv-forge/csv.mjs';
 import { toDataset } from './grow.mjs';
+import { datedOrder } from './train.mjs';
 import { verifyOn, answer, scoreInput } from './brain.mjs';
 import { fitPlan, fitInput, formFields } from './adopt.mjs';
 import { boardKpis, JOBS, agentName } from './company.mjs';
@@ -94,8 +95,10 @@ function measure(job, text, logs) {
   const p = prepare(text, { targetName: job.target });
   const cols = job.features.map((f) => p.featureNames.indexOf(f.from));
   const names = job.features.map((f) => f.name);
-  const rows = p.cases.map((c) => Object.fromEntries([...names.map((n, k) => [n, c.x[cols[k]]]), ['y', c.y]]));
-  const ds = toDataset(job.domain, rows, names);
+  // the rows in the order the brain grew on them — oldest first when the file dates every case (train.mjs datedOrder)
+  const ord = datedOrder(text, p);
+  const rows = ord.order.map((i) => p.cases[i]).map((c) => Object.fromEntries([...names.map((n, k) => [n, c.x[cols[k]]]), ['y', c.y]]));
+  const ds = toDataset(job.domain, rows, names, ord.split);
   const brain = job.pattern;
   const v = ds && ds.n === rows.length ? verifyOn(brain, ds.heldRows.map((i) => rows[i])) : null;
   if (!v || v.n !== brain.held || v.auc !== brain.heldAuc || v.acc !== brain.heldAcc) {
@@ -114,9 +117,9 @@ function measure(job, text, logs) {
   if (g && p.header.includes(g.decisionColumn)) {
     const d = p.header.indexOf(g.decisionColumn);
     const raw = parseCsv(text).rows.filter((r) => at(r, p.targetIndex) !== '');      // csv-forge's own case rule: the outcome is known
-    past = tally(held.map((i) => (at(raw[i], d) === g.positiveDecision ? 1 : 0)), ys);
+    past = tally(held.map((i) => (at(raw[ord.order[i]], d) === g.positiveDecision ? 1 : 0)), ys);
   }
-  return { rows: n, train: ds.trainRows.length, positives: ys.filter((y) => y === 1).length, doNothing: tally(ys.map(() => 0), ys), past,
+  return { rows: n, train: ds.trainRows.length, split: ord.split, gradedFrom: ord.split === 'time' ? ord.days[ord.days.length - n] : '', gradedTo: ord.split === 'time' ? ord.days[ord.days.length - 1] : '', positives: ys.filter((y) => y === 1).length, doNothing: tally(ys.map(() => 0), ys), past,
     brain: { ...tally(held.map((i) => (scoreInput(brain, rows[i]) > brain.threshold ? 1 : 0)), ys), auc: perm(brain.heldAuc),
       answered, answeredPermille: pm(answered, n), answeredRight, answeredRightPermille: pm(answeredRight, answered) } };
 }
@@ -362,7 +365,7 @@ function jobRow(j) {
     const nothing = 'If nobody had acted: ' + line(c.doNothing);
     const before = c.past === null ? nothing : 'Your past decisions: ' + line(c.past) + '<br><span class="dim">' + nothing + '</span>';
     return row([what, 'Grown from your file ' + file + (j.verified ? '' : ' — <span class="warn">it did not pass its check, so this work waits for a person</span>'),
-      num(c.rows) + ' cases from that file it never learned from', before,
+      num(c.rows) + (c.split === 'time' ? ' newest cases from that file — ' + esc(c.gradedFrom) + ' to ' + esc(c.gradedTo) + ', after everything it learned from' : ' cases from that file it never learned from'), before,
       'The brain: ' + line(c.brain) + '<br><span class="dim">AUC ' + auc3(c.brain.auc) + '</span>',
       pct(c.brain.answeredPermille) + ' (' + num(c.brain.answered) + ' of ' + num(c.rows) + ')' + (c.brain.answered > 0 ? '<br><span class="dim">right on ' + pct(c.brain.answeredRightPermille) + ' of those</span>' : '')]);
   }

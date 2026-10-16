@@ -101,3 +101,43 @@ test('never throws on junk', () => {
   }
   assert.equal(trainFromCsv(csv, { get target() { throw new Error('x'); } }).ok, false);
 });
+
+test('a dated file is graded on what came after: grown on its older rows, graded on its newest — undated, 3 rows in 10', async () => {
+  const { datedOrder } = await import('../src/train.mjs');
+  const { prepare } = await import('../vendor/csv-forge/csv.mjs');
+  const { toDataset } = await import('../src/grow.mjs');
+  const lines = csv.trim().split('\n'), head = lines[0], body = lines.slice(1);
+  const day = (i) => new Date(Date.UTC(2025, 0, 1) + ((i * 7919) % 365) * 86400000).toISOString().slice(0, 10);
+  const dated = (name, f = day) => [name + ',' + head, ...body.map((l, i) => f(i) + ',' + l)].join('\n');
+  const text = dated('Visit date');
+  const o = datedOrder(text, prepare(text, {}));
+  assert.equal(o.split, 'time');
+  assert.equal(o.column, 'Visit date');
+  assert.deepEqual([...o.order].sort((a, b) => a - b), body.map((_, i) => i), 'every case once');
+  assert.deepEqual(o.days, body.map((_, i) => day(i)).sort(), 'oldest first');
+  for (let k = 1; k < o.order.length; k++) if (o.days[k] === o.days[k - 1]) assert.ok(o.order[k] > o.order[k - 1], 'the same day keeps the file’s order');
+  const t = trainFromCsv(text, { domain: 'my-shop', seed: 3 });
+  assert.equal(t.ok, true);
+  assert.equal(t.split, 'time');
+  assert.equal(t.heldBase.n, 355);
+  assert.deepEqual(t.graded, { column: 'Visit date', from: o.days[1182 - 355], to: o.days[1181] });
+  assert.ok(!t.features.some((f) => f.from === 'Visit date'), 'a date is never a feature');
+  // the time split holds out exactly the newest rows of what it is given
+  const rows = Array.from({ length: 200 }, (_, i) => ({ a: i % 7, y: i % 2 }));
+  const ds = toDataset('x', rows, ['a'], 'time');
+  assert.deepEqual([ds.split, ds.heldRows[0], ds.heldRows.length, ds.trainRows[ds.trainRows.length - 1]], ['time', 140, 60, 139]);
+  assert.equal(toDataset('x', rows, ['a']).split, 'mixed');
+  assert.equal(toDataset('x', rows, ['a'], 'nope').split, 'mixed');
+  // a date column with any case undated, or no date column at all: the file's own order, 3 in 10
+  const gap = dated('Visit date', (i) => (i === 500 ? '' : day(i)));
+  assert.equal(datedOrder(gap, prepare(gap, {})).split, 'mixed');
+  assert.equal(trainFromCsv(csv, { domain: 'my-shop', seed: 3 }).split, 'mixed');
+  assert.equal(trainFromCsv(csv, { domain: 'my-shop', seed: 3 }).graded, null);
+  // a column named for a date is tried first; any column of days serves when none is named
+  const two = [['Created', 'Visit date', head].join(','), ...body.map((l, i) => [day(i + 3), day(i), l].join(','))].join('\n');
+  assert.equal(datedOrder(two, prepare(two, {})).column, 'Visit date');
+  const unnamed = dated('Joined');
+  assert.equal(datedOrder(unnamed, prepare(unnamed, {})).column, 'Joined');
+  for (const junk of [null, undefined, {}, { cases: 7 }]) assert.equal(datedOrder(text, junk).split, 'mixed');
+  assert.deepEqual(datedOrder('', prepare('', {})), { order: [], split: 'mixed', column: '', days: [] });
+});

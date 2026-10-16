@@ -18,8 +18,10 @@ export const GROW = Object.freeze({ population: 24, elites: 4, generations: 16 }
 export const MIN_ROWS = 120;       // fewer than this and a held-out grade means nothing — refuse to grow
 const HELD_EVERY = 10, HELD_SLOTS = 3;   // 3 rows in every 10 are held out (seed-library's split)
 
-/** Rows [{...features, y}] → a seed-library dataset, or null. */
-export function toDataset(name, rows, features) {
+/** Rows [{...features, y}] → a seed-library dataset, or null. split: 'mixed' (3 rows in every 10 held out, spread through the
+ *  file — seed-library's split) or 'time' (the rows come oldest first: the newest 3 in 10 are held out, so the grade says how
+ *  the brain does on what came AFTER everything it grew on). */
+export function toDataset(name, rows, features, split = 'mixed') {
   if (typeof name !== 'string' || !/^[a-z][a-z0-9_-]{0,31}$/.test(name)) return null;
   if (!Array.isArray(rows) || !Array.isArray(features) || features.length < 1 || features.length > MAXFEATS) return null;
   if (features.some((f) => typeof f !== 'string' || f === 'y')) return null;
@@ -30,14 +32,15 @@ export function toDataset(name, rows, features) {
   for (const f of features) cols[f] = Float64Array.from(good, (r) => r[f]);
   const y = Uint8Array.from(good, (r) => r.y);
   const trainRows = [], heldRows = [];
-  for (let i = 0; i < n; i++) (i % HELD_EVERY < HELD_SLOTS ? heldRows : trainRows).push(i);
-  return { ok: true, name, features: features.slice(), n, cols, y, trainRows, heldRows };
+  const cut = n - Math.round((n * HELD_SLOTS) / HELD_EVERY);   // 'time': the newest rows, the same share as the mixed split
+  for (let i = 0; i < n; i++) ((split === 'time' ? i >= cut : i % HELD_EVERY < HELD_SLOTS) ? heldRows : trainRows).push(i);
+  return { ok: true, name, features: features.slice(), n, cols, y, trainRows, heldRows, split: split === 'time' ? 'time' : 'mixed' };
 }
 
 /** Grow a pattern for `domain` from a node's own rows. → { ok, pattern, verified, why } — never throws. */
-export function growPattern(domain, rows, features, { seed = 1, grow = GROW, grownBy = '' } = {}) {
+export function growPattern(domain, rows, features, { seed = 1, grow = GROW, grownBy = '', split = 'mixed' } = {}) {
   try {
-    const ds = toDataset(domain, rows, features);
+    const ds = toDataset(domain, rows, features, split);
     if (!ds) return { ok: false, verified: false, why: 'not enough clean labelled rows to grow on (need ' + MIN_ROWS + ')' };
     if (!ds.y.some((v) => v === 1) || !ds.y.some((v) => v === 0)) return { ok: false, verified: false, why: 'only one class in the rows — nothing to learn' };
     const seedStr = encodeSeed(makeSeed({ domain, seed: Math.max(1, seed >>> 0), grow }));
@@ -62,7 +65,7 @@ export function growPattern(domain, rows, features, { seed = 1, grow = GROW, gro
     if (!validPattern(pattern)) return { ok: false, verified: false, why: 'the grown pattern is malformed' };
     // the base rate on the very rows heldAcc was graded on — beside the pattern, not in it, so brain files are unchanged
     const heldBase = { n: ds.heldRows.length, yes: ds.heldRows.filter((i) => ds.y[i] === 1).length };
-    return { ok: true, pattern, heldBase, verified: pattern.verified, why: pattern.verified ? 'grew and passed held-out (AUC ' + g.heldAuc + ')' : 'grew but failed held-out (AUC ' + g.heldAuc + ' < ' + GATE_AUC + ') — CUT' };
+    return { ok: true, pattern, heldBase, split: ds.split, verified: pattern.verified, why: pattern.verified ? 'grew and passed held-out (AUC ' + g.heldAuc + ')' : 'grew but failed held-out (AUC ' + g.heldAuc + ' < ' + GATE_AUC + ') — CUT' };
   } catch {
     return { ok: false, verified: false, why: 'growth failed closed' };
   }

@@ -102,3 +102,18 @@ test('growPattern never throws on junk', () => {
   }
   assert.equal(growPattern('fraud', [toxic], FRAUD).ok, false);
 });
+
+test('the split: mixed holds out 3 rows in every 10 through the rows; time holds out the newest 3 in 10 of rows given oldest first', () => {
+  const rows = Array.from({ length: 150 }, (_, i) => ({ a: i % 5, y: i % 2 }));
+  const mixed = toDataset('x', rows, ['a']), time = toDataset('x', rows, ['a'], 'time');
+  assert.deepEqual([mixed.split, mixed.heldRows.length, mixed.heldRows.slice(0, 4)], ['mixed', 45, [0, 1, 2, 10]]);
+  assert.deepEqual([time.split, time.heldRows.length, time.heldRows[0], time.heldRows[44], time.trainRows.length, time.trainRows[104]], ['time', 45, 105, 149, 105, 104]);
+  for (const s of [undefined, 'mixed', 'TIME', 7, null]) assert.equal(toDataset('x', rows, ['a'], s).split, 'mixed', String(s));
+  // growing on a time split says so, and grades on the newest rows
+  const fraud = sample('fraud', 101, 700).rows;
+  const g = growPattern('fraud', fraud, FRAUD, { seed: 101, split: 'time' });
+  assert.equal(g.split, 'time');
+  assert.deepEqual([g.pattern.held, g.pattern.train], [210, 490]);
+  assert.equal(growPattern('fraud', fraud, FRAUD, { seed: 101 }).split, 'mixed');
+  assert.deepEqual(g.heldBase, { n: 210, yes: fraud.slice(490).filter((r) => r.y === 1).length }, 'the base rate of the newest rows');
+});

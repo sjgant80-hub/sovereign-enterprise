@@ -62,7 +62,9 @@ export function renderTrain(state = {}) {
     <button class="primary" data-act="train-go">Grow the brain</button></div>` : ''}
   ${r ? `<div class="panel">
     ${r.ok && r.verified ? `<h3 class="ok">✓ A verified brain — it predicts “${esc(r.target)} = ${esc(r.positive)}”</h3>
-      <p>Grown on ${r.pattern.train} of your ${r.rows} rows and graded on the other ${r.pattern.held} it never saw — 3 rows in every 10, set aside before it grew: held-out AUC <b>${r.pattern.heldAuc.toFixed(3)}</b>
+      <p>${r.split === 'time' && r.graded
+        ? `Grown on your ${r.pattern.train} oldest rows and graded on the ${r.pattern.held} newest, which it never saw — ${esc(r.graded.from)} to ${esc(r.graded.to)} by your “${esc(r.graded.column)}” column, so the grade is how it does on what came after: held-out AUC`
+        : `Grown on ${r.pattern.train} of your ${r.rows} rows and graded on the other ${r.pattern.held} it never saw — 3 rows in every 10, set aside before it grew (a file with a date on every row is graded on its newest rows instead): held-out AUC`} <b>${r.pattern.heldAuc.toFixed(3)}</b>
         (0.5 is a coin toss; the gate is 0.6), accuracy ${(r.pattern.heldAcc * 100).toFixed(1)}%. It reads the ${r.features.length} columns most related to the outcome${r.dropped ? ` (${r.dropped} more were left out)` : ''}.</p>
       ${baseRate(r)}
       <p class="dim">Its rules, in full — add up the weights of the rules that fire; above ${+r.pattern.threshold.toFixed(3)} means “${esc(r.positive)}”:</p>
