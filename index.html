@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6x+6MKxblpfkMODRZZ2x9e818Q10/TRVDSgrKAfDGho=' 'sha256-iC6GDU+4ByRvRV0dg8O6pFTWan5wtVtJM2/tzXWzhww=' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src * data: blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6x+6MKxblpfkMODRZZ2x9e818Q10/TRVDSgrKAfDGho=' 'sha256-ufzWWZexH6mvoamzzcnRcofVvZuyou0j3Vw8V5gsuyA=' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src * data: blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sovereign Enterprise</title>
 <meta name="description" content="A full AI company on its own devices. Six AI agents run sales, service, finance, operations, systems and audit end to end; two humans watch. Every device is a brain: verified Konomi SLM patterns, re-verified on each device's own data, sharing over a signed peer-to-peer spine — the mycelium. High-stakes calls need a second brain, grown separately, to agree. The page runs the exact kernel its tests and mutation witness prove." />
@@ -228,6 +228,7 @@ button.link{background:none;border:none;color:var(--accent2);padding:0 4px;text-
     <span class="sep"></span>
     <button id="hostile" class="sm danger">Send a hostile message</button>
     <button id="poison" class="sm danger">Poison a brain</button>
+    <button id="poison-subtle" class="sm danger">Poison it subtly</button>
     <button id="steal" class="sm danger">Steal an agent's key</button>
     <button id="attack" class="sm danger">Attack this device</button>
     <button id="splitnet" class="sm">Split the network</button>
@@ -1490,7 +1491,7 @@ async function attack(node) {
 // a customer writes something hostile: it reaches the Service agent, which never reads it — the screen quarantines it
 async function hostile() { await co.hostile(prng((Date.now() & 0xffff) + 7)); tab = 'Watch'; ui.flash = 'A hostile message just reached the Service agent. Watch it land in “Quarantined unread” within a few seconds — no AI ever reads it.'; render(); }
 // a compromised agent publishes a sabotaged fraud brain: every device that tries it on its own data refuses it
-async function poison() { await co.poison(String(Date.now())); tab = 'Brains'; render(); }
+async function poison(subtle = false) { await co.poison(String(Date.now()), { subtle }); tab = 'Brains'; render(); }
 
 
 // ── the top-level views: what a stranger needs before the live app ──────────────────────────────────
@@ -1757,6 +1758,7 @@ $('run').onclick = () => { if (co.n >= SHIFT) co.n = 0; ui.running = !ui.running
 $('attack').onclick = async () => { await attack(current()); toast('Attacked this device — every forged or replayed write is refused at the gate (see Proof)', 'warn'); };
 $('hostile').onclick = async () => { await hostile(); toast('A hostile message arrived — the screen quarantines it before any AI reads it', 'warn'); };
 $('poison').onclick = async () => { await poison(); toast('A compromised agent offered a poisoned brain — each device re-tests it on its own data (see Brains)', 'warn'); };
+$('poison-subtle').onclick = async () => { await poison(true); toast('A subtly tampered brain — one rule flipped, it still clears every gate — is offered; each device refuses it because it does worse than the brain it already knows (see Brains)', 'warn'); };
 $('steal').onclick = () => { co.steal('ops'); tab = 'Watch'; render(); toast('A thief has the Ops agent’s key — watch the behaviour watch catch it below', 'bad'); };
 $('splitnet').onclick = () => { co.order.forEach((id, i) => { co.online[id] = i < 5; }); ui.split = true; ui.flash = 'The network is split: the first five devices can see each other, the rest are cut off. Work and edits carry on on both sides; press Heal and every device converges to the same company.'; render(); };
 $('healnet').onclick = () => { co.order.forEach((id) => { co.online[id] = true; }); ui.flash = ''; render(); };
